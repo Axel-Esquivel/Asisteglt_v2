@@ -29,55 +29,115 @@ flowchart LR
 
 El módulo de Reportes sirve para **cualquier tipo de reporte** (contable, ventas directas,
 cobranza, producción…), por eso la importación **no conoce conceptos de negocio** como debe,
-haber o saldo. Cada encabezado del catálogo es un nombre libre que escribe el usuario y solo
-lleva uno de cinco **roles genéricos**:
+haber o saldo. Cada encabezado es un nombre libre que escribe el usuario y se describe con tres
+propiedades: **rol**, **tipo de dato** y, si es numérico, **naturaleza**.
 
-| Rol genérico | Alias | Para qué sirve | Tipo de dato |
+### 2.1 Rol
+
+| Rol | Alias | Para qué sirve | Tipos permitidos |
 |---|---|---|---|
-| **Identificador** | `id` | Identifica el registro; puede haber varios (identificador compuesto). Obligatorio y sin vacíos. | Texto o entero |
-| **Descripción del identificador** | `id_name` | Texto que describe a un identificador (se vincula a él). | Texto |
-| **Valor** | `value` | Cantidad numérica que se suma, acumula, convierte o calcula. | Decimal (vacío = 0) |
-| **Atributo** | `attribute` | Dato descriptivo para filtrar o agrupar (vendedor, categoría, canal…). | Texto, fecha o booleano |
-| **Fecha** | `date` | Fecha propia del registro (p. ej. fecha de la venta), distinta del período de la carga. | Fecha |
+| **Identificador** | `id` | Identifica el registro; puede haber varios (identificador compuesto: producto + tienda). Obligatorio y sin vacíos. | Texto (recomendado) o número entero |
+| **Nombre del identificador** | `id_name` | Describe a un identificador concreto (se elige a cuál). | Texto |
+| **Dato** | `data` | Cualquier otra columna. | Texto, número entero, número decimal, fecha, sí/no |
 
-El mismo modelo sirve para reportes muy distintos:
+### 2.2 Tipo de dato
 
-| Encabezado (lo escribe el usuario) | Rol | | Encabezado (lo escribe el usuario) | Rol |
-|---|---|---|---|---|
-| *Proyecto contable* | | | *Proyecto de ventas directas* | |
-| Código de cuenta | `id` | | Código de producto | `id` |
-| Nombre de cuenta | `id_name` → Código de cuenta | | Descripción del producto | `id_name` → Código de producto |
-| Saldo anterior | `value` | | Código de tienda | `id` |
-| Debe | `value` | | Vendedor | `attribute` |
-| Haber | `value` | | Fecha de venta | `date` |
-| Saldo actual | `value` | | Unidades vendidas | `value` |
-| Centro de costo | `attribute` | | Monto de venta | `value` |
+| Tipo | Cómo se lee al importar | Qué se puede hacer |
+|---|---|---|
+| **Texto** | Tal cual (recortado). | Filtrar (igual, contiene, inicia, termina), agrupar, clasificar, usar como fila/columna. |
+| **Número entero** | Con el formato numérico de la preconfiguración; vacío = 0. | Según su naturaleza (§2.3). |
+| **Número decimal** | Con separadores configurables y negativos (`-`, paréntesis, `CR`); vacío = 0. | Según su naturaleza (§2.3). |
+| **Fecha** | Con el patrón de fecha configurado. | Filtrar por rango, agrupar por día/mes/año, diferencia en días. |
+| **Sí / No** | Con los valores configurados (`S/N`, `1/0`, `Sí/No`). | Filtrar y contar. |
+
+> **Recomendación**: los códigos que "parecen números" (cuentas, productos, teléfonos, facturas)
+> se declaran **Texto**. Así se conservan los ceros a la izquierda y nunca se suman por error.
+
+### 2.3 Naturaleza de los números
+
+El tipo solo no basta: *Monto de venta*, *Precio unitario* y *% de margen* son todos números,
+pero solo el primero se puede sumar con sentido. Por eso cada dato numérico declara su
+**naturaleza**, que fija cómo se agrega y si se convierte de moneda:
+
+| Naturaleza | Ejemplos | Agregación por defecto | Conversión de moneda |
+|---|---|---|---|
+| **Monto** (dinero) | Debe, Haber, Saldo, Monto de venta | Suma | ✔ Se convierte |
+| **Cantidad** | Unidades vendidas, existencia | Suma | ✖ |
+| **Tasa / porcentaje** | % de margen, tasa de interés | Promedio ponderado por otro campo, o no agregable | ✖ |
+| **Precio / valor unitario** | Precio unitario, costo unitario | Promedio ponderado por una cantidad, o no agregable | ✔ Se convierte |
+| **Número descriptivo** | Año de fabricación, número de cuotas | No agregable (solo filtrar/agrupar) | ✖ |
+
+La agregación por defecto se puede cambiar por Suma, Promedio, Mínimo, Máximo, Último o
+No agregable, **dentro de lo que permite la naturaleza**. Por ejemplo, una tasa nunca permite Suma.
+
+### 2.4 Ejemplos
+
+| Encabezado | Rol | Tipo | Naturaleza |
+|---|---|---|---|
+| *Proyecto contable* | | | |
+| Código de cuenta | `id` | Texto | — |
+| Nombre de cuenta | `id_name` → Código de cuenta | Texto | — |
+| Saldo anterior / Debe / Haber / Saldo actual | `data` | Decimal | Monto |
+| Centro de costo | `data` | Texto | — |
+| *Proyecto de ventas directas* | | | |
+| Código de producto | `id` | Texto | — |
+| Descripción del producto | `id_name` → Código de producto | Texto | — |
+| Código de tienda | `id` | Texto | — |
+| Vendedor | `data` | Texto | — |
+| Fecha de venta | `data` | Fecha | — |
+| Unidades vendidas | `data` | Entero | Cantidad |
+| Precio unitario | `data` | Decimal | Precio unitario (ponderado por *Unidades vendidas*) |
+| Monto de venta | `data` | Decimal | Monto |
+| % de descuento | `data` | Decimal | Tasa (ponderada por *Monto de venta*) |
+
+### 2.5 Reglas del catálogo
 
 - **No hay claves que escribir**: el sistema asigna a cada encabezado un identificador interno
-  invisible. El usuario solo ve y edita el nombre; renombrar un encabezado no rompe informes,
-  clasificaciones ni cargas anteriores.
+  invisible; renombrar un encabezado no rompe informes, clasificaciones ni cargas anteriores.
 - El catálogo puede empezar **vacío** o desde una plantilla opcional (*Contable*, *Ventas*); las
-  plantillas son solo listas precargadas, sin comportamiento especial.
-- Cada preconfiguración debe usar **al menos un `id`**; un encabezado no se repite dentro de la
-  misma preconfiguración; un encabezado en uso por una preconfiguración activa no se elimina, solo
-  se desactiva.
+  plantillas son solo listas precargadas.
+- Cada preconfiguración usa **al menos un `id`**; un encabezado no se repite dentro de la misma
+  preconfiguración.
+- El **tipo y la naturaleza no se pueden cambiar** si el encabezado ya tiene datos cargados (se
+  romperían cálculos existentes); se crea un encabezado nuevo y se desactiva el anterior. El nombre
+  sí se puede cambiar siempre.
 
-Pantalla: `Table` con edición en celda (`InputText` nombre, `Select` rol genérico, `Select`
-"describe a" para `id_name`, `Select` tipo para atributos), `SplitButton` "Agregar desde
-plantilla", `ConfirmDialog` al desactivar.
+Pantalla: `Table` con edición en celda — `InputText` (nombre), `Select` (rol), `Select`
+("nombre de…" para `id_name`), `Select` (tipo), `Select` (naturaleza, visible solo para números),
+`Select` (agregación, filtrado por naturaleza) — `SplitButton` "Agregar desde plantilla" y
+`ConfirmDialog` al desactivar.
 
-### 2.1 ¿Dónde queda el significado de negocio?
+### 2.6 Cómo se evita operar texto con números
+
+La protección está en **tres capas**, para que un error sea imposible y no solo improbable:
+
+| Capa | Qué hace | Ejemplo |
+|---|---|---|
+| **Interfaz** | Cada selector muestra solo los campos compatibles. | En "campos a sumar" de una consolidación solo aparecen números agregables; en "agrupar por", solo identificadores, textos y fechas. |
+| **Dominio (al guardar)** | Las clases validan la configuración y devuelven un error si no es compatible. | `ConsolidationDefinition.addSummedField(Vendedor)` → `Fail(FIELD_NOT_AGGREGATABLE)`. |
+| **Motor de fórmulas (al escribir)** | Verificación de tipos antes de ejecutar. | `=[Vendedor] + [Monto de venta]` → "No se puede sumar Texto con Número decimal"; `=SUMA([% de descuento])` → "Una tasa no se puede sumar; use PROMEDIO.PONDERADO". |
+
+| Operación | Texto | Número (Monto/Cantidad) | Tasa / Precio unitario | Número descriptivo | Fecha | Sí/No |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| Agrupar / filtrar / fila o columna de informe | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| Clasificar (reglas de texto) | ✔ | ✖ | ✖ | ✖ | ✖ | ✖ |
+| Sumar en consolidación y totales | ✖ | ✔ | ✖ (ponderado) | ✖ | ✖ | ✖ (contar) |
+| Acumular (saldo inicial + aumenta − disminuye) | ✖ | ✔ | ✖ | ✖ | ✖ | ✖ |
+| Aritmética en fórmulas | ✖ | ✔ | ✔ | ✔ | Diferencia de días | ✖ |
+| Conversión de moneda | ✖ | Solo Monto | Solo Precio unitario | ✖ | ✖ | ✖ |
+
+### 2.7 ¿Dónde queda el significado de negocio?
 
 El significado se asigna **donde se usa**, no al importar. Así, un mismo archivo puede servir a
 varios procesos y un proyecto de ventas nunca ve opciones contables:
 
 ```mermaid
 flowchart LR
-    imp["Importación<br/>solo roles genéricos:<br/>id · id_name · value · attribute · date"]
-    imp --> ops["Operaciones<br/>acumulado: el usuario elige qué valor<br/>suma, cuál resta y cuál es el saldo inicial"]
+    imp["Importación<br/>solo rol, tipo y naturaleza:<br/>id · id_name · data"]
+    imp --> ops["Operaciones<br/>acumulado: el usuario elige qué número<br/>suma, cuál resta y cuál es el inicial"]
     imp --> cls["Clasificaciones<br/>sobre cualquier id o id_name"]
-    imp --> con["Consolidación<br/>agrupa por los id elegidos<br/>y suma los value elegidos"]
-    imp --> rep["Informes<br/>filas y columnas por cualquier<br/>id, attribute, date o value"]
+    imp --> con["Consolidación<br/>agrupa por los id elegidos<br/>y agrega los números según su naturaleza"]
+    imp --> rep["Informes<br/>filas y columnas por cualquier<br/>campo; celdas con números agregables"]
     imp --> inv["Inventarios<br/>al configurar la toma se indica qué<br/>campo es existencia, costo, ubicación"]
 ```
 
@@ -100,7 +160,7 @@ flowchart LR
 | Extensiones | `.txt`, `.prn` | Al menos una; sin distinguir mayúsculas. |
 | Patrón de nombre de archivo | `balance_*.txt` | Opcional; desempata cuando varias preconfiguraciones aceptan la misma extensión. |
 | Lectura | Codificación, divisorias, reglas de líneas, máscara del identificador | Definidas con el asistente de [11](11-importacion-ancho-fijo.md). |
-| Columnas | Franja 1 → *Código de cuenta*, franja 2 → *Nombre de cuenta*, franja 3 → *Saldo anterior*… (o *Código de producto*, *Unidades vendidas*… en ventas) | El encabezado se **elige del catálogo** (`Select` con búsqueda) y trae su rol genérico; las franjas sin encabezado se omiten. |
+| Columnas | Franja 1 → *Código de cuenta*, franja 2 → *Nombre de cuenta*, franja 3 → *Saldo anterior*… (o *Código de producto*, *Unidades vendidas*… en ventas) | El encabezado se **elige del catálogo** (`Select` con búsqueda) y trae su rol, tipo y naturaleza; las franjas sin encabezado se omiten. |
 | Estado | Borrador / Activa / Archivada | Solo las **activas** aparecen al cargar. |
 | Versión | v3 | Cada cambio guardado en una activa crea una versión nueva; las cargas registran la versión usada. |
 
@@ -291,16 +351,31 @@ classDiagram
         -string label
         -FieldRole role
         -DataType dataType
+        -Nullable~NumericNature~ nature
+        -Aggregation defaultAggregation
         -Nullable~FieldKey~ describes
+        -Nullable~FieldKey~ weightField
         -boolean active
+        +allows(operation FieldOperation) boolean
+        +isAggregatable() boolean
+        +isConvertible() boolean
     }
     class FieldRole {
         <<enumeration>>
         IDENTIFIER
-        IDENTIFIER_LABEL
-        VALUE
-        ATTRIBUTE
-        DATE
+        IDENTIFIER_NAME
+        DATA
+    }
+    class NumericNature {
+        <<enumeration>>
+        AMOUNT
+        QUANTITY
+        RATE
+        UNIT_PRICE
+        DESCRIPTIVE
+    }
+    class OperationCompatibility {
+        +check(field CatalogField, operation FieldOperation) Result~CatalogField~
     }
     class DataSourceProfile {
         <<abstract>>
@@ -400,6 +475,8 @@ classDiagram
 
     FieldCatalog "1" *-- "0..*" CatalogField
     CatalogField --> FieldRole
+    CatalogField --> NumericNature
+    OperationCompatibility ..> CatalogField
     DataSourceProfile <|-- FileSourceProfile
     DataSourceProfile "1" *-- "1..*" ColumnDefinition
     ColumnDefinition ..> CatalogField : encabezado del catálogo
@@ -419,7 +496,9 @@ classDiagram
 ```
 
 - `FieldKey` es un identificador interno generado (no lo escribe el usuario).
-- `ColumnDefinition.snapshot` guarda el rol genérico y el tipo del encabezado **al activar la
+- `OperationCompatibility` es la única fuente de la matriz de §2.6; la usan la interfaz (para
+  filtrar selectores), el dominio (al guardar) y el motor de fórmulas (verificación de tipos).
+- `ColumnDefinition.snapshot` guarda el rol, el tipo y la naturaleza del encabezado **al activar la
   versión**: renombrar o ajustar el catálogo después no altera cómo se leen las cargas de esa
   versión.
 - Los *prefillers* forman una cadena (**Chain of Responsibility**): patrón de nombre →
@@ -431,7 +510,7 @@ classDiagram
 
 | Colección | Campos clave | Índices |
 |---|---|---|
-| `field_catalogs` | `projectId`, `fields[]{key (generada), label, role, dataType, describes, active}` | `{projectId:1}` único |
+| `field_catalogs` | `projectId`, `fields[]{key (generada), label, role, dataType, nature, defaultAggregation, describes, weightField, active}` | `{projectId:1}` único |
 | `data_source_profiles` | además: `name`, `description`, `status`, `extensions[]`, `fileNamePattern`, `columns[].catalogField`, `columns[].snapshot` | `{projectId:1, name:1}` único, `{projectId:1, status:1, extensions:1}` |
 | `import_batches` | `projectId`, `createdBy`, `createdAt`, `items[]{fileName, fileId, contentHash, profileId, profileVersion, period, scope, status, importJobId}` | `{projectId:1, createdAt:-1}`, `{'items.contentHash':1}` |
 | `profile_selection_history` | `projectId`, `profileId`, `fileNameKey`, `lastValues{period, scope}` | `{projectId:1, profileId:1, fileNameKey:1}` único |

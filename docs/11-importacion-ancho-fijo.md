@@ -129,7 +129,7 @@ Componentes: `Listbox` ordenable de reglas (`OrderList`), `Dialog` para crear la
 | Campo | Opciones |
 |---|---|
 | Encabezado | Se **elige del catálogo de encabezados** del proyecto (*Código de cuenta*, *Nombre de cuenta*, *Saldo anterior*, *Debe*, *Haber*, *Saldo actual*…); ver [12 §2](12-preconfiguraciones-y-carga-multiple.md#2-catálogo-de-encabezados-lista-previa). Las franjas sin encabezado se omiten. |
-| Rol y tipo | Vienen del encabezado elegido: rol genérico (`id`, `id_name`, `value`, `attribute`, `date`) y tipo de dato. La importación no conoce conceptos de negocio (debe, haber…); ver [12 §2.1](12-preconfiguraciones-y-carga-multiple.md#21-dónde-queda-el-significado-de-negocio).
+| Rol y tipo | Vienen del encabezado elegido: rol (`id`, `id_name`, `data`), tipo de dato (texto, entero, decimal, fecha, sí/no) y naturaleza de los números (monto, cantidad, tasa, precio unitario, descriptivo). La importación no conoce conceptos de negocio (debe, haber…); ver [12 §2.1](12-preconfiguraciones-y-carga-multiple.md#27-dónde-queda-el-significado-de-negocio).
 | Requerida / omitir | Las identificadoras son requeridas; se pueden omitir columnas que no interesan. |
 | Formato numérico | Separador de miles y decimal; negativo con `-` inicial, `-` final, paréntesis o sufijo `CR`; **vacío = 0** (por defecto en montos). |
 | Recorte | Quitar espacios; opción "conservar sangría" para derivar el nivel (ver abajo). |

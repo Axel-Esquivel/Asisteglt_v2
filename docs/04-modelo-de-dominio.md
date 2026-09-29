@@ -807,10 +807,8 @@ classDiagram
     class FieldRole {
         <<enumeration>>
         IDENTIFIER
-        IDENTIFIER_LABEL
-        VALUE
-        ATTRIBUTE
-        DATE
+        IDENTIFIER_NAME
+        DATA
     }
     class RowRule {
         <<abstract>>
@@ -878,8 +876,8 @@ classDiagram
     DatabaseConnection --> DatabaseEngine
 ```
 
-> Las columnas toman su encabezado, **rol genérico** (`IDENTIFIER`, `IDENTIFIER_LABEL`, `VALUE`,
-> `ATTRIBUTE`, `DATE`) y tipo del **catálogo de encabezados** del proyecto (instantánea al activar la versión). Catálogo, preconfiguraciones con
+> Las columnas toman su encabezado, **rol** (`IDENTIFIER`, `IDENTIFIER_NAME`, `DATA`), tipo de
+> dato y naturaleza numérica del **catálogo de encabezados** del proyecto (instantánea al activar la versión). Catálogo, preconfiguraciones con
 > nombre y lotes de carga múltiple se detallan en
 > [12-preconfiguraciones-y-carga-multiple](12-preconfiguraciones-y-carga-multiple.md).
 
@@ -1257,6 +1255,7 @@ classDiagram
         -FieldKey[] groupBy
         -FieldKey[] valueFields
         +addMember(scope EntityScope) Result~ConsolidationDefinition~
+        +addSummedField(field CatalogField) Result~ConsolidationDefinition~
         +plan(period Period, available DataLoad[]) Result~ConsolidationPlan~
     }
     class ConsolidationPlan {
@@ -1478,6 +1477,10 @@ classDiagram
         -FunctionRegistry functions
     }
     class DependencyCollector
+    class TypeChecker {
+        -FieldTypeResolver fields
+        +check(expression Expression) Result~FormulaType~
+    }
     class DependencyGraph {
         +add(cell CellAddress, dependencies CellAddress[]) void
         +evaluationOrder() Result~CellAddress[]~
@@ -1525,6 +1528,7 @@ classDiagram
     Expression <|-- FunctionCall
     ExpressionVisitor~R~ <|.. Evaluator
     ExpressionVisitor~R~ <|.. DependencyCollector
+    ExpressionVisitor~R~ <|.. TypeChecker
     Evaluator --> FunctionRegistry
     FunctionRegistry o-- FormulaFunction
     FormulaFunction <|-- SumFunction
@@ -1540,6 +1544,10 @@ classDiagram
     FormulaValue <|-- ErrorValue
     DependencyCollector ..> DependencyGraph
 ```
+
+**Verificación de tipos**: antes de evaluar, un `TypeChecker` (otro `ExpressionVisitor`) infiere
+el tipo de cada nodo a partir de los encabezados del catálogo (tipo y naturaleza) y rechaza
+combinaciones inválidas: sumar texto con números, sumar tasas, restar fechas de montos, etc.
 
 Ejemplos de fórmulas soportadas:
 
@@ -1701,8 +1709,7 @@ classDiagram
         YEAR
         MONTH
         IDENTIFIER_FIELD
-        ATTRIBUTE_FIELD
-        DATE_FIELD
+        DATA_FIELD
     }
     class FilterValue {
         <<abstract>>

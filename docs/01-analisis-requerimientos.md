@@ -92,10 +92,10 @@ chat global / entre usuarios.
 | RF-REP-01 | **Estructura organizacional** del proyecto: Organización (req.) → Países (req.) ↔ Monedas (req., N:M) → Compañías (req.) → Empresas (opcional) → Sucursales (opcional). | Alta |
 | RF-REP-02 | **Preconfiguraciones con nombre** (p. ej. `balancetxt`), varias por proyecto y por tipo de archivo, con estado borrador/activa/archivada y versiones, creadas junto con el área de trabajo: tipo de fuente (texto de ancho fijo, delimitado, hoja de cálculo, base de datos), extensión, codificación, delimitador, calificador de texto, filas a omitir, hoja a leer (por nombre o primera hoja), columnas a leer y campo destino. | Alta |
 | RF-REP-03 | **Asistente de ancho fijo con lienzo**: muestra el archivo tal cual con regla de caracteres; el usuario agrega, mueve y elimina líneas divisorias verticales para formar las columnas; reglas para ignorar encabezados de página repetidos (detalle en [11-importacion-ancho-fijo](11-importacion-ancho-fijo.md)). | Alta |
-| RF-REP-04 | **Asistente tabular** (CSV, hoja, BD): indicar qué contiene la 1.ª, 2.ª, 3.ª… columna, su nombre, tipo de dato, rol genérico (identificador, descripción del identificador, valor, atributo, fecha) y si se omite. | Alta |
+| RF-REP-04 | **Asistente tabular** (CSV, hoja, BD): indicar qué contiene la 1.ª, 2.ª, 3.ª… columna, su nombre, tipo de dato, encabezado del catálogo (rol, tipo de dato y naturaleza) y si se omite. | Alta |
 | RF-REP-05 | **Validación de carga**: las columnas identificadoras deben tener valor; cada columna valida su tipo; se descartan saltos de página, líneas en blanco, encabezados repetidos y totales; reporte de filas rechazadas. | Alta |
 | RF-REP-06 | **Carga etiquetada**: cada carga se identifica con período (mes/año), organización, país, moneda, compañía, empresa (si aplica) y sucursal (si aplica); recargar el mismo alcance crea una nueva versión. | Alta |
-| RF-REP-18 | **Catálogo de encabezados** por proyecto (lista previa de nombres libres, cada uno con un rol genérico `id`, `id_name`, `value`, `attribute` o `date`, válido para reportes de cualquier tipo, no solo contables; el significado de negocio se asigna en operaciones, informes e inventarios); las columnas de toda preconfiguración se nombran eligiendo un encabezado del catálogo. | Alta |
+| RF-REP-18 | **Catálogo de encabezados** por proyecto (lista previa de nombres libres, cada uno con **rol** (`id`, `id_name`, `data`), **tipo de dato** (texto, entero, decimal, fecha, sí/no) y, si es numérico, **naturaleza** (monto, cantidad, tasa, precio unitario, descriptivo) que determina qué operaciones admite; válido para reportes de cualquier tipo, no solo contables; el significado de negocio se asigna en operaciones, informes e inventarios); las columnas de toda preconfiguración se nombran eligiendo un encabezado del catálogo. | Alta |
 | RF-REP-19 | **Carga múltiple**: varios archivos a la vez; por cada archivo se eligen preconfiguración (propuesta automáticamente por extensión y patrón de nombre), período, organización, país, moneda, compañía, empresa y sucursal; al presionar *Cargar* la extracción es automática, con progreso por archivo y resumen final (detalle en [12](12-preconfiguraciones-y-carga-multiple.md)). | Alta |
 | RF-REP-07 | **Colecciones complementarias** (p. ej. tipos de cambio, sueldos): esquema definido por el usuario, captura manual o importación; sin cálculos entre sí, pero referenciables en fórmulas del informe (p. ej. convertir quetzales a dólares). | Alta |
 | RF-REP-08 | **Clasificaciones**: múltiples por proyecto, jerárquicas, construidas a partir de los datos importados mediante reglas sobre código, nombre o id (igual, inicia con, contiene, termina con, rango, lista, combinaciones Y/O/NO); reporte de elementos sin clasificar o con doble clasificación. | Alta |
@@ -145,6 +145,7 @@ chat global / entre usuarios.
 | RNF-14 | Accesibilidad | WCAG 2.1 AA en las pantallas principales (PrimeNG provee soporte ARIA). |
 | RNF-15 | Despliegue local | La plataforma completa debe poder instalarse en un PC o laptop que actúe como servidor en una **red interna sin internet**; los móviles se conectan por Wi-Fi local. Sin dependencias de CDN ni servicios externos en tiempo de ejecución. |
 | RNF-16 | Estilos | Maquetación y estilos con **SCSS** propio sobre las variables CSS del tema PrimeNG; sin frameworks de utilidades CSS. |
+| RNF-18 | Seguridad de tipos en datos | Ninguna operación (consolidación, acumulado, fórmula, total de informe, conversión) puede combinar campos incompatibles; se valida en interfaz, dominio y motor de fórmulas. |
 | RNF-17 | Confidencialidad | Los datos importados son sensibles: muestras procesadas en el navegador, archivos eliminados tras la carga, cifrado en reposo y en tránsito, acceso solo por permisos del proyecto. |
 
 ## 7. Glosario
@@ -152,7 +153,7 @@ chat global / entre usuarios.
 | Término | Definición | Identificador en código |
 |---|---|---|
 | Proyecto | Espacio de trabajo de un módulo (Reportes o Inventarios) con miembros y permisos propios. | `Project` |
-| Encabezado / rol genérico | Nombre de columna definido por el usuario con uno de cinco roles: identificador, descripción del identificador, valor, atributo, fecha. | `CatalogField`, `FieldRole` |
+| Encabezado | Nombre de columna definido por el usuario con rol (identificador, nombre del identificador, dato), tipo de dato y naturaleza numérica. | `CatalogField`, `FieldRole`, `NumericNature` |
 | Organización / País / Moneda / Compañía / Empresa / Sucursal | Jerarquía organizacional de un proyecto de reportes. | `Organization`, `Country`, `Currency`, `Company`, `Enterprise`, `Branch` |
 | Alcance (scope) | Combinación organización-país-moneda-compañía-empresa-sucursal que etiqueta una carga. | `EntityScope` |
 | Período | Mes y año de una carga o de un informe. | `Period` |
