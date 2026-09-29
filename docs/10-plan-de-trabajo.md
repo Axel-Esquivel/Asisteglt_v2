@@ -91,7 +91,8 @@ gantt
 | Entregables | Criterios de aceptación |
 |---|---|
 | Perfiles: ancho fijo, delimitado, hoja de cálculo (.xlsx; .xls/.ods por conversión), base de datos. | Cada tipo tiene pruebas con archivos reales del cliente (ver §5). |
-| Asistente de ancho fijo (regla de caracteres) y asistente tabular. | El analista define un perfil de 10 columnas sin editar JSON. |
+| `libs/shared/ingestion-core` (corte, reglas, máscaras, conversión) usada por navegador y worker. | La previsualización y la importación real producen los mismos registros (prueba de paridad). |
+| Asistente de ancho fijo con **lienzo** de divisorias, sugerencia automática, reglas de encabezado de página y máscara de identificador ([11](11-importacion-ancho-fijo.md)); asistente tabular. | Con un reporte de balance de saldos de prueba, el analista define el perfil sin editar JSON en < 10 min; ninguna divisoria corta valores. |
 | Reglas de fila, *parsers* tipados (decimal configurable, negativos con paréntesis/sufijo, fechas), identificadores obligatorios. | Saltos de página, líneas en blanco y encabezados repetidos se descartan; incidencias con línea y motivo. |
 | Conexiones SQL Server, PostgreSQL, MySQL, MongoDB con credenciales cifradas y solo `SELECT`. | Consulta con `UPDATE`/`DELETE` es rechazada; *timeout* respetado. |
 | `ImportJob` en BullMQ con progreso en tiempo real y umbral de rechazos. | Archivo de 1 000 000 de líneas se importa sin superar 512 MB de memoria en el worker. |
@@ -129,6 +130,7 @@ gantt
 | Conteo guiado móvil con bloqueo de producto, novedades, comentarios y fotos; cola local de reenvío. | Dos usuarios nunca cuentan el mismo producto en la misma ronda. |
 | Monitoreo en vivo del supervisor, evidencias, rondas de reconteo sobre diferencias. | Ronda 2 contiene exactamente los productos fuera de tolerancia + no encontrados + dañados. |
 | Cierre con resultados valorizados y exportación. | Totales valorizados cuadran con `Decimal`. |
+| **Modo servidor local**: paquete Docker Compose instalable sin internet, CA local, QR de acceso, PWA, exportar/importar paquete de toma. | Toma completa con 3 móviles en una red Wi-Fi sin internet; cortes de Wi-Fi de 2 min sin pérdida de conteos. |
 
 ### F8 · Endurecimiento y despliegue (2 sprints)
 
@@ -159,7 +161,7 @@ gantt
 | R-03 | Fidelidad del PDF frente a la previsualización. | Media | Alto | Misma ruta de renderizado para ambos; pruebas visuales de regresión. |
 | R-04 | Volumen de `data_records` degrada consultas. | Media | Alto | Índices compuestos, agregaciones por tabla, caché, datos sintéticos de carga desde F4; plan de *sharding*. |
 | R-05 | Archivos de origen muy heterogéneos (codificaciones, formatos de número). | Alta | Medio | **Solicitar al cliente un banco de archivos reales** antes de F4; asistente con previsualización. |
-| R-06 | Conectividad deficiente en almacenes. | Media | Alto | Cola local de reenvío en v1; evaluar PWA offline (P-04). |
+| R-06 | Tomas sin internet (confirmado). | Alta | Alto | Modo servidor local (ADR-11), PWA con cola en IndexedDB, paquetes de sincronización; prueba de campo en F7. |
 | R-07 | Tipos `any` en librerías de terceros (PrimeNG, Mongoose, Socket.IO). | Alta | Bajo | Adaptadores y *decoders* en las fronteras; reglas `no-unsafe-*`. |
 | R-08 | Seguridad de conexiones a BD externas (SSRF, inyección). | Media | Alto | Solo `SELECT` validado, lista blanca de hosts, credenciales cifradas, usuario de solo lectura. |
 | R-09 | Alcance amplio frente a tiempos. | Alta | Alto | MVP por módulo priorizando RF "Alta"; RF "Media" como incremento posterior. |

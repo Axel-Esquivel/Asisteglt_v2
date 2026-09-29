@@ -16,6 +16,7 @@ Este documento es **normativo**: el CI rechaza cualquier cambio que lo incumpla.
 | 8 | Dependencias hacia **abstracciones** (clases abstractas) inyectadas por constructor. | `@nx/enforce-module-boundaries` + revisión |
 | 9 | Dinero y cantidades con `Decimal`; nunca `number`. | Revisión + tipos (`Decimal` no es asignable a `number`) |
 | 10 | UI **solo PrimeNG**. Ninguna otra librería de componentes; ningún control interactivo nativo sin su equivalente PrimeNG. | `no-restricted-imports` + regla propia de plantillas |
+| 11 | Estilos solo en **SCSS** con variables del tema PrimeNG; sin Tailwind ni otros frameworks CSS; sin colores fijos. | `stylelint` (`color-no-hex`, `declaration-property-value-disallowed-list`) + `no-restricted-imports` |
 
 ### 1.1 ¿Qué pasa con las APIs de terceros que devuelven `undefined`?
 
@@ -449,7 +450,7 @@ export class UserDocument {
       (onChange)="onChange($event)"
       optionLabel="title"
       [filter]="true"
-      styleClass="w-full"
+      styleClass="conversation-list"
     >
       <ng-template #item let-conversation>
         <app-conversation-item [conversation]="conversation" />

@@ -16,6 +16,8 @@
 | Carga diferida | Rutas *lazy* por feature; `@defer` para el diseñador, gráficos y editor enriquecido. |
 | i18n | Textos en español vía archivos de traducción; `PrimeNG.setTranslation()` con la localización `es`. |
 | Tema | `providePrimeNG({ theme: { preset: AsisteGltPreset } })` donde `AsisteGltPreset = definePreset(Aura, {...})` con tokens de marca; modo oscuro por selector `.app-dark`. |
+| Estilos | **SCSS** (sin Tailwind ni frameworks de utilidades): estilos por componente (`styleUrl`) y una capa global `styles/` con `_tokens.scss` (solo lectura de variables CSS `--p-*` del tema), `_layout.scss` (mixins de grid/flex y puntos de quiebre) y `_print.scss` (páginas del informe). Prohibidos colores fijos: todo color proviene de variables del tema para respetar el modo oscuro. |
+| Offline | PWA (`@angular/service-worker`) para el modo servidor local: *shell* en caché y cola de conteos en IndexedDB. |
 
 ## 2. Estructura de una feature
 
@@ -234,7 +236,7 @@ flowchart LR
 | Proyectos | `DataView` (tarjetas / lista), `Card`, `SelectButton` (módulo), `IconField` + `InputIcon` (búsqueda), `Dialog` (crear), `SpeedDial` |
 | Miembros y permisos | `Table` (miembros), `MultiSelect` (roles), `PickList` (permisos de un rol), `TreeTable` (matriz acción × recurso con `Checkbox`), `Dialog` (vínculo con `InputGroup` + botón copiar), `DatePicker` (expiración), `InputNumber` (usos) |
 | Estructura organizacional | `OrganizationChart` (vista), `TreeTable` (edición), `Select` / `MultiSelect` (monedas), `Dialog` |
-| Perfil de importación (asistente) | `Stepper` (tipo → archivo de muestra → columnas → reglas → previsualización), `SelectButton` (tipo de fuente), `FileUpload`, `Select` (codificación, hoja), `InputText` (delimitador), `Table` editable de columnas (`InputText`, `Select` de tipo y rol, `ToggleSwitch` requerida/omitir), `Slider` (rango de columna), `ScrollPanel` (muestra de líneas), `Tag` (errores por fila) |
+| Perfil de importación (asistente) | Ver [11-importacion-ancho-fijo](11-importacion-ancho-fijo.md) para el lienzo de ancho fijo. `Stepper` (tipo → archivo de muestra → columnas → reglas → previsualización), `SelectButton` (tipo de fuente), `FileUpload`, `Select` (codificación, hoja), `InputText` (delimitador), `Table` editable de columnas (`InputText`, `Select` de tipo y rol, `ToggleSwitch` requerida/omitir), `Slider` (rango de columna), `ScrollPanel` (muestra de líneas), `Tag` (errores por fila) |
 | Conexiones a BD | `Select` (motor), `InputText`, `InputNumber`, `Password`, `Textarea` (consulta), `Button` (probar conexión), `Message` |
 | Cargas de datos | `Table` (historial con filtros y `Tag` de estado), `DatePicker` (vista mes/año), `CascadeSelect` / `TreeSelect` (alcance organización → … → sucursal), `FileUpload`, `ProgressBar` en vivo, `Dialog` + `Table` (incidencias) |
 | Colecciones complementarias | `Table` con edición en celda, `InputNumber`, `DatePicker`, `FileUpload` (importar), `Toolbar` |

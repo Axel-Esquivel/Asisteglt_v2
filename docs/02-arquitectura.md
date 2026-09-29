@@ -310,6 +310,48 @@ flowchart TB
     w1 --> mail
 ```
 
+### 11.1 Modo servidor local (red interna sin internet)
+
+Para tomas de inventario (y, si se desea, reportes) en lugares sin internet, la plataforma se
+instala completa en un **PC o laptop** que actúa como servidor de la red interna:
+
+```mermaid
+flowchart LR
+    subgraph lan["Red interna (Wi-Fi / LAN, sin internet)"]
+        subgraph laptop["PC / laptop servidor (Docker Compose)"]
+            ng["nginx + TLS<br/>(certificado de CA local)"]
+            apil["api"]
+            wkl["worker"]
+            ml[("MongoDB<br/>replica set de 1 nodo")]
+            rl[("Redis")]
+        end
+        m1["Móvil inventariador 1"]
+        m2["Móvil inventariador 2"]
+        sup["Laptop supervisor"]
+    end
+    central[("Servidor central<br/>(cuando hay internet)")]
+
+    m1 -->|https://asisteglt.local| ng
+    m2 --> ng
+    sup --> ng
+    ng --> apil
+    apil --> ml
+    apil --> rl
+    wkl --> ml
+    laptop -. paquete de sincronización .-> central
+```
+
+| Aspecto | Decisión |
+|---|---|
+| Instalación | Paquete Docker Compose con imágenes precargadas (instalable sin internet) y script de arranque; requisitos mínimos: 4 núcleos, 8 GB RAM, 20 GB libres. |
+| Descubrimiento | Nombre `asisteglt.local` (mDNS) o IP fija; se muestra un código QR con la URL para los móviles. |
+| HTTPS en red local | Autoridad certificadora local generada en la instalación; su certificado se instala una vez en cada dispositivo. Es necesario porque la cámara, el service worker y las cookies `Secure` exigen contexto seguro. |
+| Sin servicios externos | Fuentes e íconos empaquetados (sin CDN). Sin SMTP: invitaciones por vínculo/QR y restablecimiento de contraseña por un administrador local. |
+| Tolerancia a cortes de Wi-Fi | El SPA es una **PWA**: el *shell* queda en caché y los conteos se guardan en IndexedDB (`PendingSubmissionQueue`) y se reenvían al reconectar; el bloqueo de productos tolera la reconexión. |
+| Sincronización con el central | v1: **paquete firmado** (exportar/importar) de proyecto de inventario: la toma se prepara en el central, se exporta al servidor local, se ejecuta y los resultados se devuelven al central. Posterior: sincronización automática cuando haya internet. |
+| Usuarios | Los usuarios del paquete se crean con credenciales locales temporales; la autenticación funciona sin conexión al central. |
+| Respaldo | Respaldo automático local de MongoDB cada hora durante una toma. |
+
 ## 12. Decisiones de arquitectura (ADR resumidos)
 
 | ADR | Decisión | Alternativas descartadas | Motivo |
@@ -324,3 +366,4 @@ flowchart TB
 | ADR-08 | **GridFS** como almacenamiento inicial detrás de la abstracción `FileStorage`. | S3 desde el inicio. | Mantiene el stack pedido (MongoDB); se puede cambiar a S3/MinIO sin tocar el dominio. |
 | ADR-09 | Membresías de clasificación **materializadas** en los registros. | Evaluar reglas en cada consulta. | Las consultas de informes filtran por índice (`classifications.nodeIds`). |
 | ADR-10 | Asignación de inventario por **Strategy** (manual, zonas contiguas, clúster espacial). | Algoritmo único. | Se adapta a almacenes con o sin coordenadas y permite agregar estrategias sin modificar el dominio. |
+| ADR-11 | **Modo servidor local** con Docker Compose, CA local y paquetes de sincronización. | Solo nube; aplicación nativa offline. | Requisito de operar sin internet en red interna (P-04) manteniendo un único código web. |

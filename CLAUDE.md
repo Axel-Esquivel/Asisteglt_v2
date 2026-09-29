@@ -13,6 +13,9 @@ Reglas no negociables del cliente:
 - Todo tipado: tipos de retorno y modificadores de acceso explícitos; sin `as` (salvo `as const`)
   ni `!` (salvo en `*.dto.ts` / `*.schema.ts`); datos externos entran como `unknown` y se validan.
 - Dinero y cantidades con `Decimal`, nunca `number`.
-- UI exclusivamente con componentes y directivas de PrimeNG.
+- UI exclusivamente con componentes y directivas de PrimeNG; estilos solo con SCSS sobre las
+  variables CSS del tema (sin Tailwind ni colores fijos).
+- Los datos importados por el cliente son confidenciales: nunca los copies al repositorio ni a
+  documentación; usa datos ficticios en ejemplos y pruebas.
 
 Código en inglés; interfaz de usuario y documentación en español.

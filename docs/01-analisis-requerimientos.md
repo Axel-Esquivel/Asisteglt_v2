@@ -91,7 +91,7 @@ chat global / entre usuarios.
 |---|---|---|
 | RF-REP-01 | **Estructura organizacional** del proyecto: Organización (req.) → Países (req.) ↔ Monedas (req., N:M) → Compañías (req.) → Empresas (opcional) → Sucursales (opcional). | Alta |
 | RF-REP-02 | **Perfiles de importación** (preconfiguración de archivo/consulta) creados junto con el área de trabajo: tipo de fuente (texto de ancho fijo, delimitado, hoja de cálculo, base de datos), extensión, codificación, delimitador, calificador de texto, filas a omitir, hoja a leer (por nombre o primera hoja), columnas a leer y campo destino. | Alta |
-| RF-REP-03 | **Asistente de ancho fijo**: muestra líneas reales con regla de caracteres; el usuario marca los cortes de cada columna por posición/longitud. | Alta |
+| RF-REP-03 | **Asistente de ancho fijo con lienzo**: muestra el archivo tal cual con regla de caracteres; el usuario agrega, mueve y elimina líneas divisorias verticales para formar las columnas; reglas para ignorar encabezados de página repetidos (detalle en [11-importacion-ancho-fijo](11-importacion-ancho-fijo.md)). | Alta |
 | RF-REP-04 | **Asistente tabular** (CSV, hoja, BD): indicar qué contiene la 1.ª, 2.ª, 3.ª… columna, su nombre, tipo de dato, rol (código, nombre, id, valor numérico, movimiento, atributo, fecha) y si se omite. | Alta |
 | RF-REP-05 | **Validación de carga**: las columnas identificadoras deben tener valor; cada columna valida su tipo; se descartan saltos de página, líneas en blanco, encabezados repetidos y totales; reporte de filas rechazadas. | Alta |
 | RF-REP-06 | **Carga etiquetada**: cada carga se identifica con período (mes/año), organización, país, moneda, compañía, empresa (si aplica) y sucursal (si aplica); recargar el mismo alcance crea una nueva versión. | Alta |
@@ -141,6 +141,9 @@ chat global / entre usuarios.
 | RNF-12 | Internacionalización | Español por defecto; textos externalizados; formatos regionales (GTQ, USD, fechas). |
 | RNF-13 | Mantenibilidad | Monorepo, contratos compartidos front/back, límites de módulo verificados por lint. |
 | RNF-14 | Accesibilidad | WCAG 2.1 AA en las pantallas principales (PrimeNG provee soporte ARIA). |
+| RNF-15 | Despliegue local | La plataforma completa debe poder instalarse en un PC o laptop que actúe como servidor en una **red interna sin internet**; los móviles se conectan por Wi-Fi local. Sin dependencias de CDN ni servicios externos en tiempo de ejecución. |
+| RNF-16 | Estilos | Maquetación y estilos con **SCSS** propio sobre las variables CSS del tema PrimeNG; sin frameworks de utilidades CSS. |
+| RNF-17 | Confidencialidad | Los datos importados son sensibles: muestras procesadas en el navegador, archivos eliminados tras la carga, cifrado en reposo y en tránsito, acceso solo por permisos del proyecto. |
 
 ## 7. Glosario
 
@@ -167,12 +170,13 @@ chat global / entre usuarios.
 
 Mientras no se indique lo contrario, el diseño asume:
 
-1. **La estructura organizacional pertenece a cada proyecto de reportes**, con opción de copiarla
-   desde otro proyecto al que el usuario tenga acceso.
+1. **La estructura organizacional pertenece a cada proyecto de reportes** *(confirmado, P-01)*,
+   con opción de copiarla desde otro proyecto al que el usuario tenga acceso.
 2. Las **monedas** provienen de un catálogo global ISO 4217; cada país habilita un subconjunto.
 3. La **consolidación** v1 suma entidades de la misma moneda **sin** eliminaciones intercompañía.
-4. La **toma de inventario** requiere conexión; se reintentan envíos fallidos en cola local. El modo
-   *offline* completo (PWA) queda para una fase posterior.
+4. La **toma de inventario** puede realizarse **sin internet**, en una red interna con un servidor
+   local (PC o laptop) *(confirmado, P-04)*. Ver el modo de despliegue local en
+   [02-arquitectura §11.1](02-arquitectura.md#111-modo-servidor-local-red-interna-sin-internet).
 5. La **ubicación** de un producto es un código jerárquico (bodega‑pasillo‑estante‑nivel‑posición);
    si además hay coordenadas X/Y se usan para agrupar espacialmente.
 6. Los usuarios son **globales** a la plataforma; el aislamiento de datos se hace por proyecto.
@@ -185,13 +189,13 @@ Mientras no se indique lo contrario, el diseño asume:
 
 | # | Pregunta | Impacto |
 |---|---|---|
-| P-01 | ¿La estructura organizacional debe compartirse entre proyectos (catálogo por cuenta) o es por proyecto? | Modelo de datos de `org-structure`. |
+| P-01 | ✔ **Resuelta**: la estructura organizacional es por proyecto. | Modelo de datos de `org-structure`. |
 | P-02 | ¿Se requieren eliminaciones intercompañía o ajustes manuales en la consolidación? | Alcance de RF-REP-09. |
 | P-03 | ¿Qué volumen esperado de datos por carga (líneas) y cuántas cargas por mes? | Índices, particionado, tamaño de workers. |
-| P-04 | ¿Las tomas de inventario ocurren en lugares sin conectividad? | Modo offline / PWA. |
+| P-04 | ✔ **Resuelta**: sí, sin internet pero con red interna y servidor local en un PC/laptop. | Modo de despliegue local (RNF-15). |
 | P-05 | ¿Las ubicaciones tienen coordenadas o solo códigos? | Estrategia de auto-asignación. |
 | P-06 | ¿El chat global es para toda la plataforma o por organización cliente? | Modelo de conversaciones y moderación. |
 | P-07 | ¿Además de PDF, se requiere exportar informes a Excel? | Alcance del renderizador. |
-| P-08 | Maquetación CSS: ¿se acepta `tailwindcss-primeui` (utilidades oficiales de PrimeTek, **no** son componentes) o solo SCSS propio con tokens PrimeNG? | Convenciones de estilos. |
+| P-08 | ✔ **Resuelta**: estilos con SCSS propio (sin Tailwind). | Convenciones de estilos (RNF-16). |
 | P-09 | ¿Qué medida de "Oficio" se usa (216 × 330 mm o 216 × 340 mm)? | Preset `PageFormat.OFICIO`. |
 | P-10 | ¿Se necesita SSO (Google / Microsoft) además de correo y contraseña? | Alcance de IAM. |

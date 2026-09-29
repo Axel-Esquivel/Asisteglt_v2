@@ -18,6 +18,7 @@
 | Archivos | Límite por tipo (datos: 200 MB en *streaming*; imágenes: 10 MB); detección de tipo real por *magic bytes*; nombres generados; descarga solo por URL firmada con expiración; análisis antivirus opcional (ClamAV) en el worker. |
 | Conexiones a BD externas | Credenciales cifradas AES-256-GCM con llave maestra fuera de la BD (variable de entorno / KMS); solo consultas `SELECT` validadas por *parser*; usuario de solo lectura recomendado; *timeout* y límite de filas; lista de hosts permitidos para evitar SSRF. |
 | Tiempo real | Token validado en el *handshake*; autorización por evento y por sala; límite de eventos por socket. |
+| Datos sensibles importados | Muestras del asistente procesadas solo en el navegador; archivos de carga eliminados tras importarse (retención 0 días por defecto); cifrado en reposo (disco cifrado o cifrado de almacenamiento de MongoDB) y TLS en tránsito, también en el modo servidor local. |
 | Auditoría | `audit_logs` para eventos de seguridad (login, 2FA, cambios de contraseña, sesiones) y de permisos (roles, miembros, vínculos, invitaciones, exportaciones). Retención configurable. |
 | Secretos | Nunca en el repositorio; `.env` solo para desarrollo; validación tipada de configuración al arrancar (`AppConfig` con class-validator). |
 | Dependencias | `npm audit` y Dependabot en CI; *lockfile* obligatorio. |

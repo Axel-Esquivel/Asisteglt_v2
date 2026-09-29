@@ -12,6 +12,7 @@
 | 08 | [Convenciones: POO y tipado estricto](08-convenciones-tipado-poo.md) | Reglas sin `any`/`undefined`, `tsconfig`, ESLint, patrones, ejemplos de código |
 | 09 | [Seguridad y permisos](09-seguridad-permisos.md) | Controles de seguridad, modelo RBAC + ABAC, matrices de roles, compartición |
 | 10 | [Plan de trabajo](10-plan-de-trabajo.md) | Fases, cronograma, entregables, criterios de aceptación, DoD, riesgos, próximos pasos |
+| 11 | [Importación de ancho fijo](11-importacion-ancho-fijo.md) | Asistente con lienzo de divisorias, reglas de líneas, sugerencia automática, validaciones, clases y confidencialidad |
 
 Los diagramas están escritos en **Mermaid** y GitHub los muestra directamente.
 
