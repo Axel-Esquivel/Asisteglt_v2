@@ -129,7 +129,7 @@ Componentes: `Listbox` ordenable de reglas (`OrderList`), `Dialog` para crear la
 | Campo | Opciones |
 |---|---|
 | Encabezado | Se **elige del catálogo de encabezados** del proyecto (*Código de cuenta*, *Nombre de cuenta*, *Saldo anterior*, *Debe*, *Haber*, *Saldo actual*…); ver [12 §2](12-preconfiguraciones-y-carga-multiple.md#2-catálogo-de-encabezados-lista-previa). Las franjas sin encabezado se omiten. |
-| Tipo de dato, rol e identificador | Vienen del encabezado elegido (texto, entero, decimal, fecha, booleano; código, nombre, id, saldo anterior, debe, haber, saldo, valor, atributo, fecha). |
+| Rol y tipo | Vienen del encabezado elegido: rol genérico (`id`, `id_name`, `value`, `attribute`, `date`) y tipo de dato. La importación no conoce conceptos de negocio (debe, haber…); ver [12 §2.1](12-preconfiguraciones-y-carga-multiple.md#21-dónde-queda-el-significado-de-negocio).
 | Requerida / omitir | Las identificadoras son requeridas; se pueden omitir columnas que no interesan. |
 | Formato numérico | Separador de miles y decimal; negativo con `-` inicial, `-` final, paréntesis o sufijo `CR`; **vacío = 0** (por defecto en montos). |
 | Recorte | Quitar espacios; opción "conservar sangría" para derivar el nivel (ver abajo). |
@@ -142,7 +142,7 @@ celdas inválidas en rojo y el motivo en `Tooltip`.
 
 | Atributo | Cálculo | Uso |
 |---|---|---|
-| `nivel` | Número de segmentos significativos del código (`1.001.000.0000` → 2) **o** cantidad de espacios de sangría del nombre. | Filtrar por nivel en informes y clasificaciones. |
+| `nivel` | Número de segmentos significativos de un `id` con separadores (`1.001.000.0000` → 2) **o** cantidad de espacios de sangría del nombre. | Filtrar por nivel en informes y clasificaciones. |
 | `es_detalle` | Verdadero si el código no tiene segmentos en cero al final (último nivel) o si la línea siguiente no es hija. | Consolidar y clasificar solo detalle; validar que la suma del detalle = cuenta de mayor. |
 
 ### Paso 5 · Metadatos del encabezado (opcional)

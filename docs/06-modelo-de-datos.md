@@ -97,7 +97,7 @@ erDiagram
 | `companies` | `projectId`, `organizationId`, `countryId`, `code`, `name`, `enterprises[]{_id, code, name, branches[]}` | `{projectId:1, code:1}` único |
 | `currencies` | catálogo ISO 4217: `code`, `name`, `symbol`, `minorUnits` | `{code:1}` único |
 | `datasets` | `projectId`, `stage` (discriminador), `period{year, month}`, `status`, `dataVersion`, `scope{…}` (RAW), `definitionId` (CONSOLIDATED), `pipelineId` (TRANSFORMED) | `{projectId:1, stage:1, 'period.year':1, 'period.month':1, status:1}` |
-| `data_records` | `projectId`, `datasetId`, `stage`, `period{year, month}`, `scope{organizationId, countryId, currency, companyId, enterpriseId, branchId}`, `identifiers{code, name, externalId}`, `measures{<key>: Decimal128}`, `attributes{}`, `memberships[]{classificationId, nodeId, ancestorIds[]}` | ver 3.2.1 |
+| `data_records` | `projectId`, `datasetId`, `stage`, `period{year, month}`, `scope{organizationId, countryId, currency, companyId, enterpriseId, branchId}`, `key{identifiers{<campo>: texto}, labels{<campo>: texto}, hash}`, `values{<campo>: Decimal128}`, `attributes{<campo>: texto/fecha/booleano}`, `memberships[]{classificationId, nodeId, ancestorIds[]}` | ver 3.2.1 |
 | `collections` | `projectId`, `name`, `fields[]`, `periodicity` | `{projectId:1, name:1}` único |
 | `collection_entries` | `collectionId`, `period`, `values{}`, `keyHash` | `{collectionId:1, keyHash:1, 'period.year':1, 'period.month':1}` único |
 | `classifications` | `projectId`, `name`, `targetField`, `nodes[]` (árbol embebido), `unmatchedPolicy`, `version` | `{projectId:1, name:1}` único |
@@ -114,7 +114,8 @@ erDiagram
 | `{datasetId:1}` | borrar / reemplazar una versión completa |
 | `{projectId:1, stage:1, 'period.year':1, 'period.month':1, 'scope.companyId':1}` | consultas de informes por período y entidad |
 | `{projectId:1, stage:1, 'memberships.nodeId':1, 'period.year':1, 'period.month':1}` | filas de tabla filtradas por nodo de clasificación |
-| `{projectId:1, 'identifiers.code':1}` | clasificación, acumulados y búsquedas por código |
+| `{projectId:1, 'key.hash':1, 'period.year':1, 'period.month':1}` | acumulados y consolidación por identificador (compuesto) |
+| `{'key.identifiers.$**':1}` (comodín) | búsquedas y clasificaciones sobre cualquier campo identificador |
 
 > Si el volumen supera decenas de millones de registros por proyecto se evaluará *sharding* por
 > `{projectId:1, 'period.year':1}`.
@@ -134,6 +135,11 @@ erDiagram
 
 ## 4. Ejemplo de documento `data_records`
 
+Registro de un proyecto de **ventas directas** (datos ficticios). Las claves `f_…` son los
+identificadores internos de los encabezados del catálogo (*Código de producto*, *Código de tienda*,
+*Descripción del producto*, *Unidades vendidas*, *Monto de venta*, *Vendedor*, *Fecha de venta*);
+un registro contable tiene exactamente la misma forma con otros encabezados.
+
 ```json
 {
   "_id": { "$oid": "66f7c0c2a1b2c3d4e5f60718" },
@@ -149,13 +155,16 @@ erDiagram
     "enterpriseId": null,
     "branchId": null
   },
-  "identifiers": { "code": "1101-01", "name": "Caja general", "externalId": null },
-  "measures": {
-    "debit": { "$numberDecimal": "15250.75" },
-    "credit": { "$numberDecimal": "3200.00" },
-    "balance": { "$numberDecimal": "12050.75" }
+  "key": {
+    "identifiers": { "f_7Kq2": "PRD-0042", "f_9Tz1": "T-03" },
+    "labels": { "f_3Hb8": "Producto de demostración" },
+    "hash": "b41c9e0d"
   },
-  "attributes": {},
+  "values": {
+    "f_2Lm5": { "$numberDecimal": "18" },
+    "f_6Pw4": { "$numberDecimal": "2250.00" }
+  },
+  "attributes": { "f_8Vr6": "Vendedor Demo", "f_1Dx9": { "$date": "2026-08-14T00:00:00Z" } },
   "memberships": [
     {
       "classificationId": { "$oid": "66f7c0c2a1b2c3d4e5f60301" },

@@ -767,7 +767,7 @@ classDiagram
         -string label
         -ColumnLocator locator
         -DataType dataType
-        -ColumnRole role
+        -FieldRole role
         -boolean required
         -boolean omitted
         -ParseOptions parseOptions
@@ -804,21 +804,13 @@ classDiagram
         DATE
         BOOLEAN
     }
-    class ColumnRole {
+    class FieldRole {
         <<enumeration>>
-        IDENTIFIER_CODE
-        IDENTIFIER_NAME
-        IDENTIFIER_ID
-        MEASURE
-        DEBIT
-        CREDIT
-        BALANCE
-        OPENING_BALANCE
+        IDENTIFIER
+        IDENTIFIER_LABEL
+        VALUE
         ATTRIBUTE
         DATE
-        LOCATION
-        EXPECTED_QUANTITY
-        UNIT_COST
     }
     class RowRule {
         <<abstract>>
@@ -870,7 +862,7 @@ classDiagram
     ColumnDefinition *-- ColumnLocator
     ColumnDefinition *-- ParseOptions
     ColumnDefinition --> DataType
-    ColumnDefinition --> ColumnRole
+    ColumnDefinition --> FieldRole
     ColumnLocator <|-- FixedWidthLocator
     ColumnLocator <|-- IndexLocator
     ColumnLocator <|-- HeaderLocator
@@ -886,8 +878,8 @@ classDiagram
     DatabaseConnection --> DatabaseEngine
 ```
 
-> Las columnas toman su encabezado, tipo, rol e indicador de identificador del **catálogo de
-> encabezados** del proyecto (instantánea al activar la versión). Catálogo, preconfiguraciones con
+> Las columnas toman su encabezado, **rol genérico** (`IDENTIFIER`, `IDENTIFIER_LABEL`, `VALUE`,
+> `ATTRIBUTE`, `DATE`) y tipo del **catálogo de encabezados** del proyecto (instantánea al activar la versión). Catálogo, preconfiguraciones con
 > nombre y lotes de carga múltiple se detallan en
 > [12-preconfiguraciones-y-carga-multiple](12-preconfiguraciones-y-carga-multiple.md).
 
@@ -1103,25 +1095,25 @@ classDiagram
         -DataStage stage
         -Period period
         -EntityScope scope
-        -RecordIdentifiers identifiers
-        -MeasureSet measures
+        -RecordKey key
+        -ValueSet values
         -AttributeSet attributes
         -ClassificationMembership[] memberships
-        +measure(key FieldKey) Decimal
-        +withMeasure(key FieldKey, value Decimal) DataRecord
+        +value(field FieldKey) Decimal
+        +withValue(field FieldKey, value Decimal) DataRecord
     }
-    class RecordIdentifiers {
+    class RecordKey {
         <<ValueObject>>
-        -Nullable~string~ code
-        -Nullable~string~ name
-        -Nullable~string~ externalId
-        +valueOf(field IdentifierField) Nullable~string~
+        -Map~FieldKey,string~ identifiers
+        -Map~FieldKey,string~ labels
+        +textOf(field FieldKey) Nullable~string~
+        +hash() string
     }
-    class MeasureSet {
+    class ValueSet {
         <<ValueObject>>
         -Map~FieldKey,Decimal~ values
-        +get(key FieldKey) Decimal
-        +with(key FieldKey, value Decimal) MeasureSet
+        +get(field FieldKey) Decimal
+        +with(field FieldKey, value Decimal) ValueSet
     }
     class SupplementaryCollection {
         <<AggregateRoot>>
@@ -1159,13 +1151,13 @@ classDiagram
         -EntityId id
         -EntityId projectId
         -string name
-        -IdentifierField targetField
+        -FieldKey targetField
         -ClassificationNode[] roots
         -UnmatchedPolicy unmatchedPolicy
         +addNode(parentId Nullable~EntityId~, node ClassificationNode) Result~Classification~
         +moveNode(nodeId EntityId, newParentId Nullable~EntityId~) Result~Classification~
-        +classify(identifiers RecordIdentifiers) Optional~ClassificationMembership~
-        +coverage(identifiers RecordIdentifiers[]) CoverageReport
+        +classify(key RecordKey) Optional~ClassificationMembership~
+        +coverage(keys RecordKey[]) CoverageReport
     }
     class ClassificationNode {
         <<Entity>>
@@ -1225,8 +1217,8 @@ classDiagram
     Dataset --> DataStage
     Dataset --> DatasetStatus
     Dataset "1" *-- "0..*" DataRecord
-    DataRecord *-- RecordIdentifiers
-    DataRecord *-- MeasureSet
+    DataRecord *-- RecordKey
+    DataRecord *-- ValueSet
     DataRecord "1" *-- "0..*" ClassificationMembership
     SupplementaryCollection "1" *-- "1..*" CollectionField
     SupplementaryCollection "1" --> "0..*" CollectionEntry
@@ -1262,8 +1254,8 @@ classDiagram
         -CurrencyCode currency
         -ScopeLevel level
         -EntityScope[] members
-        -IdentifierField groupBy
-        -FieldKey[] measures
+        -FieldKey[] groupBy
+        -FieldKey[] valueFields
         +addMember(scope EntityScope) Result~ConsolidationDefinition~
         +plan(period Period, available DataLoad[]) Result~ConsolidationPlan~
     }
@@ -1324,32 +1316,32 @@ classDiagram
     }
     class AccumulationStep {
         -AccumulationMode mode
-        -FieldKey debit
-        -FieldKey credit
-        -FieldKey balance
+        -FieldKey increaseField
+        -Nullable~FieldKey~ decreaseField
+        -Nullable~FieldKey~ openingField
         -FieldKey target
     }
     class CurrencyConversionStep {
         -EntityId rateCollectionId
         -CurrencyCode targetCurrency
-        -FieldKey[] measures
+        -FieldKey[] valueFields
         -ConversionMethod method
     }
     class SyntheticRecordStep {
-        -RecordIdentifiers identifiers
+        -RecordKey key
         -Expression amount
         -FieldKey target
     }
-    class BalanceCheckStep {
-        -FieldKey debit
-        -FieldKey credit
+    class EqualityCheckStep {
+        -Expression left
+        -Expression right
         -Decimal tolerance
         -IssueSeverity severity
     }
     class AccumulationMode {
         <<enumeration>>
-        ROLL_FORWARD_BALANCE
-        YEAR_TO_DATE_MOVEMENTS
+        ROLL_FORWARD
+        YEAR_TO_DATE
         YEAR_TO_DATE_NET
     }
     class RecordSpecification {
@@ -1357,7 +1349,7 @@ classDiagram
         +isSatisfiedBy(record DataRecord)* boolean
     }
     class TextFieldSpecification {
-        -IdentifierField field
+        -FieldKey field
         -TextOperator operator
         -string value
     }
@@ -1385,7 +1377,7 @@ classDiagram
     TransformationStep <|-- AccumulationStep
     TransformationStep <|-- CurrencyConversionStep
     TransformationStep <|-- SyntheticRecordStep
-    TransformationStep <|-- BalanceCheckStep
+    TransformationStep <|-- EqualityCheckStep
     AccumulationStep --> AccumulationMode
     FilterStep --> RecordSpecification
     ConditionalAssignmentStep --> RecordSpecification
@@ -1394,13 +1386,17 @@ classDiagram
     TextFieldSpecification --> TextOperator
 ```
 
-Semántica de `AccumulationStep` (RF-REP-10):
+Semántica **genérica** de `AccumulationStep` (RF-REP-10): los pasos no conocen "debe" ni
+"haber"; el usuario elige qué campos de valor cumplen cada papel.
 
-| Modo | Cálculo para el período *p* |
-|---|---|
-| `ROLL_FORWARD_BALANCE` | `saldo(p) = saldo(p−1) + debe(p) − haber(p)` |
-| `YEAR_TO_DATE_MOVEMENTS` | `debeAcum(p) = Σ debe(inicioAño..p)`; `haberAcum(p) = Σ haber(inicioAño..p)` |
-| `YEAR_TO_DATE_NET` | `netoAcum(p) = Σ (debe − haber)(inicioAño..p)` |
+| Modo | Cálculo para el período *p* | Ejemplo contable | Ejemplo ventas |
+|---|---|---|---|
+| `ROLL_FORWARD` | `destino(p) = inicial(p−1 o campo) + aumenta(p) − disminuye(p)` | saldo = saldo anterior + debe − haber | existencia = existencia anterior + compras − ventas |
+| `YEAR_TO_DATE` | `destino(p) = Σ aumenta(inicioAño..p)` | debe acumulado | unidades vendidas en el año |
+| `YEAR_TO_DATE_NET` | `destino(p) = Σ (aumenta − disminuye)(inicioAño..p)` | neto acumulado debe − haber | ventas netas de devoluciones |
+
+`EqualityCheckStep` valida cualquier igualdad (Σ *Debe* = Σ *Haber*, Σ *Monto* = total de
+control).
 
 > Patrones: **Pipeline / Chain of Responsibility** (`TransformationStep`), **Strategy**
 > (`ConsolidationEngine`), **Specification** (`RecordSpecification`).
@@ -1664,7 +1660,7 @@ classDiagram
     class DataBinding {
         <<ValueObject>>
         -DataStage stage
-        -FieldKey measure
+        -FieldKey valueField
         -Aggregation aggregation
         -DimensionFilter[] baseFilters
     }
@@ -1689,6 +1685,7 @@ classDiagram
     class DimensionFilter {
         <<ValueObject>>
         -Dimension dimension
+        -Nullable~FieldKey~ field
         -FilterOperator operator
         -FilterValue[] values
     }
@@ -1703,7 +1700,9 @@ classDiagram
         BRANCH
         YEAR
         MONTH
-        MEASURE
+        IDENTIFIER_FIELD
+        ATTRIBUTE_FIELD
+        DATE_FIELD
     }
     class FilterValue {
         <<abstract>>
@@ -1794,7 +1793,7 @@ classDiagram
 **Resolución de una celda** de `MatrixTableElement`:
 
 ```text
-celda(f, c) = agregación( medida,
+celda(f, c) = agregación( campo de valor,
                  filtros(binding.baseFilters)
                ∩ filtros(fila f)
                ∩ filtros(columna c)
@@ -1824,6 +1823,7 @@ classDiagram
         -number maxRounds
         -InventoryCountStatus status
         -EntityId sourceProfileId
+        -InventoryFieldMapping fieldMapping
         -FieldVisibilityPolicy visibility
         -CountParticipant[] participants
         -CountRound[] rounds
@@ -1850,6 +1850,14 @@ classDiagram
         <<enumeration>>
         BLIND
         WITH_EXPECTED_STOCK
+    }
+    class InventoryFieldMapping {
+        <<ValueObject>>
+        -FieldKey skuField
+        -FieldKey descriptionField
+        -FieldKey expectedQuantityField
+        -Nullable~FieldKey~ unitCostField
+        -FieldKey locationField
     }
     class Tolerance {
         <<ValueObject>>
@@ -1973,6 +1981,7 @@ classDiagram
     InventoryCount --> InventoryCountStatus
     InventoryCount --> CountMode
     InventoryCount *-- Tolerance
+    InventoryCount *-- InventoryFieldMapping
     InventoryCount *-- FieldVisibilityPolicy
     InventoryCount "1" *-- "1..*" CountParticipant
     CountParticipant --> ParticipantRole

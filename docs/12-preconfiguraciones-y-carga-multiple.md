@@ -27,30 +27,66 @@ flowchart LR
 
 ## 2. Catálogo de encabezados (lista previa)
 
-Antes de crear preconfiguraciones se define, **por proyecto**, la lista de encabezados que pueden
-tener las columnas. Así todas las preconfiguraciones —aunque vengan de sistemas distintos—
-producen los mismos campos, y los informes, clasificaciones y consolidaciones funcionan igual
-para cualquier archivo.
+El módulo de Reportes sirve para **cualquier tipo de reporte** (contable, ventas directas,
+cobranza, producción…), por eso la importación **no conoce conceptos de negocio** como debe,
+haber o saldo. Cada encabezado del catálogo es un nombre libre que escribe el usuario y solo
+lleva uno de cinco **roles genéricos**:
 
-| Encabezado | Clave | Tipo | Rol | Identificador |
-|---|---|---|---|:-:|
-| Código de cuenta | `codigo_cuenta` | Texto | Código | ✔ |
-| Nombre de cuenta | `nombre_cuenta` | Texto | Nombre | ✔ |
-| Saldo anterior | `saldo_anterior` | Decimal | Saldo anterior | |
-| Debe | `debe` | Decimal | Debe | |
-| Haber | `haber` | Decimal | Haber | |
-| Saldo actual | `saldo_actual` | Decimal | Saldo | |
-| Centro de costo | `centro_costo` | Texto | Atributo | |
+| Rol genérico | Alias | Para qué sirve | Tipo de dato |
+|---|---|---|---|
+| **Identificador** | `id` | Identifica el registro; puede haber varios (identificador compuesto). Obligatorio y sin vacíos. | Texto o entero |
+| **Descripción del identificador** | `id_name` | Texto que describe a un identificador (se vincula a él). | Texto |
+| **Valor** | `value` | Cantidad numérica que se suma, acumula, convierte o calcula. | Decimal (vacío = 0) |
+| **Atributo** | `attribute` | Dato descriptivo para filtrar o agrupar (vendedor, categoría, canal…). | Texto, fecha o booleano |
+| **Fecha** | `date` | Fecha propia del registro (p. ej. fecha de la venta), distinta del período de la carga. | Fecha |
 
-- Al crear el proyecto se ofrece una **plantilla contable** con los encabezados anteriores; se
-  pueden agregar, renombrar o desactivar.
-- La **clave** no cambia nunca (los datos ya cargados la usan); la etiqueta sí puede cambiar.
-- No se puede eliminar un encabezado usado por alguna preconfiguración activa; solo desactivarlo.
-- Cada preconfiguración debe usar **al menos un encabezado identificador**, y ninguno se puede
-  repetir dentro de la misma preconfiguración.
+El mismo modelo sirve para reportes muy distintos:
 
-Pantalla: `Table` con edición en celda (`InputText`, `Select` de tipo y rol, `ToggleSwitch` de
-identificador), `Button` "Agregar desde plantilla", `ConfirmDialog` al desactivar.
+| Encabezado (lo escribe el usuario) | Rol | | Encabezado (lo escribe el usuario) | Rol |
+|---|---|---|---|---|
+| *Proyecto contable* | | | *Proyecto de ventas directas* | |
+| Código de cuenta | `id` | | Código de producto | `id` |
+| Nombre de cuenta | `id_name` → Código de cuenta | | Descripción del producto | `id_name` → Código de producto |
+| Saldo anterior | `value` | | Código de tienda | `id` |
+| Debe | `value` | | Vendedor | `attribute` |
+| Haber | `value` | | Fecha de venta | `date` |
+| Saldo actual | `value` | | Unidades vendidas | `value` |
+| Centro de costo | `attribute` | | Monto de venta | `value` |
+
+- **No hay claves que escribir**: el sistema asigna a cada encabezado un identificador interno
+  invisible. El usuario solo ve y edita el nombre; renombrar un encabezado no rompe informes,
+  clasificaciones ni cargas anteriores.
+- El catálogo puede empezar **vacío** o desde una plantilla opcional (*Contable*, *Ventas*); las
+  plantillas son solo listas precargadas, sin comportamiento especial.
+- Cada preconfiguración debe usar **al menos un `id`**; un encabezado no se repite dentro de la
+  misma preconfiguración; un encabezado en uso por una preconfiguración activa no se elimina, solo
+  se desactiva.
+
+Pantalla: `Table` con edición en celda (`InputText` nombre, `Select` rol genérico, `Select`
+"describe a" para `id_name`, `Select` tipo para atributos), `SplitButton` "Agregar desde
+plantilla", `ConfirmDialog` al desactivar.
+
+### 2.1 ¿Dónde queda el significado de negocio?
+
+El significado se asigna **donde se usa**, no al importar. Así, un mismo archivo puede servir a
+varios procesos y un proyecto de ventas nunca ve opciones contables:
+
+```mermaid
+flowchart LR
+    imp["Importación<br/>solo roles genéricos:<br/>id · id_name · value · attribute · date"]
+    imp --> ops["Operaciones<br/>acumulado: el usuario elige qué valor<br/>suma, cuál resta y cuál es el saldo inicial"]
+    imp --> cls["Clasificaciones<br/>sobre cualquier id o id_name"]
+    imp --> con["Consolidación<br/>agrupa por los id elegidos<br/>y suma los value elegidos"]
+    imp --> rep["Informes<br/>filas y columnas por cualquier<br/>id, attribute, date o value"]
+    imp --> inv["Inventarios<br/>al configurar la toma se indica qué<br/>campo es existencia, costo, ubicación"]
+```
+
+| Uso | Contable | Ventas directas |
+|---|---|---|
+| Acumulado | *Saldo actual* = *Saldo anterior* + *Debe* − *Haber* | *Unidades del año* = Σ *Unidades vendidas* desde enero |
+| Validación | Σ *Debe* = Σ *Haber* | Σ *Monto de venta* = total de control del archivo |
+| Clasificación | Por *Código de cuenta* (activo, pasivo…) | Por *Código de producto* (línea, familia…) |
+| Consolidación | Por *Código de cuenta*, suma de *Saldo actual* | Por *Código de producto*, suma de *Monto de venta* |
 
 ## 3. Preconfiguraciones con nombre
 
@@ -64,7 +100,7 @@ identificador), `Button` "Agregar desde plantilla", `ConfirmDialog` al desactiva
 | Extensiones | `.txt`, `.prn` | Al menos una; sin distinguir mayúsculas. |
 | Patrón de nombre de archivo | `balance_*.txt` | Opcional; desempata cuando varias preconfiguraciones aceptan la misma extensión. |
 | Lectura | Codificación, divisorias, reglas de líneas, máscara del identificador | Definidas con el asistente de [11](11-importacion-ancho-fijo.md). |
-| Columnas | Franja 1 → *Código de cuenta*, franja 2 → *Nombre de cuenta*, franja 3 → *Saldo anterior*… | El encabezado se **elige del catálogo** (`Select` con búsqueda); las franjas sin encabezado se omiten. |
+| Columnas | Franja 1 → *Código de cuenta*, franja 2 → *Nombre de cuenta*, franja 3 → *Saldo anterior*… (o *Código de producto*, *Unidades vendidas*… en ventas) | El encabezado se **elige del catálogo** (`Select` con búsqueda) y trae su rol genérico; las franjas sin encabezado se omiten. |
 | Estado | Borrador / Activa / Archivada | Solo las **activas** aparecen al cargar. |
 | Versión | v3 | Cada cambio guardado en una activa crea una versión nueva; las cargas registran la versión usada. |
 
@@ -241,8 +277,9 @@ classDiagram
         <<AggregateRoot>>
         -EntityId projectId
         -CatalogField[] fields
-        +fromTemplate(template CatalogTemplate)$ FieldCatalog
+        +empty(projectId EntityId)$ FieldCatalog
         +addField(field CatalogField) Result~FieldCatalog~
+        +addFromTemplate(template CatalogTemplate) FieldCatalog
         +rename(key FieldKey, label string) Result~FieldCatalog~
         +deactivate(key FieldKey, usage ProfileUsage) Result~FieldCatalog~
         +find(key FieldKey) Optional~CatalogField~
@@ -252,10 +289,18 @@ classDiagram
         <<Entity>>
         -FieldKey key
         -string label
+        -FieldRole role
         -DataType dataType
-        -ColumnRole role
-        -boolean identifier
+        -Nullable~FieldKey~ describes
         -boolean active
+    }
+    class FieldRole {
+        <<enumeration>>
+        IDENTIFIER
+        IDENTIFIER_LABEL
+        VALUE
+        ATTRIBUTE
+        DATE
     }
     class DataSourceProfile {
         <<abstract>>
@@ -353,7 +398,8 @@ classDiagram
         +validate(batch ImportBatch) BatchValidationReport
     }
 
-    FieldCatalog "1" *-- "1..*" CatalogField
+    FieldCatalog "1" *-- "0..*" CatalogField
+    CatalogField --> FieldRole
     DataSourceProfile <|-- FileSourceProfile
     DataSourceProfile "1" *-- "1..*" ColumnDefinition
     ColumnDefinition ..> CatalogField : encabezado del catálogo
@@ -372,7 +418,8 @@ classDiagram
     BatchValidator ..> ImportBatch
 ```
 
-- `ColumnDefinition.snapshot` guarda tipo, rol e identificador del encabezado **al activar la
+- `FieldKey` es un identificador interno generado (no lo escribe el usuario).
+- `ColumnDefinition.snapshot` guarda el rol genérico y el tipo del encabezado **al activar la
   versión**: renombrar o ajustar el catálogo después no altera cómo se leen las cargas de esa
   versión.
 - Los *prefillers* forman una cadena (**Chain of Responsibility**): patrón de nombre →
@@ -384,7 +431,7 @@ classDiagram
 
 | Colección | Campos clave | Índices |
 |---|---|---|
-| `field_catalogs` | `projectId`, `fields[]{key, label, dataType, role, identifier, active}` | `{projectId:1}` único |
+| `field_catalogs` | `projectId`, `fields[]{key (generada), label, role, dataType, describes, active}` | `{projectId:1}` único |
 | `data_source_profiles` | además: `name`, `description`, `status`, `extensions[]`, `fileNamePattern`, `columns[].catalogField`, `columns[].snapshot` | `{projectId:1, name:1}` único, `{projectId:1, status:1, extensions:1}` |
 | `import_batches` | `projectId`, `createdBy`, `createdAt`, `items[]{fileName, fileId, contentHash, profileId, profileVersion, period, scope, status, importJobId}` | `{projectId:1, createdAt:-1}`, `{'items.contentHash':1}` |
 | `profile_selection_history` | `projectId`, `profileId`, `fileNameKey`, `lastValues{period, scope}` | `{projectId:1, profileId:1, fileNameKey:1}` único |

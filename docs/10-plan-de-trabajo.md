@@ -108,7 +108,7 @@ gantt
 | Colecciones complementarias (plantilla "Tipo de cambio"). | Captura manual e importación; búsqueda por clave y período. |
 | Clasificaciones con reglas, árbol drag & drop, cobertura y membresías materializadas. | Reporte de no clasificados y doble clasificación; recálculo automático tras nueva carga. |
 | Consolidación misma moneda (compañía / empresa / sucursal). | Suma de 3 compañías = suma manual verificada con `Decimal`. |
-| Pipelines: filtros de texto, asignación condicional, campos calculados, acumulados, conversión de moneda, filas sintéticas, cuadre. | Caso contable de referencia (saldo = saldo anterior + debe − haber; resultado del ejercicio) reproduce el resultado esperado. |
+| Pipelines: filtros de texto, asignación condicional, campos calculados, acumulados, conversión de moneda, filas sintéticas, cuadre. | Caso contable de referencia (saldo = saldo anterior + debe − haber; resultado del ejercicio) reproduce el resultado esperado; un caso de **ventas directas** (sin debe/haber) se importa, acumula y consolida con la misma configuración genérica. |
 | `libs/shared/formula-engine` (lexer, parser, AST, evaluador, dependencias, funciones). | Pruebas basadas en propiedades; detección de referencias circulares. |
 
 ### F6 · Reportes: informes y PDF (4 sprints) — RF-REP-12…17
