@@ -128,9 +128,8 @@ Componentes: `Listbox` ordenable de reglas (`OrderList`), `Dialog` para crear la
 
 | Campo | Opciones |
 |---|---|
-| Nombre | Texto libre (`codigo`, `nombre`, `saldo_anterior`, `debe`, `haber`, `saldo_actual`). |
-| Tipo de dato | Texto, entero, decimal, fecha, booleano. |
-| Rol | Código, nombre, id, saldo anterior, debe, haber, saldo, valor, atributo, fecha. |
+| Encabezado | Se **elige del catálogo de encabezados** del proyecto (*Código de cuenta*, *Nombre de cuenta*, *Saldo anterior*, *Debe*, *Haber*, *Saldo actual*…); ver [12 §2](12-preconfiguraciones-y-carga-multiple.md#2-catálogo-de-encabezados-lista-previa). Las franjas sin encabezado se omiten. |
+| Tipo de dato, rol e identificador | Vienen del encabezado elegido (texto, entero, decimal, fecha, booleano; código, nombre, id, saldo anterior, debe, haber, saldo, valor, atributo, fecha). |
 | Requerida / omitir | Las identificadoras son requeridas; se pueden omitir columnas que no interesan. |
 | Formato numérico | Separador de miles y decimal; negativo con `-` inicial, `-` final, paréntesis o sufijo `CR`; **vacío = 0** (por defecto en montos). |
 | Recorte | Quitar espacios; opción "conservar sangría" para derivar el nivel (ver abajo). |

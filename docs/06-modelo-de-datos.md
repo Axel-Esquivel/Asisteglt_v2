@@ -89,7 +89,9 @@ erDiagram
 | Colección | Campos clave | Índices |
 |---|---|---|
 | `db_connections` | `projectId`, `engine`, `host`, `port`, `database`, `username`, `secret{iv, tag, cipherText, keyId}` | `{projectId:1}` |
-| `data_source_profiles` | `projectId`, `sourceKind` (discriminador), `target`, `columns[]`, `rowRules[]`, `version`, específicos por tipo | `{projectId:1, target:1}` |
+| `field_catalogs` | `projectId`, `fields[]{key, label, dataType, role, identifier, active}` | `{projectId:1}` único |
+| `data_source_profiles` | `projectId`, `name`, `status`, `sourceKind` (discriminador), `target`, `extensions[]`, `fileNamePattern`, `columns[]{catalogField, locator, parseOptions, snapshot}`, `rowRules[]`, `version`, específicos por tipo | `{projectId:1, name:1}` único, `{projectId:1, status:1, extensions:1}` |
+| `import_batches` | `projectId`, `createdBy`, `items[]{fileName, fileId, contentHash, profileId, profileVersion, period, scope, status, importJobId}` | `{projectId:1, createdAt:-1}` |
 | `import_jobs` | `projectId`, `profileId`, `profileVersion`, `status`, `stats{read, accepted, rejected}`, `issues[]` (máx. 1 000) | `{projectId:1, createdAt:-1}` |
 | `organizations` | `projectId`, `code`, `name`, `countries[]{_id, isoCode, name, currencies[]}` | `{projectId:1}` único |
 | `companies` | `projectId`, `organizationId`, `countryId`, `code`, `name`, `enterprises[]{_id, code, name, branches[]}` | `{projectId:1, code:1}` único |

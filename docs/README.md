@@ -13,6 +13,7 @@
 | 09 | [Seguridad y permisos](09-seguridad-permisos.md) | Controles de seguridad, modelo RBAC + ABAC, matrices de roles, compartición |
 | 10 | [Plan de trabajo](10-plan-de-trabajo.md) | Fases, cronograma, entregables, criterios de aceptación, DoD, riesgos, próximos pasos |
 | 11 | [Importación de ancho fijo](11-importacion-ancho-fijo.md) | Asistente con lienzo de divisorias, reglas de líneas, sugerencia automática, validaciones, clases y confidencialidad |
+| 12 | [Preconfiguraciones y carga múltiple](12-preconfiguraciones-y-carga-multiple.md) | Catálogo de encabezados, preconfiguraciones con nombre y selección automática, ventana de carga múltiple con propiedades por archivo, lotes en segundo plano |
 
 Los diagramas están escritos en **Mermaid** y GitHub los muestra directamente.
 

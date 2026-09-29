@@ -92,6 +92,7 @@ gantt
 |---|---|
 | Perfiles: ancho fijo, delimitado, hoja de cálculo (.xlsx; .xls/.ods por conversión), base de datos. | Cada tipo tiene pruebas con archivos reales del cliente (ver §5). |
 | `libs/shared/ingestion-core` (corte, reglas, máscaras, conversión) usada por navegador y worker. | La previsualización y la importación real producen los mismos registros (prueba de paridad). |
+| **Catálogo de encabezados** y **preconfiguraciones con nombre** (estados, versiones, duplicar, extensiones y patrón de nombre) ([12](12-preconfiguraciones-y-carga-multiple.md)). | Dos preconfiguraciones para `.txt` se distinguen por patrón de nombre; cambiar el catálogo no altera cargas de versiones ya activas. |
 | Asistente de ancho fijo con **lienzo** de divisorias, sugerencia automática, reglas de encabezado de página y máscara de identificador ([11](11-importacion-ancho-fijo.md)); asistente tabular. | Con un reporte de balance de saldos de prueba, el analista define el perfil sin editar JSON en < 10 min; ninguna divisoria corta valores. |
 | Reglas de fila, *parsers* tipados (decimal configurable, negativos con paréntesis/sufijo, fechas), identificadores obligatorios. | Saltos de página, líneas en blanco y encabezados repetidos se descartan; incidencias con línea y motivo. |
 | Conexiones SQL Server, PostgreSQL, MySQL, MongoDB con credenciales cifradas y solo `SELECT`. | Consulta con `UPDATE`/`DELETE` es rechazada; *timeout* respetado. |
@@ -103,6 +104,7 @@ gantt
 |---|---|
 | Estructura organizacional con validación de `EntityScope`. | No se puede cargar con moneda no habilitada en el país. |
 | Cargas etiquetadas por período y alcance con versionado. | Recargar el mismo alcance y período deja la versión anterior `SUPERSEDED` de forma atómica. |
+| **Carga múltiple**: ventana con propiedades por archivo, autocompletado (patrón de nombre, encabezado, últimos valores), validación previa, lotes en segundo plano con progreso por archivo. | 12 archivos de 4 compañías se cargan con un solo clic tras revisar la tabla; un archivo con error no detiene a los demás; el usuario puede cerrar la ventana y recibe el resumen. |
 | Colecciones complementarias (plantilla "Tipo de cambio"). | Captura manual e importación; búsqueda por clave y período. |
 | Clasificaciones con reglas, árbol drag & drop, cobertura y membresías materializadas. | Reporte de no clasificados y doble clasificación; recálculo automático tras nueva carga. |
 | Consolidación misma moneda (compañía / empresa / sucursal). | Suma de 3 compañías = suma manual verificada con `Decimal`. |

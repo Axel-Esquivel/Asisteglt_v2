@@ -702,7 +702,8 @@ classDiagram
         <<abstract>>
         -EntityId id
         -EntityId projectId
-        -string name
+        -ProfileName name
+        -ProfileStatus status
         -ProfileTarget target
         -ColumnDefinition[] columns
         -RowRule[] rowRules
@@ -718,6 +719,7 @@ classDiagram
     class FileSourceProfile {
         <<abstract>>
         -FileExtension[] acceptedExtensions
+        -Nullable~FileNamePattern~ fileNamePattern
         -TextEncoding encoding
     }
     class FixedWidthProfile {
@@ -761,7 +763,7 @@ classDiagram
     }
     class ColumnDefinition {
         <<ValueObject>>
-        -FieldKey key
+        -FieldKey catalogField
         -string label
         -ColumnLocator locator
         -DataType dataType
@@ -883,6 +885,11 @@ classDiagram
     DatabaseProfile --> DatabaseConnection
     DatabaseConnection --> DatabaseEngine
 ```
+
+> Las columnas toman su encabezado, tipo, rol e indicador de identificador del **catálogo de
+> encabezados** del proyecto (instantánea al activar la versión). Catálogo, preconfiguraciones con
+> nombre y lotes de carga múltiple se detallan en
+> [12-preconfiguraciones-y-carga-multiple](12-preconfiguraciones-y-carga-multiple.md).
 
 ## 7. Ingestión de datos — lectura y validación
 
