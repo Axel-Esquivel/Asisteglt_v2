@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NX_NO_CLOUD: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Lint (TypeScript, plantillas, SCSS y guardián de reglas)
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Pruebas unitarias e integración
+        run: npm run test
+      - name: Build
+        run: npm run build
+      - name: Pruebas e2e (Playwright)
+        run: |
+          npx playwright install --with-deps chromium
+          npm run e2e

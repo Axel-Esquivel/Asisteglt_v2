@@ -1,0 +1,20 @@
+// Utilidades de maquetación propias (SCSS); los colores siempre vienen de variables del tema PrimeNG.
+
+$breakpoint-md: 768px;
+
+@mixin page-container {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding: 1.5rem 1rem;
+
+  @media (min-width: $breakpoint-md) {
+    padding-inline: 2rem;
+  }
+}
+
+@mixin responsive-grid($min-column: 280px) {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(min($min-column, 100%), 1fr));
+}

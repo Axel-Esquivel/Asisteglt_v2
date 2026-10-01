@@ -1,0 +1,36 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "bundler",
+    "module": "esnext",
+    "target": "es2023",
+    "lib": ["es2023", "dom"],
+    "importHelpers": true,
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "useUnknownInCatchVariables": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@asisteglt/shared-kernel": ["./libs/shared/kernel/src/index.ts"],
+      "@asisteglt/shared-contracts": ["./libs/shared/contracts/src/index.ts"],
+      "@asisteglt/web-core": ["./libs/web/core/src/index.ts"],
+      "@asisteglt/api-platform": ["./libs/api/platform/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}

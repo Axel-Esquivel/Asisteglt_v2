@@ -14,6 +14,7 @@
 | 10 | [Plan de trabajo](10-plan-de-trabajo.md) | Fases, cronograma, entregables, criterios de aceptación, DoD, riesgos, próximos pasos |
 | 11 | [Importación de ancho fijo](11-importacion-ancho-fijo.md) | Asistente con lienzo de divisorias, reglas de líneas, sugerencia automática, validaciones, clases y confidencialidad |
 | 12 | [Preconfiguraciones y carga múltiple](12-preconfiguraciones-y-carga-multiple.md) | Catálogo de encabezados (rol, tipo, naturaleza, compatibilidad), **uso de encabezados por su nombre en todo lo posterior (§2.8)**, preconfiguraciones con nombre y selección automática, ventana de carga múltiple con propiedades por archivo, lotes en segundo plano |
+| 13 | [Puesta en marcha](13-puesta-en-marcha.md) | Requisitos, comandos, estructura del código, verificaciones de las reglas, licencia de PrimeNG, alcance de la Fase 0 |
 
 Los diagramas están escritos en **Mermaid** y GitHub los muestra directamente.
 

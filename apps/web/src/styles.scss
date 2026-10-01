@@ -1,0 +1,23 @@
+@use 'primeicons/primeicons.css';
+
+html {
+  font-size: 14px;
+}
+
+body {
+  margin: 0;
+  font-family: var(--p-font-family, system-ui, sans-serif);
+  background: var(--p-surface-50);
+  color: var(--p-text-color);
+}
+
+.app-dark body {
+  background: var(--p-surface-950);
+}
+
+// La barra superior del shell ocupa todo el ancho (clase aplicada con styleClass de p-toolbar).
+.p-toolbar.shell__toolbar {
+  border-radius: 0;
+  border-inline: none;
+  border-block-start: none;
+}

@@ -19,3 +19,6 @@ Reglas no negociables del cliente:
   documentación; usa datos ficticios en ejemplos y pruebas.
 
 Código en inglés; interfaz de usuario y documentación en español.
+
+Comandos (ver `docs/13-puesta-en-marcha.md`): `npm run verify` (lint + typecheck + pruebas + build),
+`npm run e2e`, `npm run lint:guard`. Todo cambio debe dejar `npm run verify` en verde.

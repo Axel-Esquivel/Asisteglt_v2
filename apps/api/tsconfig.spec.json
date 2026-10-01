@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../dist/out-tsc",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "types": ["vitest/globals", "vitest/importMeta", "node"]
+  },
+  "include": ["vitest.config.mts", "src/**/*.spec.ts", "src/**/*.ts"]
+}

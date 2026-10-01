@@ -1,0 +1,23 @@
+# dependencies
+node_modules
+# build / cache
+dist
+tmp
+out-tsc
+coverage
+.nx/cache
+.nx/workspace-data
+.angular
+vite.config.*.timestamp*
+vitest.config.*.timestamp*
+test-output
+playwright-report
+test-results
+# env
+.env
+.env.*
+!.env.example
+# editors / os
+.idea
+*.swp
+.DS_Store

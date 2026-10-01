@@ -18,4 +18,13 @@ TypeScript 6 (estricto: sin `any`, sin `undefined`, POO).
 
 ## Estado
 
-Fase de **análisis y diseño**. Toda la documentación está en [`docs/`](docs/README.md).
+- Análisis y diseño: [`docs/`](docs/README.md).
+- **Fase 0 (Fundaciones) implementada**: monorepo, reglas estrictas en CI, kernel POO, API,
+  worker y shell web. Cómo levantarlo: [`docs/13-puesta-en-marcha.md`](docs/13-puesta-en-marcha.md).
+
+```bash
+npm install && cp .env.example .env && npm run services:up
+npm run start:api      # http://localhost:3000/api/v1/health
+npm run start:web      # http://localhost:4200
+npm run verify         # lint + typecheck + pruebas + build
+```

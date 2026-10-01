@@ -1,0 +1,31 @@
+{
+  "name": "web-core",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/web/core/src",
+  "prefix": "lib",
+  "projectType": "library",
+  "tags": [
+    "scope:web",
+    "type:core"
+  ],
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "default",
+        "^default"
+      ],
+      "options": {
+        "commands": [
+          "tsc -p libs/web/core/tsconfig.lib.json --noEmit",
+          "tsc -p libs/web/core/tsconfig.spec.json --noEmit"
+        ],
+        "parallel": false
+      }
+    }
+  }
+}

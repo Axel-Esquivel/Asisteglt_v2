@@ -1,0 +1,13 @@
+{
+  "extends": ["stylelint-config-standard-scss"],
+  "rules": {
+    "color-no-hex": true,
+    "color-named": "never",
+    "function-disallowed-list": ["rgb", "rgba", "hsl", "hsla", "hwb", "lab", "lch", "oklab", "oklch"],
+    "selector-class-pattern": [
+      "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:__[a-z0-9]+(?:-[a-z0-9]+)*)?(?:--[a-z0-9]+(?:-[a-z0-9]+)*)?$",
+      { "message": "Usa nombres en kebab-case con convención BEM (bloque__elemento--modificador)." }
+    ]
+  },
+  "ignoreFiles": ["**/dist/**", "**/node_modules/**", "**/coverage/**"]
+}
