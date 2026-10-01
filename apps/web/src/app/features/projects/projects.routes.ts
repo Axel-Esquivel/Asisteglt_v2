@@ -70,6 +70,16 @@ export const PROJECTS_ROUTES: Route[] = [
         loadComponent: () => import('../reports/report-viewer/reports.page').then((m) => m.ReportsPage),
       },
       {
+        path: 'inventory',
+        title: 'Tomas · AsisteGLT',
+        loadComponent: () => import('../inventory/list/counts.page').then((m) => m.CountsPage),
+      },
+      {
+        path: 'inventory/:countId',
+        title: 'Toma · AsisteGLT',
+        loadComponent: () => import('../inventory/count/count.page').then((m) => m.CountPage),
+      },
+      {
         path: 'chat',
         title: 'Chat del proyecto · AsisteGLT',
         loadComponent: () => import('./chat/project-chat.page').then((m) => m.ProjectChatPage),

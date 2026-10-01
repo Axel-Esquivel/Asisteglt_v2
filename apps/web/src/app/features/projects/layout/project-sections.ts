@@ -31,6 +31,14 @@ export class ProjectSections {
     if (project.can(ProjectPermission.REPORTS_VIEW)) {
       sections.push({ path: 'reports', label: 'Informes', icon: 'pi pi-chart-bar' });
     }
+    const inventory: boolean = [
+      ProjectPermission.INVENTORY_CONFIGURE,
+      ProjectPermission.INVENTORY_COUNT,
+      ProjectPermission.INVENTORY_VIEW,
+    ].some((p: ProjectPermission): boolean => project.can(p));
+    if (!project.isReports() && inventory) {
+      sections.push({ path: 'inventory', label: 'Tomas', icon: 'pi pi-box' });
+    }
     sections.push({ path: 'members', label: 'Miembros', icon: 'pi pi-users' });
     sections.push({ path: 'chat', label: 'Chat', icon: 'pi pi-comments' });
     if (project.can(ProjectPermission.MEMBERS_MANAGE)) {

@@ -7,3 +7,4 @@ export * from './lib/reports/catalog.contracts';
 export * from './lib/reports/org-structure.contracts';
 export * from './lib/reports/ingestion.contracts';
 export * from './lib/reports/analysis.contracts';
+export * from './lib/inventory/inventory.contracts';
