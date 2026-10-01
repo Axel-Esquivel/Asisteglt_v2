@@ -68,6 +68,9 @@
         },
         "development": {
           "buildTarget": "web:build:development"
+        },
+        "demo": {
+          "buildTarget": "web:build:development"
         }
       },
       "options": {

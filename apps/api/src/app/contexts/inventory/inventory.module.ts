@@ -21,6 +21,7 @@ export class InventoryModule {
   public static register(store: DataStore): DynamicModule {
     return {
       module: InventoryModule,
+      global: true,
       controllers: [InventoryController],
       providers: [
         RepositoryBinding.bind(
@@ -43,6 +44,7 @@ export class InventoryModule {
         ),
         InventoryService,
       ],
+      exports: [InventoryService],
     };
   }
 }

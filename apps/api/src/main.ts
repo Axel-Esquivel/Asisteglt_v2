@@ -8,7 +8,9 @@ import { AppConfig, AppConfigLoader } from './app/config/app-config';
 
 async function bootstrap(): Promise<void> {
   const config: AppConfig = AppConfigLoader.load(process.env);
-  const app: INestApplication = await NestFactory.create(AppModule.forRoot(config), { logger: JsonLogger.toStdout(config.logLevel) });
+  const app: INestApplication = await NestFactory.create(AppModule.forRoot(config), {
+    logger: JsonLogger.toStdout(config.logLevel),
+  });
   AppBootstrapper.configure(app, config);
   await app.listen(config.port);
 }

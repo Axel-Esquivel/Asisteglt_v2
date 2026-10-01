@@ -62,10 +62,15 @@ export class AccountService {
   }
 
   public async activeSessions(principal: AuthenticatedPrincipal): Promise<Session[]> {
-    return (await this.sessions.findByUser(principal.userId)).filter((s: Session): boolean => s.isActive(this.clock));
+    return (await this.sessions.findByUser(principal.userId)).filter((s: Session): boolean =>
+      s.isActive(this.clock),
+    );
   }
 
-  public async revokeSession(principal: AuthenticatedPrincipal, sessionId: EntityId): Promise<Result<Session>> {
+  public async revokeSession(
+    principal: AuthenticatedPrincipal,
+    sessionId: EntityId,
+  ): Promise<Result<Session>> {
     const session: Nullable<Session> = (await this.sessions.findById(sessionId)).toNullable();
     if (session === null || !session.getUserId().equals(principal.userId)) {
       return Result.fail(IamErrors.sessionNotFound());

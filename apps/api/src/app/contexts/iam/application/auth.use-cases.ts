@@ -70,12 +70,17 @@ export class LoginUseCase {
     if (lockedUntil !== null) {
       return Result.fail(IamErrors.accountLocked(lockedUntil));
     }
-    const valid: boolean = await this.hasher.verify(PlainPassword.forVerification(command.password), found.getPasswordHash());
+    const valid: boolean = await this.hasher.verify(
+      PlainPassword.forVerification(command.password),
+      found.getPasswordHash(),
+    );
     if (!valid) {
       found.recordFailedLogin(this.policy, this.clock);
       await this.users.save(found);
       const nowLocked: Nullable<Date> = found.lockedUntilAt(this.clock);
-      return Result.fail(nowLocked === null ? IamErrors.invalidCredentials() : IamErrors.accountLocked(nowLocked));
+      return Result.fail(
+        nowLocked === null ? IamErrors.invalidCredentials() : IamErrors.accountLocked(nowLocked),
+      );
     }
     found.recordSuccessfulLogin(this.clock);
     await this.users.save(found);
@@ -121,7 +126,9 @@ export class LogoutUseCase {
   ) {}
 
   public async execute(rawRefreshToken: string): Promise<void> {
-    const session: Nullable<Session> = (await this.sessions.findByAnyTokenHash(this.tokens.digest(rawRefreshToken))).toNullable();
+    const session: Nullable<Session> = (
+      await this.sessions.findByAnyTokenHash(this.tokens.digest(rawRefreshToken))
+    ).toNullable();
     if (session !== null) {
       session.revoke(this.clock);
       await this.sessions.save(session);

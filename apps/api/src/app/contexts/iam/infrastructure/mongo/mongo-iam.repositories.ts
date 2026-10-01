@@ -34,7 +34,10 @@ export class MongoUserRepository extends UserRepository {
   }
 
   public override async findByEmail(email: Email): Promise<Optional<User>> {
-    const record: Nullable<UserRecord> = await this.model.findOne({ email: email.toString() }).lean<UserRecord>().exec();
+    const record: Nullable<UserRecord> = await this.model
+      .findOne({ email: email.toString() })
+      .lean<UserRecord>()
+      .exec();
     return Optional.fromNullable(record).map(toUser);
   }
 
@@ -72,7 +75,10 @@ export class MongoSessionRepository extends SessionRepository {
   }
 
   public override async findById(id: EntityId): Promise<Optional<Session>> {
-    const record: Nullable<SessionRecord> = await this.model.findById(id.toString()).lean<SessionRecord>().exec();
+    const record: Nullable<SessionRecord> = await this.model
+      .findById(id.toString())
+      .lean<SessionRecord>()
+      .exec();
     return Optional.fromNullable(record).map(toSession);
   }
 
@@ -85,7 +91,10 @@ export class MongoSessionRepository extends SessionRepository {
   }
 
   public override async findByUser(userId: EntityId): Promise<Session[]> {
-    const records: SessionRecord[] = await this.model.find({ userId: userId.toString() }).lean<SessionRecord[]>().exec();
+    const records: SessionRecord[] = await this.model
+      .find({ userId: userId.toString() })
+      .lean<SessionRecord[]>()
+      .exec();
     return records.map(toSession);
   }
 

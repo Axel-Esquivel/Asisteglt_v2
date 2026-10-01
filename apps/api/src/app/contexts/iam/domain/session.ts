@@ -42,9 +42,25 @@ export class Session extends AggregateRoot {
     super(id);
   }
 
-  public static open(userId: EntityId, refreshTokenHash: string, device: DeviceInfo, ttlMs: number, clock: Clock): Session {
+  public static open(
+    userId: EntityId,
+    refreshTokenHash: string,
+    device: DeviceInfo,
+    ttlMs: number,
+    clock: Clock,
+  ): Session {
     const now: Date = clock.now();
-    return new Session(EntityId.generate(), userId, refreshTokenHash, [], device, now, now, new Date(now.getTime() + ttlMs), null);
+    return new Session(
+      EntityId.generate(),
+      userId,
+      refreshTokenHash,
+      [],
+      device,
+      now,
+      now,
+      new Date(now.getTime() + ttlMs),
+      null,
+    );
   }
 
   public static restore(s: SessionSnapshot): Session {
@@ -78,7 +94,10 @@ export class Session extends AggregateRoot {
   }
 
   public rotate(newHash: string, ttlMs: number, clock: Clock): void {
-    this.previousTokenHashes = [this.refreshTokenHash, ...this.previousTokenHashes].slice(0, Session.MAX_HISTORY);
+    this.previousTokenHashes = [this.refreshTokenHash, ...this.previousTokenHashes].slice(
+      0,
+      Session.MAX_HISTORY,
+    );
     this.refreshTokenHash = newHash;
     this.lastSeenAt = clock.now();
     this.expiresAt = new Date(this.lastSeenAt.getTime() + ttlMs);

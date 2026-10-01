@@ -26,11 +26,16 @@ export class ApiExceptionFilter implements ExceptionFilter<unknown> {
     }
     if (error instanceof HttpException) {
       const status: number = error.getStatus();
-      const code: string = status === HttpStatus.NOT_FOUND ? CommonErrorCode.NOT_FOUND : CommonErrorCode.VALIDATION_FAILED;
+      const code: string =
+        status === HttpStatus.NOT_FOUND ? CommonErrorCode.NOT_FOUND : CommonErrorCode.VALIDATION_FAILED;
       return this.build(status, code, ApiExceptionFilter.messageOf(error));
     }
     this.logger.error(error);
-    return this.build(HttpStatus.INTERNAL_SERVER_ERROR, CommonErrorCode.INTERNAL_ERROR, 'Error interno del servidor');
+    return this.build(
+      HttpStatus.INTERNAL_SERVER_ERROR,
+      CommonErrorCode.INTERNAL_ERROR,
+      'Error interno del servidor',
+    );
   }
 
   private build(statusCode: number, code: string, message: string): ApiErrorResponse {

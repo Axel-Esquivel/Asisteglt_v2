@@ -20,30 +20,39 @@ export class RoleCatalog {
     ],
     [
       ProjectRole.ANALYST,
-      [ProjectPermission.DATA_CONFIGURE, ProjectPermission.DATA_LOAD, ProjectPermission.DATA_VIEW, ProjectPermission.REPORTS_VIEW],
+      [
+        ProjectPermission.DATA_CONFIGURE,
+        ProjectPermission.DATA_LOAD,
+        ProjectPermission.DATA_VIEW,
+        ProjectPermission.REPORTS_VIEW,
+      ],
     ],
-    [ProjectRole.DESIGNER, [ProjectPermission.DATA_VIEW, ProjectPermission.REPORTS_DESIGN, ProjectPermission.REPORTS_VIEW]],
+    [
+      ProjectRole.DESIGNER,
+      [ProjectPermission.DATA_VIEW, ProjectPermission.REPORTS_DESIGN, ProjectPermission.REPORTS_VIEW],
+    ],
     [ProjectRole.VIEWER, [ProjectPermission.REPORTS_VIEW]],
   ]);
 
-  private static readonly INVENTORY_ROLES: ReadonlyMap<ProjectRole, ReadonlyArray<ProjectPermission>> = new Map([
-    [ProjectRole.OWNER, Object.values(ProjectPermission)],
-    [
-      ProjectRole.ADMIN,
+  private static readonly INVENTORY_ROLES: ReadonlyMap<ProjectRole, ReadonlyArray<ProjectPermission>> =
+    new Map([
+      [ProjectRole.OWNER, Object.values(ProjectPermission)],
       [
-        ProjectPermission.PROJECT_MANAGE,
-        ProjectPermission.MEMBERS_MANAGE,
-        ProjectPermission.DATA_CONFIGURE,
-        ProjectPermission.DATA_LOAD,
-        ProjectPermission.INVENTORY_CONFIGURE,
-        ProjectPermission.INVENTORY_SUPERVISE,
-        ProjectPermission.INVENTORY_VIEW,
+        ProjectRole.ADMIN,
+        [
+          ProjectPermission.PROJECT_MANAGE,
+          ProjectPermission.MEMBERS_MANAGE,
+          ProjectPermission.DATA_CONFIGURE,
+          ProjectPermission.DATA_LOAD,
+          ProjectPermission.INVENTORY_CONFIGURE,
+          ProjectPermission.INVENTORY_SUPERVISE,
+          ProjectPermission.INVENTORY_VIEW,
+        ],
       ],
-    ],
-    [ProjectRole.SUPERVISOR, [ProjectPermission.INVENTORY_SUPERVISE, ProjectPermission.INVENTORY_VIEW]],
-    [ProjectRole.COUNTER, [ProjectPermission.INVENTORY_COUNT]],
-    [ProjectRole.AUDITOR, [ProjectPermission.INVENTORY_VIEW]],
-  ]);
+      [ProjectRole.SUPERVISOR, [ProjectPermission.INVENTORY_SUPERVISE, ProjectPermission.INVENTORY_VIEW]],
+      [ProjectRole.COUNTER, [ProjectPermission.INVENTORY_COUNT]],
+      [ProjectRole.AUDITOR, [ProjectPermission.INVENTORY_VIEW]],
+    ]);
 
   public static rolesFor(module: ModuleType): ProjectRole[] {
     return [...RoleCatalog.table(module).keys()];

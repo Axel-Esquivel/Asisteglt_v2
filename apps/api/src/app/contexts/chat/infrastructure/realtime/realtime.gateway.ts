@@ -1,11 +1,22 @@
 import { Logger } from '@nestjs/common';
-import { OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, WebSocketGateway } from '@nestjs/websockets';
+import {
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+  OnGatewayInit,
+  WebSocketGateway,
+} from '@nestjs/websockets';
 import { ChatMessageResponse, PresenceChangedEvent, RealtimeEvent } from '@asisteglt/shared-contracts';
 import { EntityId, Nullable, Result } from '@asisteglt/shared-kernel';
 import { Server, Socket } from 'socket.io';
 import { AccountService } from '../../../iam/application/account.use-cases';
 import { AccessTokenIssuer, AuthenticatedPrincipal } from '../../../iam/domain/ports';
-import { EveryoneAudience, PresenceTracker, RealtimeAudience, RealtimeEventPublisher, UsersAudience } from '../../domain/ports';
+import {
+  EveryoneAudience,
+  PresenceTracker,
+  RealtimeAudience,
+  RealtimeEventPublisher,
+  UsersAudience,
+} from '../../domain/ports';
 
 /** Ruta del endpoint Socket.IO (mismo origen que la API; el proxy la reenvía). */
 export const REALTIME_PATH: string = '/api/v1/realtime';
@@ -57,10 +68,16 @@ export class RealtimeGateway
     }
   }
 
-  public override chatMessage(audience: RealtimeAudience, message: ChatMessageResponse, updated: boolean): void {
+  public override chatMessage(
+    audience: RealtimeAudience,
+    message: ChatMessageResponse,
+    updated: boolean,
+  ): void {
     const rooms: string[] = audience.rooms();
     if (this.server !== null && rooms.length > 0) {
-      this.server.to(rooms).emit(updated ? RealtimeEvent.CHAT_MESSAGE_UPDATED : RealtimeEvent.CHAT_MESSAGE, message);
+      this.server
+        .to(rooms)
+        .emit(updated ? RealtimeEvent.CHAT_MESSAGE_UPDATED : RealtimeEvent.CHAT_MESSAGE, message);
     }
   }
 

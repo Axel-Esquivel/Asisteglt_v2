@@ -6,6 +6,7 @@
   "scripts": {
     "start:web": "nx serve web",
     "start:api": "nx serve api",
+    "start:demo": "nx run-many -t serve -p api web -c demo",
     "start:worker": "nx serve worker",
     "build": "nx run-many -t build",
     "test": "nx run-many -t test",

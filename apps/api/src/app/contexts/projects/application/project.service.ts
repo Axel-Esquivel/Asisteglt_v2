@@ -44,7 +44,12 @@ export class ProjectService {
     private readonly clock: Clock,
   ) {}
 
-  public async create(owner: EntityId, name: string, description: string, moduleType: ModuleType): Promise<Result<Project>> {
+  public async create(
+    owner: EntityId,
+    name: string,
+    description: string,
+    moduleType: ModuleType,
+  ): Promise<Result<Project>> {
     const created: Result<Project> = Project.create(name, description, moduleType, owner, this.clock);
     if (created.isOk()) {
       await this.projects.save(created.unwrap());
@@ -60,7 +65,12 @@ export class ProjectService {
     return this.access.load(projectId, userId);
   }
 
-  public async update(projectId: string, userId: EntityId, name: string, description: string): Promise<Result<Project>> {
+  public async update(
+    projectId: string,
+    userId: EntityId,
+    name: string,
+    description: string,
+  ): Promise<Result<Project>> {
     return this.persist(
       (await this.access.require(projectId, userId, ProjectPermission.PROJECT_MANAGE)).flatMap(
         (p: Project): Result<Project> => p.update(name, description),
@@ -74,7 +84,9 @@ export class ProjectService {
       return Result.fail(ProjectErrors.notFound());
     }
     const members: ReadonlyArray<ProjectMember> = project.unwrap().getMembers();
-    const users: User[] = await this.directory.findMany(members.map((m: ProjectMember): EntityId => m.userId));
+    const users: User[] = await this.directory.findMany(
+      members.map((m: ProjectMember): EntityId => m.userId),
+    );
     return Result.ok(
       members.map(
         (m: ProjectMember): MemberView =>
@@ -83,20 +95,38 @@ export class ProjectService {
     );
   }
 
-  public async addMember(projectId: string, actor: EntityId, email: string, role: ProjectRole): Promise<Result<Project>> {
-    const project: Result<Project> = await this.access.require(projectId, actor, ProjectPermission.MEMBERS_MANAGE);
+  public async addMember(
+    projectId: string,
+    actor: EntityId,
+    email: string,
+    role: ProjectRole,
+  ): Promise<Result<Project>> {
+    const project: Result<Project> = await this.access.require(
+      projectId,
+      actor,
+      ProjectPermission.MEMBERS_MANAGE,
+    );
     if (!project.isOk()) {
       return project;
     }
     const parsed: Result<Email> = Email.create(email);
-    const user: Nullable<User> = parsed.isOk() ? (await this.directory.findByEmail(parsed.unwrap())).toNullable() : null;
+    const user: Nullable<User> = parsed.isOk()
+      ? (await this.directory.findByEmail(parsed.unwrap())).toNullable()
+      : null;
     if (user === null) {
       return Result.fail(ProjectErrors.userNotFound());
     }
-    return this.persist(project.flatMap((p: Project): Result<Project> => p.addMember(user.getId(), role, this.clock)));
+    return this.persist(
+      project.flatMap((p: Project): Result<Project> => p.addMember(user.getId(), role, this.clock)),
+    );
   }
 
-  public async changeRole(projectId: string, actor: EntityId, memberId: string, role: ProjectRole): Promise<Result<Project>> {
+  public async changeRole(
+    projectId: string,
+    actor: EntityId,
+    memberId: string,
+    role: ProjectRole,
+  ): Promise<Result<Project>> {
     const target: Result<EntityId> = EntityId.fromString(memberId);
     if (!target.isOk()) {
       return Result.fail(ProjectErrors.memberNotFound());
@@ -121,8 +151,16 @@ export class ProjectService {
     return this.persist(project.flatMap((p: Project): Result<Project> => p.removeMember(target.unwrap())));
   }
 
-  public async createShareLink(projectId: string, actor: EntityId, spec: ShareLinkSpec): Promise<Result<CreatedShareLink>> {
-    const project: Result<Project> = await this.access.require(projectId, actor, ProjectPermission.MEMBERS_MANAGE);
+  public async createShareLink(
+    projectId: string,
+    actor: EntityId,
+    spec: ShareLinkSpec,
+  ): Promise<Result<CreatedShareLink>> {
+    const project: Result<Project> = await this.access.require(
+      projectId,
+      actor,
+      ProjectPermission.MEMBERS_MANAGE,
+    );
     if (!project.isOk()) {
       return Result.fail(ProjectErrors.denied(ProjectPermission.MEMBERS_MANAGE));
     }
@@ -145,15 +183,27 @@ export class ProjectService {
   }
 
   public async shareLinks(projectId: string, actor: EntityId): Promise<Result<ShareLink[]>> {
-    const project: Result<Project> = await this.access.require(projectId, actor, ProjectPermission.MEMBERS_MANAGE);
+    const project: Result<Project> = await this.access.require(
+      projectId,
+      actor,
+      ProjectPermission.MEMBERS_MANAGE,
+    );
     if (!project.isOk()) {
       return Result.fail(ProjectErrors.denied(ProjectPermission.MEMBERS_MANAGE));
     }
     return Result.ok(await this.links.findByProject(project.unwrap().getId()));
   }
 
-  public async revokeShareLink(projectId: string, actor: EntityId, linkId: string): Promise<Result<ShareLink>> {
-    const project: Result<Project> = await this.access.require(projectId, actor, ProjectPermission.MEMBERS_MANAGE);
+  public async revokeShareLink(
+    projectId: string,
+    actor: EntityId,
+    linkId: string,
+  ): Promise<Result<ShareLink>> {
+    const project: Result<Project> = await this.access.require(
+      projectId,
+      actor,
+      ProjectPermission.MEMBERS_MANAGE,
+    );
     const id: Result<EntityId> = EntityId.fromString(linkId);
     if (!project.isOk() || !id.isOk()) {
       return Result.fail(ProjectErrors.shareLinkInvalid());

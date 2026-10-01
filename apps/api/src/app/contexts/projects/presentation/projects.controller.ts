@@ -30,8 +30,8 @@ export class ProjectsController {
 
   @Get()
   public async list(@CurrentPrincipal() principal: AuthenticatedPrincipal): Promise<ProjectResponse[]> {
-    return (await this.service.listFor(principal.userId)).map(
-      (p: Project): ProjectResponse => ProjectsPresenter.project(p, principal.userId),
+    return (await this.service.listFor(principal.userId)).map((p: Project): ProjectResponse =>
+      ProjectsPresenter.project(p, principal.userId),
     );
   }
 
@@ -56,8 +56,14 @@ export class ProjectsController {
   }
 
   @Get(':id')
-  public async get(@CurrentPrincipal() principal: AuthenticatedPrincipal, @Param('id') id: string): Promise<ProjectResponse> {
-    return ProjectsPresenter.project((await this.service.get(id, principal.userId)).unwrap(), principal.userId);
+  public async get(
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+    @Param('id') id: string,
+  ): Promise<ProjectResponse> {
+    return ProjectsPresenter.project(
+      (await this.service.get(id, principal.userId)).unwrap(),
+      principal.userId,
+    );
   }
 
   @Patch(':id')
@@ -66,7 +72,9 @@ export class ProjectsController {
     @Param('id') id: string,
     @Body() body: UpdateProjectRequestDto,
   ): Promise<ProjectResponse> {
-    const project: Project = (await this.service.update(id, principal.userId, body.name, body.description)).unwrap();
+    const project: Project = (
+      await this.service.update(id, principal.userId, body.name, body.description)
+    ).unwrap();
     return ProjectsPresenter.project(project, principal.userId);
   }
 
@@ -75,9 +83,9 @@ export class ProjectsController {
     @CurrentPrincipal() principal: AuthenticatedPrincipal,
     @Param('id') id: string,
   ): Promise<MemberResponse[]> {
-    return (await this.service.members(id, principal.userId)).unwrap().map(
-      (view: MemberView): MemberResponse => ProjectsPresenter.member(view),
-    );
+    return (await this.service.members(id, principal.userId))
+      .unwrap()
+      .map((view: MemberView): MemberResponse => ProjectsPresenter.member(view));
   }
 
   @Post(':id/members')
@@ -116,9 +124,9 @@ export class ProjectsController {
     @CurrentPrincipal() principal: AuthenticatedPrincipal,
     @Param('id') id: string,
   ): Promise<ShareLinkResponse[]> {
-    return (await this.service.shareLinks(id, principal.userId)).unwrap().map(
-      (link: ShareLink): ShareLinkResponse => ProjectsPresenter.shareLink(link, this.clock),
-    );
+    return (await this.service.shareLinks(id, principal.userId))
+      .unwrap()
+      .map((link: ShareLink): ShareLinkResponse => ProjectsPresenter.shareLink(link, this.clock));
   }
 
   @Post(':id/share-links')

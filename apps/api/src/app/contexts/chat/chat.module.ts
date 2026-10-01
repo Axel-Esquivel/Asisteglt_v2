@@ -32,9 +32,19 @@ export class ChatModule {
       global: true,
       controllers: [ChatController],
       providers: [
-        RepositoryBinding.bind(ConversationRepository, store, InMemoryConversationRepository, MongoConversationRepository),
+        RepositoryBinding.bind(
+          ConversationRepository,
+          store,
+          InMemoryConversationRepository,
+          MongoConversationRepository,
+        ),
         RepositoryBinding.bind(MessageRepository, store, InMemoryMessageRepository, MongoMessageRepository),
-        RepositoryBinding.bind(ReadMarkerRepository, store, InMemoryReadMarkerRepository, MongoReadMarkerRepository),
+        RepositoryBinding.bind(
+          ReadMarkerRepository,
+          store,
+          InMemoryReadMarkerRepository,
+          MongoReadMarkerRepository,
+        ),
         { provide: PresenceTracker, useClass: InMemoryPresenceTracker },
         RealtimeGateway,
         { provide: RealtimeEventPublisher, useExisting: RealtimeGateway },

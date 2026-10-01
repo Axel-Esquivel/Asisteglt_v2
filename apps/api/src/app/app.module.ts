@@ -10,6 +10,7 @@ import { IamModule } from './contexts/iam/iam.module';
 import { InventoryModule } from './contexts/inventory/inventory.module';
 import { ProjectsModule } from './contexts/projects/projects.module';
 import { ReportsModule } from './contexts/reports/reports.module';
+import { DemoSeeder } from './demo/demo-seeder';
 import { HealthController } from './health/health.controller';
 import { HealthService } from './health/health.service';
 
@@ -34,6 +35,7 @@ export class AppModule implements NestModule {
         { provide: Clock, useClass: SystemClock },
         { provide: APP_FILTER, useClass: ApiExceptionFilter },
         HealthService,
+        DemoSeeder,
       ],
       exports: [AppConfig, Clock],
     };

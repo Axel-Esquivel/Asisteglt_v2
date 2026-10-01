@@ -6,7 +6,9 @@ export class MongoDatabase implements OnApplicationShutdown {
   private constructor(public readonly connection: Connection) {}
 
   public static async connect(uri: string): Promise<MongoDatabase> {
-    const connection: Connection = await createConnection(uri, { serverSelectionTimeoutMS: 10_000 }).asPromise();
+    const connection: Connection = await createConnection(uri, {
+      serverSelectionTimeoutMS: 10_000,
+    }).asPromise();
     return new MongoDatabase(connection);
   }
 

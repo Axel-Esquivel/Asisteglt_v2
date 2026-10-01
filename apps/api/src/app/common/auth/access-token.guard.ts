@@ -19,7 +19,10 @@ export class AccessTokenGuard implements CanActivate {
 
   public async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic: boolean =
-      this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_ROUTE, [context.getHandler(), context.getClass()]) ?? false;
+      this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_ROUTE, [
+        context.getHandler(),
+        context.getClass(),
+      ]) ?? false;
     if (isPublic || context.getType() !== 'http') {
       return true;
     }

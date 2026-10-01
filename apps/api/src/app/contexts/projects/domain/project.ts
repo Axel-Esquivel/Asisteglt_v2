@@ -1,5 +1,13 @@
 import { ModuleType, ProjectPermission, ProjectRole } from '@asisteglt/shared-contracts';
-import { AggregateRoot, Clock, Collections, EntityId, Nullable, Optional, Result } from '@asisteglt/shared-kernel';
+import {
+  AggregateRoot,
+  Clock,
+  Collections,
+  EntityId,
+  Nullable,
+  Optional,
+  Result,
+} from '@asisteglt/shared-kernel';
 import { ProjectErrors } from './project-errors';
 import { RoleCatalog } from './role-catalog';
 
@@ -62,9 +70,16 @@ export class Project extends AggregateRoot {
   ): Result<Project> {
     return Project.validateName(name).map((valid: string): Project => {
       const now: Date = clock.now();
-      return new Project(EntityId.generate(), valid, description.trim(), moduleType, owner, ProjectStatus.ACTIVE, [
-        new ProjectMember(owner, ProjectRole.OWNER, now),
-      ], now);
+      return new Project(
+        EntityId.generate(),
+        valid,
+        description.trim(),
+        moduleType,
+        owner,
+        ProjectStatus.ACTIVE,
+        [new ProjectMember(owner, ProjectRole.OWNER, now)],
+        now,
+      );
     });
   }
 
@@ -77,7 +92,8 @@ export class Project extends AggregateRoot {
       EntityId.fromString(s.ownerId).unwrap(),
       s.status,
       s.members.map(
-        (m: MemberSnapshot): ProjectMember => new ProjectMember(EntityId.fromString(m.userId).unwrap(), m.role, m.joinedAt),
+        (m: MemberSnapshot): ProjectMember =>
+          new ProjectMember(EntityId.fromString(m.userId).unwrap(), m.role, m.joinedAt),
       ),
       s.createdAt,
     );
@@ -89,7 +105,9 @@ export class Project extends AggregateRoot {
 
   private static validateName(raw: string): Result<string> {
     const name: string = raw.trim().replace(/\s+/g, ' ');
-    return name.length >= 3 && name.length <= 120 ? Result.ok(name) : Result.fail(ProjectErrors.invalidName());
+    return name.length >= 3 && name.length <= 120
+      ? Result.ok(name)
+      : Result.fail(ProjectErrors.invalidName());
   }
 
   public getModuleType(): ModuleType {
@@ -133,7 +151,11 @@ export class Project extends AggregateRoot {
 
   public can(userId: EntityId, permission: ProjectPermission): boolean {
     const role: Nullable<ProjectRole> = this.roleOf(userId);
-    return role !== null && this.status === ProjectStatus.ACTIVE && RoleCatalog.grants(this.moduleType, role, permission);
+    return (
+      role !== null &&
+      this.status === ProjectStatus.ACTIVE &&
+      RoleCatalog.grants(this.moduleType, role, permission)
+    );
   }
 
   public update(name: string, description: string): Result<Project> {
@@ -165,7 +187,9 @@ export class Project extends AggregateRoot {
     if (!this.member(userId).isPresent()) {
       return Result.fail(ProjectErrors.memberNotFound());
     }
-    this.members = this.members.map((m: ProjectMember): ProjectMember => (m.userId.equals(userId) ? m.withRole(role) : m));
+    this.members = this.members.map((m: ProjectMember): ProjectMember =>
+      m.userId.equals(userId) ? m.withRole(role) : m,
+    );
     return Result.ok(this);
   }
 
@@ -192,9 +216,11 @@ export class Project extends AggregateRoot {
       moduleType: this.moduleType,
       ownerId: this.ownerId.toString(),
       status: this.status,
-      members: this.members.map(
-        (m: ProjectMember): MemberSnapshot => ({ userId: m.userId.toString(), role: m.role, joinedAt: m.joinedAt }),
-      ),
+      members: this.members.map((m: ProjectMember): MemberSnapshot => ({
+        userId: m.userId.toString(),
+        role: m.role,
+        joinedAt: m.joinedAt,
+      })),
       createdAt: this.createdAt,
     };
   }

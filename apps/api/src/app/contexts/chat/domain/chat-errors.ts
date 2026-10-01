@@ -3,11 +3,17 @@ import { ForbiddenError, NotFoundError, ValidationError } from '@asisteglt/share
 
 export class ChatErrors {
   public static conversationNotFound(): NotFoundError {
-    return new NotFoundError(ChatErrorCode.CONVERSATION_NOT_FOUND, 'La conversación no existe o no tienes acceso');
+    return new NotFoundError(
+      ChatErrorCode.CONVERSATION_NOT_FOUND,
+      'La conversación no existe o no tienes acceso',
+    );
   }
 
   public static invalidMessage(): ValidationError {
-    return new ValidationError(ChatErrorCode.INVALID_MESSAGE, 'El mensaje debe tener entre 1 y 4000 caracteres');
+    return new ValidationError(
+      ChatErrorCode.INVALID_MESSAGE,
+      'El mensaje debe tener entre 1 y 4000 caracteres',
+    );
   }
 
   public static messageNotFound(): NotFoundError {
@@ -19,6 +25,9 @@ export class ChatErrors {
   }
 
   public static invalidDirectTarget(): ValidationError {
-    return new ValidationError(ChatErrorCode.INVALID_DIRECT_TARGET, 'Elige otra persona registrada para conversar');
+    return new ValidationError(
+      ChatErrorCode.INVALID_DIRECT_TARGET,
+      'Elige otra persona registrada para conversar',
+    );
   }
 }

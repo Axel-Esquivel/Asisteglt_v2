@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ChatMessageResponse, ConversationResponse, PresenceResponse } from '@asisteglt/shared-contracts';
 import { Nullable } from '@asisteglt/shared-kernel';
 import { CurrentPrincipal } from '../../../common/auth/auth.decorators';
@@ -15,7 +26,9 @@ export class ChatController {
   ) {}
 
   @Get('conversations')
-  public async conversations(@CurrentPrincipal() principal: AuthenticatedPrincipal): Promise<ConversationResponse[]> {
+  public async conversations(
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+  ): Promise<ConversationResponse[]> {
     return (await this.chat.list(principal.userId)).map(ChatController.conversation);
   }
 
@@ -55,7 +68,10 @@ export class ChatController {
 
   @Post('conversations/:id/read')
   @HttpCode(HttpStatus.NO_CONTENT)
-  public async read(@CurrentPrincipal() principal: AuthenticatedPrincipal, @Param('id') id: string): Promise<void> {
+  public async read(
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+    @Param('id') id: string,
+  ): Promise<void> {
     (await this.chat.markRead(principal.userId, id)).unwrap();
   }
 

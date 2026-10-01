@@ -1,7 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { Clock } from '@asisteglt/shared-kernel';
 import { DeviceInfo, Session } from '../domain/session';
-import { AccessTokenIssuer, AuthenticatedPrincipal, OpaqueTokenService, SessionRepository } from '../domain/ports';
+import {
+  AccessTokenIssuer,
+  AuthenticatedPrincipal,
+  OpaqueTokenService,
+  SessionRepository,
+} from '../domain/ports';
 import { User } from '../domain/user';
 import { IamSettings } from './iam-settings';
 

@@ -18,7 +18,11 @@ export abstract class MessageRepository {
   public abstract findById(id: EntityId): Promise<Optional<Message>>;
   /** Mensajes anteriores a `before` (o los últimos), en orden cronológico. */
   public abstract page(conversationId: EntityId, before: Nullable<Date>, limit: number): Promise<Message[]>;
-  public abstract countAfter(conversationId: EntityId, after: Nullable<Date>, excludeSender: EntityId): Promise<number>;
+  public abstract countAfter(
+    conversationId: EntityId,
+    after: Nullable<Date>,
+    excludeSender: EntityId,
+  ): Promise<number>;
   public abstract save(message: Message): Promise<void>;
 }
 
@@ -65,7 +69,11 @@ export class EveryoneAudience extends RealtimeAudience {
 
 /** Publica eventos hacia los clientes conectados. */
 export abstract class RealtimeEventPublisher {
-  public abstract chatMessage(audience: RealtimeAudience, message: ChatMessageResponse, updated: boolean): void;
+  public abstract chatMessage(
+    audience: RealtimeAudience,
+    message: ChatMessageResponse,
+    updated: boolean,
+  ): void;
   public abstract presenceChanged(event: PresenceChangedEvent): void;
   /** Evento genérico de otros contextos (p. ej. progreso de importación). */
   public abstract publish(audience: RealtimeAudience, event: RealtimeEvent, payload: object): void;

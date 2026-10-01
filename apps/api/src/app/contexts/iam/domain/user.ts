@@ -38,10 +38,26 @@ export class User extends AggregateRoot {
     super(id);
   }
 
-  public static register(email: Email, passwordHash: string, displayName: string, clock: Clock): Result<User> {
+  public static register(
+    email: Email,
+    passwordHash: string,
+    displayName: string,
+    clock: Clock,
+  ): Result<User> {
     return User.validateDisplayName(displayName).map(
       (name: string): User =>
-        new User(EntityId.generate(), email, passwordHash, name, UserStatus.ACTIVE, 0, 0, null, clock.now(), null),
+        new User(
+          EntityId.generate(),
+          email,
+          passwordHash,
+          name,
+          UserStatus.ACTIVE,
+          0,
+          0,
+          null,
+          clock.now(),
+          null,
+        ),
     );
   }
 
@@ -62,7 +78,9 @@ export class User extends AggregateRoot {
 
   private static validateDisplayName(raw: string): Result<string> {
     const name: string = raw.trim().replace(/\s+/g, ' ');
-    return name.length >= 2 && name.length <= 80 ? Result.ok(name) : Result.fail(IamErrors.invalidDisplayName());
+    return name.length >= 2 && name.length <= 80
+      ? Result.ok(name)
+      : Result.fail(IamErrors.invalidDisplayName());
   }
 
   public getEmail(): Email {
@@ -86,7 +104,9 @@ export class User extends AggregateRoot {
   }
 
   public lockedUntilAt(clock: Clock): Nullable<Date> {
-    return this.lockedUntil !== null && this.lockedUntil.getTime() > clock.now().getTime() ? this.lockedUntil : null;
+    return this.lockedUntil !== null && this.lockedUntil.getTime() > clock.now().getTime()
+      ? this.lockedUntil
+      : null;
   }
 
   public recordFailedLogin(policy: LockoutPolicy, clock: Clock): void {

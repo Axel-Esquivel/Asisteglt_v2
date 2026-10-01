@@ -41,8 +41,20 @@ export class ShareLink extends AggregateRoot {
     clock: Clock,
   ): ShareLink {
     const now: Date = clock.now();
-    const expiresAt: Nullable<Date> = expiresInDays === null ? null : new Date(now.getTime() + expiresInDays * 86_400_000);
-    return new ShareLink(EntityId.generate(), projectId, tokenHash, role, expiresAt, maxUses, 0, null, createdBy, now);
+    const expiresAt: Nullable<Date> =
+      expiresInDays === null ? null : new Date(now.getTime() + expiresInDays * 86_400_000);
+    return new ShareLink(
+      EntityId.generate(),
+      projectId,
+      tokenHash,
+      role,
+      expiresAt,
+      maxUses,
+      0,
+      null,
+      createdBy,
+      now,
+    );
   }
 
   public static restore(s: ShareLinkSnapshot): ShareLink {

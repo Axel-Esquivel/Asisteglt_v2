@@ -6,12 +6,26 @@ import { DataStore } from '../../common/persistence/data-store';
 import { RepositoryBinding } from '../../common/persistence/persistence.module';
 import { AppConfig } from '../../config/app-config';
 import { AccountService } from './application/account.use-cases';
-import { LoginUseCase, LogoutUseCase, RefreshSessionUseCase, RegisterUserUseCase } from './application/auth.use-cases';
+import {
+  LoginUseCase,
+  LogoutUseCase,
+  RefreshSessionUseCase,
+  RegisterUserUseCase,
+} from './application/auth.use-cases';
 import { IamSettings } from './application/iam-settings';
 import { SessionIssuer } from './application/session-issuer';
 import { UserDirectory } from './application/user-directory';
-import { AccessTokenIssuer, OpaqueTokenService, PasswordHasher, SessionRepository, UserRepository } from './domain/ports';
-import { InMemorySessionRepository, InMemoryUserRepository } from './infrastructure/memory/in-memory-iam.repositories';
+import {
+  AccessTokenIssuer,
+  OpaqueTokenService,
+  PasswordHasher,
+  SessionRepository,
+  UserRepository,
+} from './domain/ports';
+import {
+  InMemorySessionRepository,
+  InMemoryUserRepository,
+} from './infrastructure/memory/in-memory-iam.repositories';
 import { MongoSessionRepository, MongoUserRepository } from './infrastructure/mongo/mongo-iam.repositories';
 import {
   AccessTokenSettings,
@@ -58,7 +72,7 @@ export class IamModule {
         UserDirectory,
         { provide: APP_GUARD, useClass: AccessTokenGuard },
       ],
-      exports: [AccessTokenIssuer, AccountService, UserDirectory, OpaqueTokenService],
+      exports: [AccessTokenIssuer, AccountService, UserDirectory, OpaqueTokenService, RegisterUserUseCase],
     };
   }
 }

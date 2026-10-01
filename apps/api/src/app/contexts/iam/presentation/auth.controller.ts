@@ -5,7 +5,12 @@ import { Nullable, Result } from '@asisteglt/shared-kernel';
 import { CurrentPrincipal, Public } from '../../../common/auth/auth.decorators';
 import { ClientInfo } from '../../../common/http/client-info';
 import { AccountService } from '../application/account.use-cases';
-import { LoginUseCase, LogoutUseCase, RefreshSessionUseCase, RegisterUserUseCase } from '../application/auth.use-cases';
+import {
+  LoginUseCase,
+  LogoutUseCase,
+  RefreshSessionUseCase,
+  RegisterUserUseCase,
+} from '../application/auth.use-cases';
 import { LoginCommand, RegisterCommand } from '../application/commands';
 import { IamSettings } from '../application/iam-settings';
 import { IssuedSession } from '../application/session-issuer';
@@ -58,7 +63,10 @@ export class AuthController {
   @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  public async renew(@Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<AuthSessionResponse> {
+  public async renew(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<AuthSessionResponse> {
     const token: Nullable<string> = RefreshCookie.read(request);
     if (token === null) {
       throw IamErrors.sessionExpired();
@@ -73,7 +81,10 @@ export class AuthController {
   @Public()
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
-  public async signOut(@Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<void> {
+  public async signOut(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<void> {
     const token: Nullable<string> = RefreshCookie.read(request);
     if (token !== null) {
       await this.logout.execute(token);

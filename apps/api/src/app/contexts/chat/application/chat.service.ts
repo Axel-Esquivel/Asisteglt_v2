@@ -70,14 +70,21 @@ export class ChatService {
         conversation instanceof ProjectConversation
           ? (myProjects.find((p: Project): boolean => p.getId().equals(conversation.getProjectId())) ?? null)
           : null;
-      views.push(await this.view(conversation, userId, project === null ? 'Proyecto' : project.getName(), null));
+      views.push(
+        await this.view(conversation, userId, project === null ? 'Proyecto' : project.getName(), null),
+      );
     }
     for (const conversation of directs) {
       if (conversation instanceof DirectConversation) {
         const other: EntityId = conversation.counterpartOf(userId);
         const user: Nullable<User> = users.find((u: User): boolean => u.getId().equals(other)) ?? null;
         views.push(
-          await this.view(conversation, userId, user === null ? 'Usuario eliminado' : user.getDisplayName(), other.toString()),
+          await this.view(
+            conversation,
+            userId,
+            user === null ? 'Usuario eliminado' : user.getDisplayName(),
+            other.toString(),
+          ),
         );
       }
     }
@@ -95,7 +102,8 @@ export class ChatService {
     }
     const key: string = DirectConversation.pairKey(userId, other.getId());
     const existing: Nullable<Conversation> = (await this.conversations.findByPairKey(key)).toNullable();
-    const conversation: Conversation = existing ?? DirectConversation.between(userId, other.getId(), this.clock.now());
+    const conversation: Conversation =
+      existing ?? DirectConversation.between(userId, other.getId(), this.clock.now());
     if (existing === null) {
       await this.conversations.save(conversation);
     }
@@ -111,16 +119,28 @@ export class ChatService {
     return Result.ok(await this.view(conversation, userId, project.unwrap().getName(), null));
   }
 
-  public async history(userId: EntityId, conversationId: string, before: Nullable<Date>): Promise<Result<ChatMessageResponse[]>> {
+  public async history(
+    userId: EntityId,
+    conversationId: string,
+    before: Nullable<Date>,
+  ): Promise<Result<ChatMessageResponse[]>> {
     const conversation: Result<Conversation> = await this.admitted(userId, conversationId);
     if (!conversation.isOk()) {
       return Result.fail(ChatErrors.conversationNotFound());
     }
-    const page: Message[] = await this.messages.page(conversation.unwrap().getId(), before, ChatService.PAGE_SIZE);
+    const page: Message[] = await this.messages.page(
+      conversation.unwrap().getId(),
+      before,
+      ChatService.PAGE_SIZE,
+    );
     return Result.ok(await this.present(page));
   }
 
-  public async post(userId: EntityId, conversationId: string, text: string): Promise<Result<ChatMessageResponse>> {
+  public async post(
+    userId: EntityId,
+    conversationId: string,
+    text: string,
+  ): Promise<Result<ChatMessageResponse>> {
     const conversation: Result<Conversation> = await this.admitted(userId, conversationId);
     const body: Result<MessageBody> = MessageBody.create(text);
     if (!conversation.isOk()) {
@@ -130,7 +150,12 @@ export class ChatService {
       return Result.fail(ChatErrors.invalidMessage());
     }
     const target: Conversation = conversation.unwrap();
-    const message: Result<Message> = Message.post(target, await this.principal(userId), body.unwrap(), this.clock);
+    const message: Result<Message> = Message.post(
+      target,
+      await this.principal(userId),
+      body.unwrap(),
+      this.clock,
+    );
     if (!message.isOk()) {
       return Result.fail(ChatErrors.conversationNotFound());
     }
@@ -145,11 +170,15 @@ export class ChatService {
     if (!body.isOk()) {
       return Result.fail(ChatErrors.invalidMessage());
     }
-    return this.changeMessage(userId, messageId, (m: Message): Result<Message> => m.edit(userId, body.unwrap(), this.clock));
+    return this.changeMessage(userId, messageId, (m: Message): Result<Message> =>
+      m.edit(userId, body.unwrap(), this.clock),
+    );
   }
 
   public remove(userId: EntityId, messageId: string): Promise<Result<ChatMessageResponse>> {
-    return this.changeMessage(userId, messageId, (m: Message): Result<Message> => m.softDelete(userId, this.clock));
+    return this.changeMessage(userId, messageId, (m: Message): Result<Message> =>
+      m.softDelete(userId, this.clock),
+    );
   }
 
   public async markRead(userId: EntityId, conversationId: string): Promise<Result<true>> {
@@ -159,8 +188,8 @@ export class ChatService {
     }
     const id: EntityId = conversation.unwrap().getId();
     const now: Date = this.clock.now();
-    const marker: ReadMarker = (await this.markers.find(id, userId)).orElseGet(
-      (): ReadMarker => ReadMarker.start(id.toString(), userId.toString(), now),
+    const marker: ReadMarker = (await this.markers.find(id, userId)).orElseGet((): ReadMarker =>
+      ReadMarker.start(id.toString(), userId.toString(), now),
     );
     marker.advanceTo(now);
     await this.markers.save(marker);
@@ -173,11 +202,16 @@ export class ChatService {
     change: (message: Message) => Result<Message>,
   ): Promise<Result<ChatMessageResponse>> {
     const id: Result<EntityId> = EntityId.fromString(messageId);
-    const message: Nullable<Message> = id.isOk() ? (await this.messages.findById(id.unwrap())).toNullable() : null;
+    const message: Nullable<Message> = id.isOk()
+      ? (await this.messages.findById(id.unwrap())).toNullable()
+      : null;
     if (message === null) {
       return Result.fail(ChatErrors.messageNotFound());
     }
-    const conversation: Result<Conversation> = await this.admitted(userId, message.getConversationId().toString());
+    const conversation: Result<Conversation> = await this.admitted(
+      userId,
+      message.getConversationId().toString(),
+    );
     if (!conversation.isOk()) {
       return Result.fail(ChatErrors.messageNotFound());
     }
@@ -189,7 +223,11 @@ export class ChatService {
     return Result.ok(await this.broadcast(conversation.unwrap(), message, true));
   }
 
-  private async broadcast(conversation: Conversation, message: Message, updated: boolean): Promise<ChatMessageResponse> {
+  private async broadcast(
+    conversation: Conversation,
+    message: Message,
+    updated: boolean,
+  ): Promise<ChatMessageResponse> {
     const [payload] = await this.present([message]);
     const response: ChatMessageResponse = payload ?? ChatService.fallback(message);
     this.publisher.chatMessage(await this.audienceOf(conversation), response, updated);
@@ -201,7 +239,9 @@ export class ChatService {
       return new UsersAudience(conversation.participants());
     }
     if (conversation instanceof ProjectConversation) {
-      const project: Nullable<Project> = (await this.projects.findById(conversation.getProjectId())).toNullable();
+      const project: Nullable<Project> = (
+        await this.projects.findById(conversation.getProjectId())
+      ).toNullable();
       return new UsersAudience(
         project === null ? [] : project.getMembers().map((m: ProjectMember): EntityId => m.userId),
       );
@@ -255,16 +295,23 @@ export class ChatService {
     title: string,
     counterpartId: Nullable<string>,
   ): Promise<ConversationView> {
-    const readAt: Nullable<Date> = ReadMarker.readAtOf((await this.markers.find(conversation.getId(), userId)).toNullable());
+    const readAt: Nullable<Date> = ReadMarker.readAtOf(
+      (await this.markers.find(conversation.getId(), userId)).toNullable(),
+    );
     const unread: number =
-      conversation.getLastMessageAt() === null ? 0 : await this.messages.countAfter(conversation.getId(), readAt, userId);
+      conversation.getLastMessageAt() === null
+        ? 0
+        : await this.messages.countAfter(conversation.getId(), readAt, userId);
     return new ConversationView(conversation, title, counterpartId, unread);
   }
 
   private async present(messages: ReadonlyArray<Message>): Promise<ChatMessageResponse[]> {
-    const senders: User[] = await this.directory.findMany(messages.map((m: Message): EntityId => m.getSenderId()));
+    const senders: User[] = await this.directory.findMany(
+      messages.map((m: Message): EntityId => m.getSenderId()),
+    );
     return messages.map((message: Message): ChatMessageResponse => {
-      const sender: Nullable<User> = senders.find((u: User): boolean => u.getId().equals(message.getSenderId())) ?? null;
+      const sender: Nullable<User> =
+        senders.find((u: User): boolean => u.getId().equals(message.getSenderId())) ?? null;
       return ChatService.toResponse(message, sender === null ? 'Usuario eliminado' : sender.getDisplayName());
     });
   }

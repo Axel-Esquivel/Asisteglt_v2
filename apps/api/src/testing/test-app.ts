@@ -12,7 +12,15 @@ import { AppConfig, AppConfigLoader } from '../app/config/app-config';
 export class TestApp {
   private constructor(public readonly app: INestApplication<Server>) {}
 
-  public static async start(clock: Clock | null): Promise<TestApp> {
+  public static start(clock: Clock | null): Promise<TestApp> {
+    return TestApp.startWith(clock, {});
+  }
+
+  /** Igual que `start`, con variables de entorno adicionales (p. ej. `DEMO_SEED`). */
+  public static async startWith(
+    clock: Clock | null,
+    extra: Readonly<Record<string, string>>,
+  ): Promise<TestApp> {
     const config: AppConfig = AppConfigLoader.load({
       NODE_ENV: 'test',
       DATA_STORE: 'memory',
@@ -20,11 +28,11 @@ export class TestApp {
       REDIS_URL: 'redis://localhost:6379',
       APP_VERSION: '9.9.9',
       JWT_SECRET: 'secreto-de-pruebas-con-mas-de-32-caracteres',
+      ...extra,
     });
     const builder = Test.createTestingModule({ imports: [AppModule.forRoot(config)] });
-    const moduleRef: TestingModule = await (clock === null
-      ? builder
-      : builder.overrideProvider(Clock).useValue(clock)
+    const moduleRef: TestingModule = await (
+      clock === null ? builder : builder.overrideProvider(Clock).useValue(clock)
     ).compile();
     const app: INestApplication<Server> = moduleRef.createNestApplication<INestApplication<Server>>();
     AppBootstrapper.configure(app, config);
@@ -36,7 +44,8 @@ export class TestApp {
   public async listen(): Promise<string> {
     await this.app.listen(0, '127.0.0.1');
     const address: unknown = this.server().address();
-    const port: unknown = typeof address === 'object' && address !== null && 'port' in address ? address.port : null;
+    const port: unknown =
+      typeof address === 'object' && address !== null && 'port' in address ? address.port : null;
     if (typeof port !== 'number') {
       throw new Error('No se pudo obtener el puerto de escucha');
     }
@@ -70,11 +79,12 @@ export class AuthenticatedClient {
 
   public static from(response: Response): AuthenticatedClient {
     const body: unknown = response.body;
-    const token: unknown = typeof body === 'object' && body !== null && 'accessToken' in body ? body.accessToken : null;
+    const token: unknown =
+      typeof body === 'object' && body !== null && 'accessToken' in body ? body.accessToken : null;
     const user: unknown = typeof body === 'object' && body !== null && 'user' in body ? body.user : null;
     const userId: unknown = typeof user === 'object' && user !== null && 'id' in user ? user.id : null;
     const cookies: unknown = response.headers['set-cookie'];
-    const cookie: string = Array.isArray(cookies) ? String(cookies[0] ?? '').split(';')[0] ?? '' : '';
+    const cookie: string = Array.isArray(cookies) ? (String(cookies[0] ?? '').split(';')[0] ?? '') : '';
     if (typeof token !== 'string' || typeof userId !== 'string') {
       throw new Error('Respuesta de autenticación inesperada');
     }

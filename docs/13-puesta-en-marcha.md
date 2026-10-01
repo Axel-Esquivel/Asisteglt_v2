@@ -1,4 +1,8 @@
-# 13 · Puesta en marcha (Fase 0 · Fundaciones)
+# 13 · Puesta en marcha
+
+Estado: **fase de pruebas** — identidad, proyectos, chat, Reportes (importación, clasificaciones
+e informes) e Inventarios (tomas con rondas) funcionando de punta a punta. Guía de pruebas:
+[14-guia-de-pruebas.md](14-guia-de-pruebas.md).
 
 ## 1. Requisitos
 
@@ -6,98 +10,102 @@
 |---|---|
 | Node.js | 24 LTS (mínimo 22) |
 | npm | 10 o superior |
-| Docker + Docker Compose | Para MongoDB, Redis y Mailpit en desarrollo |
-| Navegador | Chromium/Chrome para las pruebas e2e |
+| MongoDB 8 (replica set) | Solo para el modo persistente (`DATA_STORE=mongo`); `docker/docker-compose.yml` lo levanta |
+| Navegador | Chromium/Chrome; para las pruebas e2e, Playwright |
 
-## 2. Primer arranque
+## 2. Arranque rápido de demostración (sin base de datos)
 
 ```bash
-npm install                     # usa .npmrc (legacy-peer-deps)
-cp .env.example .env            # Nx carga .env automáticamente en cada tarea
-npm run services:up             # MongoDB (replica set rs0), Redis y Mailpit
-npm run start:api               # API en http://localhost:3000/api/v1
-npm run start:web               # Web en http://localhost:4200 (proxy /api → :3000)
-npm run start:worker            # Worker de colas (opcional en esta fase)
+npm install
+npm run start:demo        # API en memoria con datos de demostración + web en http://localhost:4200
 ```
 
-Comprobación rápida: `curl http://localhost:3000/api/v1/health` devuelve
-`{"service":"api","status":"UP",...}` y la página de inicio muestra **Estado: Operativo**.
+`start:demo` usa `DATA_STORE=memory` y `DEMO_SEED=true`: al arrancar crea usuarios, un proyecto
+de Reportes con dos meses cargados, una clasificación y un informe, y un proyecto de Inventarios
+con una toma en curso. **Todo es ficticio** y se pierde al detener la API.
 
-> En la Fase 0 la API y el worker **validan** `MONGODB_URI` y `REDIS_URL` pero todavía no se
-> conectan; la conexión llega en F1 (identidad) y F4 (colas).
+| Usuario | Papel en los proyectos de demostración |
+|---|---|
+| `admin@demo.asisteglt.local` | Propietario de ambos proyectos (configura, supervisa) |
+| `analista@demo.asisteglt.local` | Analista en «Demo · Balance ficticio» |
+| `contador1@demo.asisteglt.local` | Contador en «Demo · Bodega ficticia» |
+| `contador2@demo.asisteglt.local` | Contador en «Demo · Bodega ficticia» |
 
-## 3. Comandos
+Contraseña de todos: `DemoAsiste2026`.
+
+## 3. Arranque persistente (MongoDB)
+
+```bash
+cp .env.example .env            # Nx carga .env en cada tarea; cambia JWT_SECRET
+npm run services:up             # MongoDB (replica set rs0), Redis y Mailpit (Docker)
+npm run start:api               # API en http://localhost:3000/api/v1
+npm run start:web               # Web en http://localhost:4200 (proxy /api y WebSocket → :3000)
+```
+
+- `STORAGE_DIR` (por defecto `var/storage`, fuera del repositorio) guarda los archivos cargados.
+  Son datos del cliente: no se versionan y conviene respaldarlos junto con la base.
+- `IMPORT_REJECT_THRESHOLD_PERCENT` (20 por defecto): por encima de ese porcentaje de líneas
+  rechazadas, una carga queda «Con errores» y no se publica.
+- Para el **servidor local sin internet** basta un equipo con Node.js y MongoDB: la cola de
+  importación y la presencia del chat funcionan en proceso (no requieren Redis). Con varias
+  instancias de API se reemplazan por BullMQ/Redis sin cambiar el dominio.
+
+Comprobación: `curl http://localhost:3000/api/v1/health` → `{"status":"UP",...}`.
+
+## 4. Comandos
 
 | Comando | Qué hace |
 |---|---|
-| `npm run lint` | ESLint (TypeScript y plantillas) + stylelint (SCSS) + guardián de reglas |
-| `npm run lint:guard` | Demuestra que cada regla normativa detecta su violación (ver §5) |
-| `npm run typecheck` | `tsc --noEmit` de todos los proyectos |
-| `npm run test` | Pruebas unitarias e integración (Vitest) |
-| `npm run build` | Compila web, api y worker en `dist/` |
-| `npm run e2e` | Pruebas e2e de la web con Playwright (escritorio y móvil) |
-| `npm run verify` | Todo lo anterior salvo e2e (lo mismo que exige el CI) |
-| `npx nx graph` | Grafo de proyectos y dependencias |
+| `npm run verify` | lint + guardián de reglas + typecheck + pruebas + build (lo que exige el CI) |
+| `npm run e2e` | Playwright en escritorio y móvil; levanta API en memoria y web automáticamente |
+| `npm run lint:guard` | Demuestra que cada regla normativa detecta su violación |
+| `npm run start:demo` | Demostración en memoria con datos ficticios |
+| `MONGO_SMOKE_URI=mongodb://… npx nx run api:test` | Además ejecuta la prueba de humo de persistencia contra un MongoDB real |
 
 Con un Chromium ya instalado: `CHROMIUM_PATH=/ruta/a/chromium npm run e2e`.
 
-## 4. Estructura
+## 5. Estructura
 
 ```text
 apps/
-  web/            Angular 22 + PrimeNG 22 (zoneless, signals, SCSS)
-  web-e2e/        Playwright
-  api/            NestJS 12: /api/v1/health, filtro de errores, logs JSON, correlation id
-  worker/         NestJS 12 (contexto de aplicación) para colas BullMQ
+  web/                      Angular 22 + PrimeNG 22 (zoneless, signals, SCSS)
+    app.routes.ts           Contextos con su propio router-outlet, todos diferidos (lazy):
+                              /auth  → AuthLayout (login, registro)       [guestGuard]
+                              /app   → AppLayout (shell)                  [authGuard]
+                                /app/projects/:id → ProjectLayout (pestañas del proyecto)
+                                /app/chat         → ChatLayout (lista + conversación)
+    features/               auth, home, account, projects, chat, reports, inventory
+  web-e2e/                  Playwright (auth, proyectos, chat, reportes, inventarios)
+  api/src/app/contexts/     Monolito modular hexagonal: iam, projects, chat, reports, inventory
+                            (domain / application / infrastructure{memory,mongo} / presentation)
+  worker/                   Proceso para colas BullMQ (reservado para varias instancias)
 libs/
-  shared/kernel/     Nullable, Optional, Result, DomainError, Entity, AggregateRoot,
-                     ValueObject, EntityId, DomainEvent, Decimal, Period, Clock,
-                     ReadonlyDictionary, Collections
-  shared/contracts/  Contratos de solo tipo compartidos front/back
-  api/platform/      EnvironmentReader, JsonLogger, CorrelationContext
-  web/core/          BaseStore, ApiClient + Decoder/JsonReader, tema, i18n, ThemeService
-tools/
-  eslint-plugin-asisteglt/   regla primeng-controls-only
-  lint-guard/                fixtures con violaciones intencionales
-docker/docker-compose.yml
+  shared/kernel/            Nullable, Optional, Result, DomainError, Decimal, Clock, JsonReader/FieldReader…
+  shared/contracts/         Contratos de solo tipo compartidos front/back
+  shared/ingestion-core/    Lectura de ancho fijo: decodificación, divisorias, sugerencia, reglas,
+                            máscaras, conversión de valores, atributos derivados (navegador y API)
+  api/platform/             EnvironmentReader, JsonLogger, CorrelationContext
+  web/core/                 ApiClient, AuthSession, RealtimeClient (Socket.IO), Notifier, tema, i18n
+tools/                      Plugin ESLint propio y guardián de reglas
 ```
 
-Límites entre módulos (`@nx/enforce-module-boundaries`): `scope:shared` solo depende de
-`scope:shared`; `scope:web` y `scope:api` solo de sí mismos y de `scope:shared`.
+## 6. Reglas del cliente convertidas en verificaciones
 
-## 5. Reglas del cliente convertidas en verificaciones
+Sin `any` (ni `$any()`), sin `undefined`, sin `?:`/parámetros opcionales/`?.`, sin `as` ni `!`
+(salvo DTO/esquemas), tipos de retorno y modificadores explícitos, solo controles PrimeNG en
+plantillas y SCSS sin colores fijos. `npm run lint:guard` prueba que cada regla falla ante su
+violación. Dinero y cantidades: `Decimal` en dominio y cadenas decimales en el transporte.
 
-| Regla | Verificación |
-|---|---|
-| Sin `any` | `no-explicit-any` + `no-unsafe-*` (también detecta el `any` que entregan librerías) |
-| Sin `undefined` | `no-undefined`, `no-void`, prohibición de `?:`, parámetros opcionales, `?.`, tipo `undefined` |
-| Todo tipado | `strict`, `exactOptionalPropertyTypes`, `noUncheckedIndexedAccess`, tipos de retorno y accesibilidad explícitos, sin `as` ni `!` |
-| POO | Clases para dominio, stores, clientes, decoders, configuración; dependencias inyectadas |
-| Solo PrimeNG | `no-restricted-imports` (Material, CDK, Bootstrap…) + regla `primeng-controls-only` en plantillas |
-| Solo SCSS con variables del tema | stylelint: sin colores hexadecimales, con nombre ni funciones de color |
+## 7. Licencia de PrimeNG
 
-`npm run lint:guard` lint-ea `tools/lint-guard/fixtures` (archivos con violaciones a propósito) y
-falla si alguna regla deja de detectar su caso.
+PrimeNG 22 usa la **licencia PrimeUI** (Community gratuita para organizaciones pequeñas;
+Commercial para el resto). Sin clave aparece el aviso «Invalid PrimeUI License»; la aplicación
+funciona igual. La clave va en `apps/web/src/environments/environment.ts` → `PRIMEUI_LICENSE_KEY`
+(verificación local, sin internet). **Pendiente de decisión del cliente.**
 
-## 6. Licencia de PrimeNG
+## 8. Confidencialidad
 
-PrimeNG 22 se distribuye con la **licencia PrimeUI**: gratuita (*Community*) para
-organizaciones con menos de 1 M USD de ingresos anuales, menos de 5 desarrolladores y menos de
-10 empleados; *Commercial* (por desarrollador) para el resto. Sin clave válida, PrimeNG muestra
-el aviso «Invalid PrimeUI License» en la esquina inferior derecha; la aplicación funciona igual.
-
-Para registrar la clave: `apps/web/src/environments/environment.ts` →
-`PRIMEUI_LICENSE_KEY`. La verificación es local, sin conexión a internet (compatible con el
-modo servidor local).
-
-## 7. Qué cubre la Fase 0
-
-| Entregable (docs/10 F0) | Estado |
-|---|---|
-| Monorepo Nx con apps y librerías | ✔ |
-| `tsconfig` y ESLint normativos + regla propia + guardián | ✔ |
-| Kernel compartido con pruebas | ✔ |
-| `docker-compose` (MongoDB rs, Redis, Mailpit) | ✔ (no probado en el entorno de desarrollo de esta sesión, sin Docker) |
-| Configuración tipada validada al arrancar, logs JSON con correlation id, filtro de errores | ✔ |
-| Shell Angular + PrimeNG (tema, modo oscuro, español, Toast/ConfirmDialog globales) | ✔ |
-| CI (GitHub Actions) | ✔ |
+Los archivos de muestra del asistente se leen en el navegador y nunca se envían al servidor;
+la preconfiguración guarda solo la configuración. Los archivos cargados se guardan en
+`STORAGE_DIR` del servidor. Ningún dato real del cliente está en el repositorio: pruebas y
+demostración usan datos ficticios.

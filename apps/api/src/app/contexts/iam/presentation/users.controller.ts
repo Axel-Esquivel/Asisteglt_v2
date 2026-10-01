@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { SessionResponse, UserResponse } from '@asisteglt/shared-contracts';
 import { EntityId } from '@asisteglt/shared-kernel';
 import { CurrentPrincipal } from '../../../common/auth/auth.decorators';
@@ -35,14 +46,17 @@ export class UsersController {
 
   @Get('me/sessions')
   public async sessions(@CurrentPrincipal() principal: AuthenticatedPrincipal): Promise<SessionResponse[]> {
-    return (await this.accounts.activeSessions(principal)).map(
-      (session: Session): SessionResponse => IamPresenter.activeSession(session, principal.sessionId),
+    return (await this.accounts.activeSessions(principal)).map((session: Session): SessionResponse =>
+      IamPresenter.activeSession(session, principal.sessionId),
     );
   }
 
   @Delete('me/sessions/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  public async revoke(@CurrentPrincipal() principal: AuthenticatedPrincipal, @Param('id') id: string): Promise<void> {
+  public async revoke(
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+    @Param('id') id: string,
+  ): Promise<void> {
     (await this.accounts.revokeSession(principal, EntityId.fromString(id).unwrap())).unwrap();
   }
 

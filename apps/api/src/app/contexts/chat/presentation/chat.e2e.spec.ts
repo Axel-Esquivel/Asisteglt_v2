@@ -6,7 +6,8 @@ import { REALTIME_PATH } from '../infrastructure/realtime/realtime.gateway';
 
 class Json {
   public static text(body: unknown, key: string): string {
-    const value: unknown = typeof body === 'object' && body !== null && key in body ? Reflect.get(body, key) : null;
+    const value: unknown =
+      typeof body === 'object' && body !== null && key in body ? Reflect.get(body, key) : null;
     if (typeof value !== 'string') {
       throw new Error(`Falta el campo ${key}`);
     }
@@ -70,7 +71,11 @@ describe('Chat (e2e)', () => {
       .send({ userId: beto.userId })
       .expect(201);
     const conversationBody: unknown = opened.body;
-    expect(conversationBody).toMatchObject({ type: 'DIRECT', title: 'Beto Chat', counterpartId: beto.userId });
+    expect(conversationBody).toMatchObject({
+      type: 'DIRECT',
+      title: 'Beto Chat',
+      counterpartId: beto.userId,
+    });
     const conversationId: string = Json.text(conversationBody, 'id');
 
     const received: Promise<unknown> = probe.next(RealtimeEvent.CHAT_MESSAGE);
@@ -81,7 +86,10 @@ describe('Chat (e2e)', () => {
       .expect(201);
     expect(await received).toMatchObject({ conversationId, senderName: 'Ana Chat', text: 'Hola Beto' });
 
-    const list: Response = await request(app.server()).get('/api/v1/chat/conversations').set('authorization', beto.bearer()).expect(200);
+    const list: Response = await request(app.server())
+      .get('/api/v1/chat/conversations')
+      .set('authorization', beto.bearer())
+      .expect(200);
     const conversations: unknown[] = Json.list(list.body);
     expect(conversations).toEqual(
       expect.arrayContaining([
@@ -93,8 +101,13 @@ describe('Chat (e2e)', () => {
       .post(`/api/v1/chat/conversations/${conversationId}/read`)
       .set('authorization', beto.bearer())
       .expect(204);
-    const after: Response = await request(app.server()).get('/api/v1/chat/conversations').set('authorization', beto.bearer()).expect(200);
-    expect(Json.list(after.body)).toEqual(expect.arrayContaining([expect.objectContaining({ id: conversationId, unread: 0 })]));
+    const after: Response = await request(app.server())
+      .get('/api/v1/chat/conversations')
+      .set('authorization', beto.bearer())
+      .expect(200);
+    expect(Json.list(after.body)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: conversationId, unread: 0 })]),
+    );
     probe.close();
   });
 
@@ -110,7 +123,10 @@ describe('Chat (e2e)', () => {
       .set('authorization', ana.bearer())
       .expect(200);
     const conversationId: string = Json.text(conversation.body, 'id');
-    await request(app.server()).get(`/api/v1/chat/projects/${projectId}`).set('authorization', beto.bearer()).expect(404);
+    await request(app.server())
+      .get(`/api/v1/chat/projects/${projectId}`)
+      .set('authorization', beto.bearer())
+      .expect(404);
     await request(app.server())
       .post(`/api/v1/chat/conversations/${conversationId}/messages`)
       .set('authorization', beto.bearer())
@@ -122,7 +138,11 @@ describe('Chat (e2e)', () => {
       .send({ text: 'Primer mensaje' })
       .expect(201);
     const messageId: string = Json.text(posted.body, 'id');
-    await request(app.server()).patch(`/api/v1/chat/messages/${messageId}`).set('authorization', beto.bearer()).send({ text: 'x' }).expect(404);
+    await request(app.server())
+      .patch(`/api/v1/chat/messages/${messageId}`)
+      .set('authorization', beto.bearer())
+      .send({ text: 'x' })
+      .expect(404);
     const edited: Response = await request(app.server())
       .patch(`/api/v1/chat/messages/${messageId}`)
       .set('authorization', ana.bearer())
@@ -138,7 +158,11 @@ describe('Chat (e2e)', () => {
   });
 
   it('rechaza conexiones Socket.IO sin token válido', async (): Promise<void> => {
-    const socket: Socket = io(baseUrl, { path: REALTIME_PATH, auth: { token: 'invalido' }, transports: ['websocket'] });
+    const socket: Socket = io(baseUrl, {
+      path: REALTIME_PATH,
+      auth: { token: 'invalido' },
+      transports: ['websocket'],
+    });
     const reason: string = await new Promise<string>((resolve: (value: string) => void): void => {
       socket.once('disconnect', (why: string): void => resolve(why));
     });

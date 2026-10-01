@@ -19,6 +19,7 @@ var
 .env
 .env.*
 !.env.example
+!apps/api/.env.serve.demo
 # editors / os
 .idea
 *.swp

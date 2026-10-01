@@ -14,19 +14,26 @@ export class InMemoryUserRepository extends UserRepository {
   }
 
   public override findByEmail(email: Email): Promise<Optional<User>> {
-    return Promise.resolve(this.restore(this.collection.find((u: UserSnapshot): boolean => u.email === email.toString())));
+    return Promise.resolve(
+      this.restore(this.collection.find((u: UserSnapshot): boolean => u.email === email.toString())),
+    );
   }
 
   public override findManyByIds(ids: ReadonlyArray<EntityId>): Promise<User[]> {
     const wanted: Set<string> = new Set<string>(ids.map((id: EntityId): string => id.toString()));
-    return Promise.resolve(this.collection.filter((u: UserSnapshot): boolean => wanted.has(u.id)).map(User.restore));
+    return Promise.resolve(
+      this.collection.filter((u: UserSnapshot): boolean => wanted.has(u.id)).map(User.restore),
+    );
   }
 
   public override search(text: string, limit: number): Promise<User[]> {
     const needle: string = text.trim().toLowerCase();
     return Promise.resolve(
       this.collection
-        .filter((u: UserSnapshot): boolean => u.email.includes(needle) || u.displayName.toLowerCase().includes(needle))
+        .filter(
+          (u: UserSnapshot): boolean =>
+            u.email.includes(needle) || u.displayName.toLowerCase().includes(needle),
+        )
         .slice(0, limit)
         .map(User.restore),
     );
@@ -44,7 +51,8 @@ export class InMemoryUserRepository extends UserRepository {
 
 @Injectable()
 export class InMemorySessionRepository extends SessionRepository {
-  private readonly collection: InMemoryCollection<SessionSnapshot> = new InMemoryCollection<SessionSnapshot>();
+  private readonly collection: InMemoryCollection<SessionSnapshot> =
+    new InMemoryCollection<SessionSnapshot>();
 
   public override findById(id: EntityId): Promise<Optional<Session>> {
     return Promise.resolve(Optional.fromNullable(this.collection.get(id.toString())).map(Session.restore));
@@ -59,7 +67,9 @@ export class InMemorySessionRepository extends SessionRepository {
 
   public override findByUser(userId: EntityId): Promise<Session[]> {
     return Promise.resolve(
-      this.collection.filter((s: SessionSnapshot): boolean => s.userId === userId.toString()).map(Session.restore),
+      this.collection
+        .filter((s: SessionSnapshot): boolean => s.userId === userId.toString())
+        .map(Session.restore),
     );
   }
 

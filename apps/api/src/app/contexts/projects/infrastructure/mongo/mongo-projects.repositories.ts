@@ -27,7 +27,10 @@ export class MongoProjectRepository extends ProjectRepository {
   }
 
   public override async findById(id: EntityId): Promise<Optional<Project>> {
-    const record: Nullable<ProjectRecord> = await this.model.findById(id.toString()).lean<ProjectRecord>().exec();
+    const record: Nullable<ProjectRecord> = await this.model
+      .findById(id.toString())
+      .lean<ProjectRecord>()
+      .exec();
     return Optional.fromNullable(record).map(toProject);
   }
 
@@ -56,12 +59,18 @@ export class MongoShareLinkRepository extends ShareLinkRepository {
   }
 
   public override async findById(id: EntityId): Promise<Optional<ShareLink>> {
-    const record: Nullable<ShareLinkRecord> = await this.model.findById(id.toString()).lean<ShareLinkRecord>().exec();
+    const record: Nullable<ShareLinkRecord> = await this.model
+      .findById(id.toString())
+      .lean<ShareLinkRecord>()
+      .exec();
     return Optional.fromNullable(record).map(toShareLink);
   }
 
   public override async findByTokenHash(hash: string): Promise<Optional<ShareLink>> {
-    const record: Nullable<ShareLinkRecord> = await this.model.findOne({ tokenHash: hash }).lean<ShareLinkRecord>().exec();
+    const record: Nullable<ShareLinkRecord> = await this.model
+      .findOne({ tokenHash: hash })
+      .lean<ShareLinkRecord>()
+      .exec();
     return Optional.fromNullable(record).map(toShareLink);
   }
 

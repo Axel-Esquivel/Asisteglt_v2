@@ -13,7 +13,8 @@ export class PersistenceModule {
         ? [
             {
               provide: MongoDatabase,
-              useFactory: (config: AppConfig): Promise<MongoDatabase> => MongoDatabase.connect(config.mongoUri),
+              useFactory: (config: AppConfig): Promise<MongoDatabase> =>
+                MongoDatabase.connect(config.mongoUri),
               inject: [AppConfig],
             },
           ]
@@ -24,7 +25,12 @@ export class PersistenceModule {
 
 /** Elige la implementación de un repositorio según el almacén configurado. */
 export class RepositoryBinding {
-  public static bind<T>(port: abstract new (...args: never[]) => T, store: DataStore, memory: Type<T>, mongo: Type<T>): Provider {
+  public static bind<T>(
+    port: abstract new (...args: never[]) => T,
+    store: DataStore,
+    memory: Type<T>,
+    mongo: Type<T>,
+  ): Provider {
     return { provide: port, useClass: store === DataStore.MONGO ? mongo : memory };
   }
 }

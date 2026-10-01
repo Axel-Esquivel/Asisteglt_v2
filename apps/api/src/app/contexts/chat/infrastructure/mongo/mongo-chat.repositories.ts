@@ -73,7 +73,10 @@ export class MongoConversationRepository extends ConversationRepository {
   }
 
   private async one(filter: QueryFilter<ConversationRecord>): Promise<Optional<Conversation>> {
-    const record: Nullable<ConversationRecord> = await this.model.findOne(filter).lean<ConversationRecord>().exec();
+    const record: Nullable<ConversationRecord> = await this.model
+      .findOne(filter)
+      .lean<ConversationRecord>()
+      .exec();
     return Optional.fromNullable(record).map(toConversation);
   }
 }
@@ -88,20 +91,36 @@ export class MongoMessageRepository extends MessageRepository {
   }
 
   public override async findById(id: EntityId): Promise<Optional<Message>> {
-    const record: Nullable<MessageRecord> = await this.model.findById(id.toString()).lean<MessageRecord>().exec();
+    const record: Nullable<MessageRecord> = await this.model
+      .findById(id.toString())
+      .lean<MessageRecord>()
+      .exec();
     return Optional.fromNullable(record).map(toMessage);
   }
 
-  public override async page(conversationId: EntityId, before: Nullable<Date>, limit: number): Promise<Message[]> {
+  public override async page(
+    conversationId: EntityId,
+    before: Nullable<Date>,
+    limit: number,
+  ): Promise<Message[]> {
     const filter: QueryFilter<MessageRecord> =
       before === null
         ? { conversationId: conversationId.toString() }
         : { conversationId: conversationId.toString(), sentAt: { $lt: before } };
-    const records: MessageRecord[] = await this.model.find(filter).sort({ sentAt: -1 }).limit(limit).lean<MessageRecord[]>().exec();
+    const records: MessageRecord[] = await this.model
+      .find(filter)
+      .sort({ sentAt: -1 })
+      .limit(limit)
+      .lean<MessageRecord[]>()
+      .exec();
     return records.reverse().map(toMessage);
   }
 
-  public override countAfter(conversationId: EntityId, after: Nullable<Date>, excludeSender: EntityId): Promise<number> {
+  public override countAfter(
+    conversationId: EntityId,
+    after: Nullable<Date>,
+    excludeSender: EntityId,
+  ): Promise<number> {
     const base: QueryFilter<MessageRecord> = {
       conversationId: conversationId.toString(),
       senderId: { $ne: excludeSender.toString() },

@@ -114,6 +114,8 @@ export class ReportsModule {
         CatalogService,
         OrgStructureService,
         ProfileService,
+        ImportService,
+        AnalysisService,
         DataRecordRepository,
         ImportQueue,
         ReportsAccess,

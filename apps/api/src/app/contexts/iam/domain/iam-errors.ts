@@ -26,7 +26,10 @@ export class IamErrors {
   }
 
   public static invalidDisplayName(): ValidationError {
-    return new ValidationError(IamErrorCode.INVALID_DISPLAY_NAME, 'El nombre debe tener entre 2 y 80 caracteres');
+    return new ValidationError(
+      IamErrorCode.INVALID_DISPLAY_NAME,
+      'El nombre debe tener entre 2 y 80 caracteres',
+    );
   }
 
   public static sessionExpired(): UnauthorizedError {

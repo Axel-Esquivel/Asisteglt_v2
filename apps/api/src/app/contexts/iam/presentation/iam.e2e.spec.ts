@@ -15,7 +15,10 @@ describe('Identidad (e2e)', () => {
   it('registra, consulta el perfil y rechaza correos duplicados', async (): Promise<void> => {
     const client: AuthenticatedClient = await app.register('ana@demo.test', 'Ana Demo');
     expect(client.refreshCookie).toMatch(/^asisteglt_rt=/);
-    const me: Response = await request(app.server()).get('/api/v1/auth/me').set('authorization', client.bearer()).expect(200);
+    const me: Response = await request(app.server())
+      .get('/api/v1/auth/me')
+      .set('authorization', client.bearer())
+      .expect(200);
     const body: unknown = me.body;
     expect(body).toMatchObject({ email: 'ana@demo.test', displayName: 'Ana Demo' });
     await request(app.server())

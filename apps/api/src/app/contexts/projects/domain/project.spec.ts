@@ -16,7 +16,13 @@ describe('Project', () => {
   });
 
   it('solo acepta roles del módulo del proyecto', () => {
-    const project: Project = Project.create('Inventario demo', '', ModuleType.INVENTORY, owner, clock).unwrap();
+    const project: Project = Project.create(
+      'Inventario demo',
+      '',
+      ModuleType.INVENTORY,
+      owner,
+      clock,
+    ).unwrap();
     expect(project.addMember(other, ProjectRole.DESIGNER, clock).isOk()).toBe(false);
     expect(project.addMember(other, ProjectRole.SUPERVISOR, clock).isOk()).toBe(true);
     expect(project.can(other, ProjectPermission.INVENTORY_SUPERVISE)).toBe(true);
@@ -25,12 +31,22 @@ describe('Project', () => {
   });
 
   it('un vínculo expira por fecha y por número de usos', () => {
-    const link: ShareLink = ShareLink.create(EntityId.generate(), 'h', ProjectRole.VIEWER, 1, 2, owner, clock);
+    const link: ShareLink = ShareLink.create(
+      EntityId.generate(),
+      'h',
+      ProjectRole.VIEWER,
+      1,
+      2,
+      owner,
+      clock,
+    );
     expect(link.isUsable(clock)).toBe(true);
     link.registerUse();
     link.registerUse();
     expect(link.isUsable(clock)).toBe(false);
     const later: FixedClock = new FixedClock(new Date('2026-03-03T10:00:00Z'));
-    expect(ShareLink.create(EntityId.generate(), 'h', ProjectRole.VIEWER, 1, null, owner, clock).isUsable(later)).toBe(false);
+    expect(
+      ShareLink.create(EntityId.generate(), 'h', ProjectRole.VIEWER, 1, null, owner, clock).isUsable(later),
+    ).toBe(false);
   });
 });

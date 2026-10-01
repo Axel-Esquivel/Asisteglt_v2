@@ -40,13 +40,20 @@ export class Message extends AggregateRoot {
     super(id);
   }
 
-  public static post(conversation: Conversation, sender: ChatPrincipal, body: MessageBody, clock: Clock): Result<Message> {
+  public static post(
+    conversation: Conversation,
+    sender: ChatPrincipal,
+    body: MessageBody,
+    clock: Clock,
+  ): Result<Message> {
     if (!conversation.admits(sender)) {
       return Result.fail(ChatErrors.conversationNotFound());
     }
     const now: Date = clock.now();
     conversation.touch(now);
-    return Result.ok(new Message(EntityId.generate(), conversation.getId(), sender.userId, body.text, now, null, null));
+    return Result.ok(
+      new Message(EntityId.generate(), conversation.getId(), sender.userId, body.text, now, null, null),
+    );
   }
 
   public static restore(s: MessageSnapshot): Message {

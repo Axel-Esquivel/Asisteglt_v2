@@ -59,6 +59,9 @@
         },
         "production": {
           "buildTarget": "api:build:production"
+        },
+        "demo": {
+          "buildTarget": "api:build:development"
         }
       }
     },

@@ -8,7 +8,10 @@ import {
   InMemoryProjectRepository,
   InMemoryShareLinkRepository,
 } from './infrastructure/memory/in-memory-projects.repositories';
-import { MongoProjectRepository, MongoShareLinkRepository } from './infrastructure/mongo/mongo-projects.repositories';
+import {
+  MongoProjectRepository,
+  MongoShareLinkRepository,
+} from './infrastructure/mongo/mongo-projects.repositories';
 import { ProjectsController } from './presentation/projects.controller';
 
 /** Contexto de proyectos: miembros, roles y vínculos para compartir. Exporta `ProjectAccess`. */
@@ -21,11 +24,16 @@ export class ProjectsModule {
       controllers: [ProjectsController],
       providers: [
         RepositoryBinding.bind(ProjectRepository, store, InMemoryProjectRepository, MongoProjectRepository),
-        RepositoryBinding.bind(ShareLinkRepository, store, InMemoryShareLinkRepository, MongoShareLinkRepository),
+        RepositoryBinding.bind(
+          ShareLinkRepository,
+          store,
+          InMemoryShareLinkRepository,
+          MongoShareLinkRepository,
+        ),
         ProjectAccess,
         ProjectService,
       ],
-      exports: [ProjectAccess, ProjectRepository],
+      exports: [ProjectAccess, ProjectRepository, ProjectService],
     };
   }
 }

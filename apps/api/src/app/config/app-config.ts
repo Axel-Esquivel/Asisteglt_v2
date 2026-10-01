@@ -18,6 +18,7 @@ export class AppConfig {
     public readonly secureCookies: boolean,
     public readonly storageDir: string,
     public readonly importRejectThreshold: number,
+    public readonly demoSeed: boolean,
   ) {}
 
   public isProduction(): boolean {
@@ -45,10 +46,14 @@ export class AppConfigLoader {
       env.secret('JWT_SECRET', 32),
       env.positiveInteger('ACCESS_TOKEN_TTL_SECONDS', 900),
       env.positiveInteger('REFRESH_TOKEN_TTL_DAYS', 14),
-      env.enumValue('SECURE_COOKIES', ['true', 'false'], environment === RuntimeEnvironment.PRODUCTION ? 'true' : 'false') ===
-        'true',
+      env.enumValue(
+        'SECURE_COOKIES',
+        ['true', 'false'],
+        environment === RuntimeEnvironment.PRODUCTION ? 'true' : 'false',
+      ) === 'true',
       env.text('STORAGE_DIR', 'var/storage'),
       env.positiveInteger('IMPORT_REJECT_THRESHOLD_PERCENT', 20) / 100,
+      env.enumValue('DEMO_SEED', ['true', 'false'], 'false') === 'true',
     );
     env.assertValid();
     return config;

@@ -24,10 +24,13 @@ export class ProjectAccess {
     return project === null ? Result.fail(ProjectErrors.notFound()) : Result.ok(project);
   }
 
-  public async require(projectId: string, userId: EntityId, permission: ProjectPermission): Promise<Result<Project>> {
-    return (await this.load(projectId, userId)).flatMap(
-      (project: Project): Result<Project> =>
-        project.can(userId, permission) ? Result.ok(project) : Result.fail(ProjectErrors.denied(permission)),
+  public async require(
+    projectId: string,
+    userId: EntityId,
+    permission: ProjectPermission,
+  ): Promise<Result<Project>> {
+    return (await this.load(projectId, userId)).flatMap((project: Project): Result<Project> =>
+      project.can(userId, permission) ? Result.ok(project) : Result.fail(ProjectErrors.denied(permission)),
     );
   }
 }

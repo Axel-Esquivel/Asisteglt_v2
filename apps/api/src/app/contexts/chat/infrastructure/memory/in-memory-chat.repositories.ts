@@ -9,7 +9,8 @@ import { ReadMarker, ReadMarkerSnapshot } from '../../domain/read-marker';
 
 @Injectable()
 export class InMemoryConversationRepository extends ConversationRepository {
-  private readonly collection: InMemoryCollection<ConversationSnapshot> = new InMemoryCollection<ConversationSnapshot>();
+  private readonly collection: InMemoryCollection<ConversationSnapshot> =
+    new InMemoryCollection<ConversationSnapshot>();
 
   public override findById(id: EntityId): Promise<Optional<Conversation>> {
     return this.one((c: ConversationSnapshot): boolean => c.id === id.toString());
@@ -31,7 +32,10 @@ export class InMemoryConversationRepository extends ConversationRepository {
     const wanted: string = userId.toString();
     return Promise.resolve(
       this.collection
-        .filter((c: ConversationSnapshot): boolean => c.type === ConversationType.DIRECT && c.participantIds.includes(wanted))
+        .filter(
+          (c: ConversationSnapshot): boolean =>
+            c.type === ConversationType.DIRECT && c.participantIds.includes(wanted),
+        )
         .map(Conversation.restore),
     );
   }
@@ -57,7 +61,8 @@ export class InMemoryConversationRepository extends ConversationRepository {
 
 @Injectable()
 export class InMemoryMessageRepository extends MessageRepository {
-  private readonly collection: InMemoryCollection<MessageSnapshot> = new InMemoryCollection<MessageSnapshot>();
+  private readonly collection: InMemoryCollection<MessageSnapshot> =
+    new InMemoryCollection<MessageSnapshot>();
 
   public override findById(id: EntityId): Promise<Optional<Message>> {
     return Promise.resolve(Optional.fromNullable(this.collection.get(id.toString())).map(Message.restore));
@@ -74,7 +79,11 @@ export class InMemoryMessageRepository extends MessageRepository {
     return Promise.resolve(items.slice(Math.max(0, items.length - limit)).map(Message.restore));
   }
 
-  public override countAfter(conversationId: EntityId, after: Nullable<Date>, excludeSender: EntityId): Promise<number> {
+  public override countAfter(
+    conversationId: EntityId,
+    after: Nullable<Date>,
+    excludeSender: EntityId,
+  ): Promise<number> {
     const wanted: string = conversationId.toString();
     const sender: string = excludeSender.toString();
     return Promise.resolve(
@@ -96,7 +105,8 @@ export class InMemoryMessageRepository extends MessageRepository {
 
 @Injectable()
 export class InMemoryReadMarkerRepository extends ReadMarkerRepository {
-  private readonly collection: InMemoryCollection<ReadMarkerSnapshot> = new InMemoryCollection<ReadMarkerSnapshot>();
+  private readonly collection: InMemoryCollection<ReadMarkerSnapshot> =
+    new InMemoryCollection<ReadMarkerSnapshot>();
 
   public override find(conversationId: EntityId, userId: EntityId): Promise<Optional<ReadMarker>> {
     const key: string = ReadMarker.key(conversationId.toString(), userId.toString());

@@ -19,12 +19,15 @@ TypeScript 6 (estricto: sin `any`, sin `undefined`, POO).
 ## Estado
 
 - Análisis y diseño: [`docs/`](docs/README.md).
-- **Fase 0 (Fundaciones) implementada**: monorepo, reglas estrictas en CI, kernel POO, API,
-  worker y shell web. Cómo levantarlo: [`docs/13-puesta-en-marcha.md`](docs/13-puesta-en-marcha.md).
+- **Fase de pruebas**: identidad y sesiones, proyectos con roles y vínculos, chat en tiempo
+  real, Reportes (estructura, catálogo de encabezados, asistente de ancho fijo con lienzo, carga
+  múltiple, datos, clasificaciones e informes) e Inventarios (tomas por zonas, conteo a ciegas,
+  supervisión en vivo y rondas). Guía: [`docs/14-guia-de-pruebas.md`](docs/14-guia-de-pruebas.md).
+- Cómo levantarlo: [`docs/13-puesta-en-marcha.md`](docs/13-puesta-en-marcha.md).
 
 ```bash
-npm install && cp .env.example .env && npm run services:up
-npm run start:api      # http://localhost:3000/api/v1/health
-npm run start:web      # http://localhost:4200
+npm install
+npm run start:demo     # demostración en memoria con datos ficticios → http://localhost:4200
 npm run verify         # lint + typecheck + pruebas + build
+npm run e2e            # Playwright (escritorio y móvil)
 ```

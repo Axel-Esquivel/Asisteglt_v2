@@ -5,7 +5,12 @@ import { EntityId, Result } from '@asisteglt/shared-kernel';
 import * as argon2 from 'argon2';
 import { IamErrors } from '../domain/iam-errors';
 import { PlainPassword } from '../domain/password-policy';
-import { AccessTokenIssuer, AuthenticatedPrincipal, OpaqueTokenService, PasswordHasher } from '../domain/ports';
+import {
+  AccessTokenIssuer,
+  AuthenticatedPrincipal,
+  OpaqueTokenService,
+  PasswordHasher,
+} from '../domain/ports';
 
 @Injectable()
 export class Argon2PasswordHasher extends PasswordHasher {
@@ -84,9 +89,10 @@ export class JwtAccessTokenIssuer extends AccessTokenIssuer {
     if (typeof sub !== 'string' || typeof sid !== 'string' || typeof email !== 'string') {
       return Result.fail(IamErrors.unauthenticated());
     }
-    return EntityId.fromString(sub).flatMap(
-      (userId: EntityId): Result<AuthenticatedPrincipal> =>
-        EntityId.fromString(sid).map((sessionId: EntityId): AuthenticatedPrincipal => new AuthenticatedPrincipal(userId, sessionId, email)),
+    return EntityId.fromString(sub).flatMap((userId: EntityId): Result<AuthenticatedPrincipal> =>
+      EntityId.fromString(sid).map(
+        (sessionId: EntityId): AuthenticatedPrincipal => new AuthenticatedPrincipal(userId, sessionId, email),
+      ),
     );
   }
 }

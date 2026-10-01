@@ -3,7 +3,8 @@ import { AuthenticatedClient, TestApp } from '../../../../testing/test-app';
 
 class Field {
   public static text(body: unknown, key: string): string {
-    const value: unknown = typeof body === 'object' && body !== null && key in body ? Reflect.get(body, key) : null;
+    const value: unknown =
+      typeof body === 'object' && body !== null && key in body ? Reflect.get(body, key) : null;
     if (typeof value !== 'string') {
       throw new Error(`Falta el campo ${key}`);
     }
@@ -39,10 +40,16 @@ describe('Proyectos (e2e)', () => {
 
   it('crea y lista proyectos; un no miembro recibe 404', async (): Promise<void> => {
     const id: string = await createProject('Cierre anual ficticio', 'REPORTS');
-    const list: Response = await request(app.server()).get('/api/v1/projects').set('authorization', owner.bearer()).expect(200);
+    const list: Response = await request(app.server())
+      .get('/api/v1/projects')
+      .set('authorization', owner.bearer())
+      .expect(200);
     const listBody: unknown = list.body;
     expect(listBody).toEqual(expect.arrayContaining([expect.objectContaining({ id })]));
-    await request(app.server()).get(`/api/v1/projects/${id}`).set('authorization', guest.bearer()).expect(404);
+    await request(app.server())
+      .get(`/api/v1/projects/${id}`)
+      .set('authorization', guest.bearer())
+      .expect(404);
     await request(app.server())
       .post('/api/v1/projects')
       .set('authorization', owner.bearer())
@@ -88,7 +95,10 @@ describe('Proyectos (e2e)', () => {
       .delete(`/api/v1/projects/${id}/members/${guest.userId}`)
       .set('authorization', guest.bearer())
       .expect(204);
-    await request(app.server()).get(`/api/v1/projects/${id}`).set('authorization', guest.bearer()).expect(404);
+    await request(app.server())
+      .get(`/api/v1/projects/${id}`)
+      .set('authorization', guest.bearer())
+      .expect(404);
   });
 
   it('se une con un vínculo de un solo uso y luego queda agotado', async (): Promise<void> => {
@@ -108,7 +118,11 @@ describe('Proyectos (e2e)', () => {
     const joinedBody: unknown = joined.body;
     expect(joinedBody).toMatchObject({ id, myRole: 'COUNTER', myPermissions: ['INVENTORY_COUNT'] });
     const third: AuthenticatedClient = await app.register('tercero@demo.test', 'Tercero');
-    await request(app.server()).post('/api/v1/projects/join').set('authorization', third.bearer()).send({ token }).expect(400);
+    await request(app.server())
+      .post('/api/v1/projects/join')
+      .set('authorization', third.bearer())
+      .send({ token })
+      .expect(400);
     const links: Response = await request(app.server())
       .get(`/api/v1/projects/${id}/share-links`)
       .set('authorization', owner.bearer())

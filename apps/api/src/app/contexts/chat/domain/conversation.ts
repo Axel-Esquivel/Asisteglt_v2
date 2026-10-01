@@ -38,7 +38,12 @@ export abstract class Conversation extends AggregateRoot {
         );
       }
       case ConversationType.PROJECT:
-        return new ProjectConversation(id, EntityId.fromString(s.projectId ?? '').unwrap(), s.createdAt, s.lastMessageAt);
+        return new ProjectConversation(
+          id,
+          EntityId.fromString(s.projectId ?? '').unwrap(),
+          s.createdAt,
+          s.lastMessageAt,
+        );
     }
   }
 
