@@ -1,0 +1,22 @@
+{
+  "name": "shared-formula-engine",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/shared/formula-engine/src",
+  "projectType": "library",
+  "tags": ["scope:shared", "type:domain"],
+  "// targets": "to see all targets run: nx show project shared-formula-engine --web",
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["default", "^default"],
+      "options": {
+        "commands": [
+          "tsc -p libs/shared/formula-engine/tsconfig.lib.json --noEmit",
+          "tsc -p libs/shared/formula-engine/tsconfig.spec.json --noEmit"
+        ],
+        "parallel": false
+      }
+    }
+  }
+}

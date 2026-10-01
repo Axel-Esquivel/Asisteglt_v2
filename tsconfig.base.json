@@ -29,6 +29,7 @@
       "@asisteglt/shared-kernel": ["./libs/shared/kernel/src/index.ts"],
       "@asisteglt/shared-contracts": ["./libs/shared/contracts/src/index.ts"],
       "@asisteglt/shared-ingestion-core": ["./libs/shared/ingestion-core/src/index.ts"],
+      "@asisteglt/shared-formula-engine": ["./libs/shared/formula-engine/src/index.ts"],
       "@asisteglt/web-core": ["./libs/web/core/src/index.ts"],
       "@asisteglt/api-platform": ["./libs/api/platform/src/index.ts"]
     }
