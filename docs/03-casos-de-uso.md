@@ -34,6 +34,10 @@ mindmap
         Compañías
         Empresas
         Sucursales
+      Catálogo de encabezados
+        Crear y renombrar
+        Desactivar
+        Reemplazar
       Ingestión
         Perfiles de importación
         Asistente ancho fijo
@@ -143,6 +147,7 @@ flowchart LR
         r03(["CU-22 Asistente de ancho fijo"])
         r04(["CU-23 Asistente tabular"])
         r05(["CU-24 Registrar conexión a BD"])
+        r20(["CU-39 Gestionar catálogo de encabezados"])
     end
 
     subgraph datos["Gestión de datos"]
@@ -168,6 +173,7 @@ flowchart LR
     analista --- r01
     analista --- r02
     analista --- r05
+    analista --- r20
     analista --- r06
     analista --- r07
     analista --- r08
@@ -266,9 +272,10 @@ flowchart LR
 | Campo | Detalle |
 |---|---|
 | Actor | Analista de datos |
+| Requerimientos | RF-REP-18, RF-REP-20 |
 | Precondición | Proyecto de reportes con permiso `create:DataSourceProfile`. |
-| Flujo principal | 1. Selecciona tipo *Texto de ancho fijo*, extensión y codificación (UTF-8, Windows-1252, ISO-8859-1). 2. Sube un archivo de muestra. 3. El sistema muestra las primeras 200 líneas en fuente monoespaciada con una regla de caracteres. 4. El analista marca cortes (clic en la regla o edición de inicio/longitud en tabla). 5. Por cada columna elige un **encabezado del catálogo** (que define su **rol genérico**: identificador, descripción, valor, atributo o fecha, y su **tipo de dato**) o la **omite**. 6. Define reglas de fila: omitir líneas en blanco, saltos de página (`\f`), líneas que contengan un patrón (p. ej. "Página", "Total"), primeras N líneas. 7. El sistema previsualiza el resultado tipado marcando en rojo las filas que se rechazarían y el motivo. 8. Guarda el perfil. |
-| Reglas | Toda columna con rol identificador es **requerida** automáticamente. Las columnas no pueden superponerse. Los números admiten separador decimal/miles configurable y negativos con signo inicial, final, paréntesis o sufijo `CR`. |
+| Flujo principal | 1. Selecciona tipo *Texto de ancho fijo*, extensión y codificación (UTF-8, Windows-1252, ISO-8859-1). 2. Sube un archivo de muestra. 3. El sistema muestra las primeras 200 líneas en fuente monoespaciada con una regla de caracteres. 4. El analista marca cortes (clic en la regla o edición de inicio/longitud en tabla). 5. Por cada columna elige **por su nombre** un **encabezado del catálogo** (p. ej. *Código de cuenta*, *Saldo anterior*, *Debe*, *Haber*, *Saldo actual*, *Monto de venta* o cualquier otro nombre libre definido por el usuario), que trae su **rol** (identificador `id`, nombre del identificador `id_name` o dato `data`), su **tipo de dato** y, si es numérico, su **naturaleza** (monto, cantidad, tasa, precio unitario o descriptivo); o crea uno con «Nuevo encabezado…»; o la **omite** (una franja omitida no genera columna). Rol, tipo y naturaleza se muestran como `Tag` de solo lectura y la columna no define nombre ni tipo propios. 6. Define reglas de fila: omitir líneas en blanco, saltos de página (`\f`), líneas que contengan un patrón (p. ej. "Página", "Total"), primeras N líneas. 7. El sistema previsualiza el resultado tipado marcando en rojo las filas que se rechazarían y el motivo. 8. Guarda el perfil. |
+| Reglas | Toda columna con rol `id` es **requerida** automáticamente (un vacío rechaza la línea). Un encabezado no se repite en la misma preconfiguración (`DUPLICATE_FIELD`); el selector solo ofrece encabezados **activos** e importados (un encabezado derivado no se asigna a columnas: `DERIVED_FIELD_NOT_ASSIGNABLE`) y excluye los ya asignados. Un `id_name` exige que el `id` que describe esté en la misma preconfiguración (`DESCRIBED_IDENTIFIER_MISSING`). La columna guarda la **clave interna** (`FieldKey`) del encabezado, nunca su nombre: renombrar el encabezado en el catálogo no obliga a editar la preconfiguración, que siempre muestra el nombre vigente. En los datos de naturaleza monto o cantidad un vacío vale cero por defecto (configurable por columna: «cero» o «sin valor»). Las columnas no pueden superponerse. Los números admiten separador decimal/miles configurable y negativos con signo inicial, final, paréntesis o sufijo `CR`. |
 | Postcondición | Perfil versionado disponible para CU-25. |
 
 ### CU-25 · Cargar datos
@@ -284,8 +291,33 @@ flowchart LR
 | Campo | Detalle |
 |---|---|
 | Actor | Diseñador de informes |
-| Flujo principal | 1. Inserta una tabla en una página. 2. Elige etapa de datos (cargados / consolidados / transformados) y el campo de valor a mostrar (p. ej. *Saldo actual* o *Monto de venta*). 3. Define **filas**: cada fila es un filtro (nodo de clasificación, compañía, moneda…), una fórmula (`=F3-F5`), un total (`SUMA(F1:F4)`) o una etiqueta. 4. Define **columnas** del mismo modo (p. ej. mes del informe, mes anterior, acumulado anual, compañía A, compañía B). 5. La celda = intersección de filtros fila ∩ columna ∩ parámetros del informe. 6. Aplica formato numérico, colores, bordes y formato condicional (negativos en rojo). 7. La previsualización se actualiza en tiempo real. |
-| Reglas | Las fórmulas pueden referenciar celdas de otras tablas y páginas (`Pagina2!Balance!C4`) y colecciones (`COLECCION("TipoCambio"; "USD"; PERIODO())`). Se detectan referencias circulares. |
+| Requerimientos | RF-REP-18, RF-REP-20 |
+| Flujo principal | 1. Inserta una tabla en una página. 2. Elige etapa de datos (cargados / consolidados / transformados) y, **por su nombre**, el encabezado de valor a mostrar (p. ej. *Saldo actual* o *Monto de venta*); el selector solo ofrece números agregables presentes en la fuente. 3. Define **filas**: cada fila es un filtro (nodo de clasificación, compañía, moneda o cualquier encabezado agrupable, como *Código de tienda*), una fórmula (`=F3-F5`), un total (`SUMA(F1:F4)`) o una etiqueta. 4. Define **columnas** del mismo modo (p. ej. mes del informe, mes anterior, acumulado anual, compañía A, compañía B) o como **medidas**: una columna por encabezado (p. ej. *Saldo anterior*, *Debe*, *Haber*, *Saldo actual*), cuyo título es el nombre vigente del encabezado. 5. La celda = intersección de filtros fila ∩ columna ∩ parámetros del informe; el valor es el encabezado de la fila o columna de medida o, si no hay, el de valor del paso 2, agregado según su naturaleza (suma, promedio ponderado). 6. Aplica formato numérico, colores, bordes y formato condicional (negativos en rojo). 7. La previsualización se actualiza en tiempo real. |
+| Reglas | Las fórmulas pueden referenciar celdas de otras tablas y páginas (`Pagina2.Balance!C4`), colecciones (`COLECCION("Tipo de cambio"; [Tasa de cierre]; "USD"; PERIODO())`) y **encabezados por su nombre entre corchetes** (`=[Debe] - [Haber]`, `=SUMA([Monto de venta])`), evaluados con los filtros de la celda (ver CU-35). Se detectan referencias circulares. Si la fila y la columna definen encabezados de medida distintos, la celda es un error `CONFLICTING_MEASURES`. Todas las referencias se guardan con la clave interna del encabezado: renombrarlo actualiza títulos y fórmulas sin editar ni republicar la plantilla. Al publicar y al calcular se valida cada referencia (`FIELD_NOT_FOUND`, `FIELD_INACTIVE`, `FIELD_INCOMPATIBLE`) indicando el elemento afectado. |
+
+### CU-35 · Escribir fórmula
+
+| Campo | Detalle |
+|---|---|
+| Actor | Diseñador de informes (también analista de datos en pasos de operaciones y validaciones de cuadre) |
+| Requerimientos | RF-REP-18, RF-REP-20 |
+| Precondición | Elemento de informe, paso de pipeline o validación en edición; catálogo de encabezados del proyecto definido. |
+| Flujo principal | 1. Escribe la fórmula en el editor (`FormulaInputComponent`); al teclear `[` el editor sugiere, por su **nombre vigente**, los encabezados activos compatibles y presentes en la fuente, con su tipo y naturaleza. 2. El compilador resuelve cada `[Nombre]` a su clave interna (`FieldKey`) con `FieldResolver`, comparando sin distinguir mayúsculas ni tildes; los nombres nunca contienen `[` ni `]`, por lo que no hay que escapar nada. 3. El `TypeChecker` valida tipo y naturaleza según el contexto: en celdas, KPI y ejes `[X]` sin función usa la agregación por defecto del encabezado bajo los filtros de la celda y `SUMA([X])`, `PROMEDIO.PONDERADO([X]; [Peso])` etc. la hacen explícita; en pasos por registro `[X]` es el valor del registro y no se admiten funciones de agregación. 4. Se guarda en **forma canónica** con claves internas (p. ej. `=[#f_6Pw4] - [#f_2Lm5]`) y se muestra siempre con los nombres vigentes. 5. La previsualización muestra el resultado. |
+| Flujos alternos | 2a. Nombre inexistente → `UNKNOWN_FIELD`; encabezado desactivado → `FIELD_INACTIVE`; encabezado no presente en la fuente → `FIELD_NOT_IN_SOURCE`; el error se muestra en un `Message` y la fórmula no se guarda. 3a. Error de tipo, p. ej. `=[Vendedor] + [Monto de venta]` → «No se puede sumar Texto con Número decimal»; `=SUMA([% de descuento])` → «Una tasa no se puede sumar; use PROMEDIO.PONDERADO». |
+| Reglas | Ejemplos válidos: `=[Debe] - [Haber]`, `=[Saldo anterior] + [Debe] - [Haber]`, `=SUMA([Monto de venta])`, `=[Monto de venta] / [Unidades vendidas]` (resultado de naturaleza precio unitario). Las referencias a celdas (`F3`) solo son válidas en informes. |
+| Postcondición | Tras renombrar *Debe* → *Cargos*, el editor muestra `=[Cargos] - [Haber]` sin intervención; la fórmula, el resultado y la versión de la plantilla no cambian. |
+
+### CU-39 · Gestionar catálogo de encabezados
+
+| Campo | Detalle |
+|---|---|
+| Actor | Analista de datos |
+| Requerimientos | RF-REP-18, RF-REP-20 |
+| Precondición | Proyecto de reportes; el analista puede editar el catálogo de encabezados del proyecto. |
+| Flujo principal | 1. Abre el catálogo de encabezados del proyecto; cada encabezado muestra su nombre vigente, rol, tipo, naturaleza, origen (importado o derivado) y un `Tag` «Usado en N» cuyo `Popover` lista los usos por nombre. 2. **Crea** un encabezado con nombre libre (1 a 80 caracteres, sin `[` ni `]`), rol, tipo y naturaleza, o agrega varios desde una plantilla (los nombres repetidos se omiten y se informan). 3. **Renombra** un encabezado (p. ej. *Debe* → *Cargos*): `FieldCatalog.rename` valida el nombre nuevo y actualiza solo el catálogo, sin migrar datos ni crear versiones de preconfiguraciones, pipelines o plantillas. 4. El sistema sube la versión del catálogo (invalida la caché de informes) y emite `catalog.changed`; selectores, fórmulas, títulos y filtros muestran el nombre nuevo, también en informes de períodos anteriores y en pantallas abiertas. |
+| Flujos alternos | 2a/3a. Nombre repetido entre los encabezados activos (sin distinguir mayúsculas ni tildes) → `DUPLICATE_FIELD_LABEL`; nombre vacío, demasiado largo o con `[` o `]` → `INVALID_FIELD_LABEL`; el error se muestra en un `Message`. 3b. **Desactivar**: `FieldCatalog.deactivate` consulta los usos (`FieldUsageIndex`); si los hay devuelve `FIELD_IN_USE` y un `ConfirmDialog` los lista por nombre («Preconfiguración `balancetxt`, Informe *Balance mensual*…»); tras confirmar, el encabezado se ve como «Debe (inactivo)», su nombre queda libre y las definiciones que lo usan dan `FIELD_INACTIVE` al publicar o calcular. 3c. **Reemplazar** (cambiar tipo o naturaleza de un encabezado con datos o usos, p. ej. *Unidades vendidas* de Número descriptivo a Cantidad): `FieldCatalog.replace` valida la compatibilidad en cada uso; el nuevo toma el nombre, el anterior queda inactivo con `supersededBy` y se crean versiones nuevas de las definiciones afectadas, reapuntadas a la clave nueva; si algún uso es incompatible, no se reemplaza y se indica cuál. |
+| Reglas | Toda referencia guardada usa la clave interna (`FieldKey`), nunca el nombre; por eso, si se crea otro encabezado con el nombre de uno desactivado, las referencias antiguas **no** pasan a él. Tipo y naturaleza son inmutables si el encabezado tiene datos cargados o usos (solo se cambian con *Reemplazar*); el nombre siempre se puede cambiar. Para períodos anteriores, la clave reemplazada es alias de la nueva cuando son compatibles. Detalle en [12 §2.8.5](12-preconfiguraciones-y-carga-multiple.md#285-renombrar-desactivar-y-reemplazar) y flujo en [05 §2.3](05-flujos-y-estados.md#23-renombrar-o-desactivar-un-encabezado). |
+| Postcondición | Catálogo con versión nueva; las preconfiguraciones (CU-22, CU-23), fórmulas (CU-35) e informes (CU-33) muestran los nombres vigentes sin editarse ni republicarse. |
 
 ### CU-46 · Auto-asignar por zonas
 

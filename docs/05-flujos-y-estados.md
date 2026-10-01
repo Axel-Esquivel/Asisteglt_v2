@@ -106,7 +106,7 @@ sequenceDiagram
         WK->>Q: encolar recálculo de clasificaciones
     else rechazos sobre el umbral
         WK->>DB: ImportJob FAILED + incidencias
-        WK->>RT: load.failed
+        WK->>RT: job.progress (estado FAILED)
     end
 ```
 
@@ -127,7 +127,7 @@ sequenceDiagram
 
     D->>W: cambia período / edita elemento
     W->>API: POST /templates/:id/compute { params, draftVersion }
-    API->>C: buscar rpt:{id}:{version}:{hash}:{dataVersion}
+    API->>C: buscar rpt:{templateId}:{version}:{paramsHash}:{dataVersion}:{catalogVersion}
     alt en caché
         C-->>API: ComputedReport
     else no está en caché
@@ -148,6 +148,17 @@ sequenceDiagram
     WK->>FS: guardar PDF
     WK-->>W: export.completed (tiempo real) con URL firmada
 ```
+
+> **Encabezados en el informe calculado.** `ComputedReport` transporta claves internas de
+> encabezado (`FieldKey`), nunca nombres; los títulos de filas, columnas, dimensiones, series y
+> leyendas se resuelven con el catálogo vigente (`FieldCatalogStore.labelOf`) al renderizar la
+> previsualización y la página de impresión. La clave de caché incluye `catalogVersion`
+> (`rpt:{templateId}:{version}:{paramsHash}:{dataVersion}:{catalogVersion}`), de modo que
+> renombrar un encabezado (p. ej. *Debe* → *Cargos*) invalida la caché y **no** crea una versión
+> nueva de la plantilla: las definiciones guardan claves y las fórmulas su forma canónica
+> (`=[#f_6Pw4] - [#f_2Lm5]`). Antes de calcular, `ReportComputationService.compute()` valida cada
+> referencia y responde `FIELD_NOT_FOUND`, `FIELD_INACTIVE` o `FIELD_INCOMPATIBLE` indicando el
+> elemento afectado.
 
 ### 1.5 Conteo guiado en tiempo real (Inventarios)
 
@@ -223,17 +234,20 @@ sequenceDiagram
 ```mermaid
 flowchart TD
     start([Inicio]) --> org[Definir estructura organizacional]
-    org --> prof[Crear perfil de importación]
+    org --> cat["Definir catálogo de encabezados: nombre único, rol, tipo, naturaleza y agregación"]
+    cat --> prof[Crear perfil de importación]
     prof --> tipo{Tipo de fuente}
     tipo -->|Ancho fijo| fw[Asistente de cortes por posición]
     tipo -->|Delimitado| dl[Delimitador, calificador, encabezado]
     tipo -->|Hoja de cálculo| ss[Hoja por nombre o primera hoja]
     tipo -->|Base de datos| db[Conexión + consulta SELECT]
-    fw --> cols[Definir columnas: nombre, tipo, rol, requerida, omitir]
+    fw --> cols["Asignar a cada columna un encabezado del catálogo por su nombre (rol, tipo y naturaleza vienen del catálogo) u omitirla"]
     dl --> cols
     ss --> cols
     db --> cols
-    cols --> rules[Definir reglas de fila]
+    cols --> nuevo{"¿Falta un encabezado?"}
+    nuevo -->|Sí| cat
+    nuevo -->|No| rules[Definir reglas de fila]
     rules --> prev[Previsualizar resultado tipado]
     prev --> ok{¿Correcto?}
     ok -->|No| cols
@@ -252,6 +266,14 @@ flowchart TD
     clas --> rep
     rep --> fin([Fin])
 ```
+
+La obligatoriedad de una columna no se define en el perfil: se deriva del rol del encabezado
+(los de rol `id` son obligatorios). La columna guarda solo la `FieldKey` del encabezado y una
+instantánea (`FieldSnapshot`) tomada al activar la versión; la interfaz la muestra siempre con el
+nombre vigente. Desde ese momento el encabezado se elige por su nombre (por ejemplo *Debe*,
+*Haber*, *Saldo* o *Monto de venta*) en clasificaciones, consolidaciones, pipelines, informes y
+fórmulas (`=[Debe] - [Haber]`); los encabezados derivados que crean los pasos de operaciones con
+«Nuevo encabezado…» quedan disponibles por su nombre en todos los pasos y elementos posteriores.
 
 ### 2.2 Toma de inventario con rondas
 
@@ -280,6 +302,52 @@ flowchart TD
     hay -->|No| fin[Cerrar toma y exportar resultados valorizados]
     fin --> e([Fin])
 ```
+
+### 2.3 Renombrar o desactivar un encabezado
+
+Aplica a encabezados importados y derivados del `FieldCatalog` del proyecto. Todas las
+definiciones (preconfiguraciones, pipelines, consolidaciones, clasificaciones, colecciones,
+plantillas, mapeos de inventario y claves de `data_records`) guardan `FieldKey`, por lo que
+renombrar es una sola actualización del catálogo; desactivar y reemplazar consultan primero el
+índice de usos (`FieldUsageIndex`, colección `field_usages`).
+
+```mermaid
+flowchart TD
+    s([Inicio]) --> acc{Acción sobre el encabezado}
+    acc -->|Renombrar| nom["FieldLabel.create(nombre nuevo)"]
+    nom --> valn{"¿Nombre válido y único entre activos?"}
+    valn -->|No| errn["Mostrar INVALID_FIELD_LABEL o DUPLICATE_FIELD_LABEL"] --> nom
+    valn -->|Sí| ren["FieldCatalog.rename + version + 1 (concurrencia optimista)"]
+    ren --> evt["Emitir catalog.changed en sala project:{id}"]
+    evt --> refr[Selectores, editores de fórmulas e informes abiertos muestran el nombre nuevo]
+    refr --> cache["Caché de informes invalidada por catalogVersion, sin nueva versión de plantilla"]
+    cache --> fin([Fin])
+    acc -->|Desactivar| uses["FieldUsageIndex.usagesOf(key)"]
+    uses --> hay{"¿Tiene usos?"}
+    hay -->|No| deact["FieldCatalog.deactivate: queda INACTIVE y su nombre queda libre"]
+    hay -->|Sí| lista["Mostrar FIELD_IN_USE con la lista de usos por nombre"]
+    lista --> dec{Decisión del usuario}
+    dec -->|Cancelar| fin
+    dec -->|Reemplazar por otro encabezado| ruses
+    dec -->|Confirmar desactivación| deact
+    acc -->|"Reemplazar (p. ej. para cambiar tipo o naturaleza con datos o usos)"| ruses["FieldUsageIndex.usagesOf(key)"]
+    ruses --> repl["FieldCatalog.replace: valida compatibilidad en cada uso (sin usos no hay nada que validar)"]
+    repl --> compat{"¿Compatible en todos los usos?"}
+    compat -->|No| errc["Mostrar FIELD_INCOMPATIBLE por uso"] --> dec
+    compat -->|Sí| newv["El nuevo toma el nombre, el anterior pasa a INACTIVE con supersededBy y se versionan las definiciones afectadas"]
+    newv --> evt
+    deact --> inval["Las definiciones que lo usan fallan al publicar o calcular con FIELD_INACTIVE"]
+    inval --> evt
+```
+
+- **Renombrar** nunca altera resultados ni membresías: tras renombrar *Debe* → *Cargos* el editor
+  muestra `=[Cargos] - [Haber]` sin intervención, porque la fórmula guardada es
+  `=[#f_6Pw4] - [#f_2Lm5]`.
+- **Desactivar** libera el nombre; la interfaz muestra las referencias antiguas como
+  «Debe (inactivo)». Reutilizar ese nombre en otro encabezado nunca redirige referencias antiguas.
+- **Reemplazar** se puede pedir directamente, tenga o no usos (por ejemplo, para cambiar tipo o
+  naturaleza de un encabezado con datos cargados, que son inmutables); trata la clave antigua como alias de la nueva al leer períodos anteriores, cuando
+  ambas son compatibles.
 
 ## 3. Máquinas de estado
 
@@ -359,3 +427,19 @@ stateDiagram-v2
     DRAFT --> ARCHIVED
     ARCHIVED --> [*]
 ```
+
+### 3.6 `CatalogField`
+
+```mermaid
+stateDiagram-v2
+    [*] --> ACTIVE: crear (nombre único entre activos)
+    ACTIVE --> ACTIVE: renombrar (DUPLICATE_FIELD_LABEL si el nombre está en uso)
+    ACTIVE --> INACTIVE: desactivar (sin usos o confirmado)
+    ACTIVE --> INACTIVE: reemplazar (supersededBy = clave nueva)
+```
+
+> Tipo y naturaleza de un `CatalogField` son inmutables cuando el encabezado tiene datos cargados
+> o usos registrados en `field_usages`; el nombre siempre se puede cambiar. `INACTIVE` es un estado
+> final: `FieldCatalog` no define una operación para reactivar; si se necesita de nuevo, se crea
+> otro encabezado (con otra clave) o se usa el sucesor. Un encabezado reemplazado conserva
+> `supersededBy`.

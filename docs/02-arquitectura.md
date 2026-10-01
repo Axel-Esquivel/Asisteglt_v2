@@ -90,7 +90,12 @@ asisteglt/
 │   │   ├── kernel/              # Entity, AggregateRoot, ValueObject, Nullable, Optional, Result,
 │   │   │                        # DomainError, Decimal/Money, Period, EntityId, Clock
 │   │   ├── contracts/           # DTOs, enums, eventos de tiempo real, códigos de error
-│   │   └── formula-engine/      # Lexer, parser, AST, evaluador (TypeScript puro)
+│   │   ├── field-catalog/       # FieldKey, FieldLabel, CatalogField, DataType, NumericNature,
+│   │   │                        # FieldRole, FieldOperation, Aggregation, OperationCompatibility
+│   │   │                        # y FieldResolver (abstracta). TypeScript puro, usado por web,
+│   │   │                        # api, worker y formula-engine
+│   │   ├── ingestion-core/      # Lectores, reglas de fila y validación de importación (puro)
+│   │   └── formula-engine/      # Lexer, parser, AST, evaluador, TypeChecker (TypeScript puro)
 │   ├── api/                     # Contextos acotados del backend
 │   │   ├── iam/                 # usuarios, sesiones, tokens, 2FA, auditoría
 │   │   ├── access-control/      # roles, permisos, membresías, vínculos, invitaciones (CASL)
@@ -126,7 +131,34 @@ asisteglt/
 
 Las etiquetas Nx (`scope:web`, `scope:api`, `scope:shared`, `type:domain`, `type:feature`…) y la
 regla `@nx/enforce-module-boundaries` impiden, por ejemplo, que `libs/web/*` importe código de
-`libs/api/*` o que un dominio dependa de infraestructura.
+`libs/api/*` o que un dominio dependa de infraestructura. `libs/shared/formula-engine` depende
+solo de `kernel` y `field-catalog`.
+
+### 4.1 Encabezados dinámicos: una sola fuente de verdad
+
+Los encabezados (*Debe*, *Haber*, *Saldo*, *Monto de venta* o cualquier otro nombre que defina el
+usuario) viven en el `FieldCatalog` del proyecto (colección `field_catalogs`). Cada uno tiene un
+nombre único entre los activos (`FieldLabel`, comparación normalizada) y una clave interna generada
+(`FieldKey`, p. ej. `f_6Pw4`) invisible para el usuario. Las consecuencias arquitectónicas son:
+
+- **Referencias por clave**: toda definición guardada (preconfiguraciones, pasos de operaciones,
+  consolidaciones, clasificaciones, colecciones, elementos de informe, fórmulas, mapeos de
+  inventario y claves de `data_records`) usa `FieldKey`, nunca el nombre. Renombrar es una sola
+  actualización del catálogo: no se migra nada ni se republican plantillas.
+- **Uso por nombre**: los selectores muestran el nombre vigente y las fórmulas se escriben con
+  `[Nombre]`; el `FieldResolver` traduce nombre ↔ `FieldKey` y las fórmulas se persisten en forma
+  canónica (`=[#f_6Pw4] - [#f_2Lm5]`).
+- **Compatibilidad única**: `OperationCompatibility` (en `libs/shared/field-catalog`) decide qué
+  operación admite cada encabezado según rol, tipo y naturaleza; la usan la interfaz, el dominio
+  (API y worker) y el `TypeChecker` del motor de fórmulas.
+- **Usos**: el puerto `FieldUsageIndex` (colección `field_usages`) permite desactivar o reemplazar un
+  encabezado mostrando dónde se usa.
+- **Propagación**: cada cambio incrementa `FieldCatalog.version` (`catalogVersion`) y publica
+  `catalog.changed`, que refresca selectores, editores de fórmulas e informes abiertos e invalida la
+  caché de resultados.
+
+El detalle está en [04 · Modelo de dominio](04-modelo-de-dominio.md) y en
+[12 · Preconfiguraciones y carga múltiple](12-preconfiguraciones-y-carga-multiple.md).
 
 ## 5. Capas dentro de cada contexto del backend
 
@@ -186,6 +218,7 @@ flowchart LR
         db["Consulta a BD"]
     end
 
+    catalogo["Catálogo de encabezados<br/>(FieldCatalog: nombre ↔ FieldKey)"]
     perfil["Perfil de importación<br/>(DataSourceProfile)"]
     lector["Lectores (Strategy)<br/>+ reglas de fila"]
     valid["Mapeo y validación<br/>por columna"]
@@ -216,14 +249,21 @@ flowchart LR
     col --> motor
     col --> trans
     tpl --> motor --> out
+    catalogo -.->|encabezados por clave| perfil
+    catalogo -.->|"[Nombre] y selectores"| trans
+    catalogo -.->|nombres vigentes| motor
 ```
+
+Todas las etapas guardan y leen los encabezados por `FieldKey`; el usuario los elige y escribe por
+su nombre vigente, y los nombres se resuelven con el catálogo al mostrar (títulos de filas y
+columnas, leyendas, fórmulas).
 
 ## 7. Tiempo real
 
 | Namespace Socket.IO | Salas (rooms) | Eventos principales |
 |---|---|---|
 | `/chat` | `conversation:{id}`, `user:{id}` | `message.created`, `message.updated`, `typing.changed`, `presence.changed`, `read.updated` |
-| `/projects` | `project:{id}` | `member.joined`, `member.updated`, `resource.changed`, `job.progress`, `notification.created` |
+| `/projects` | `project:{id}` | `member.joined`, `member.updated`, `resource.changed`, `job.progress`, `notification.created`, `catalog.changed` |
 | `/reports` | `template:{id}`, `dataset:{projectId}` | `template.changed`, `element.locked`, `element.unlocked`, `preview.invalidated`, `load.completed` |
 | `/inventory` | `count:{id}`, `count:{id}:supervisors`, `counter:{countId}:{userId}` | `item.assigned`, `item.locked`, `entry.recorded`, `evidence.added`, `progress.updated`, `round.opened`, `round.closed` |
 
@@ -236,6 +276,10 @@ flowchart LR
 - **Origen de los eventos**: los casos de uso publican **eventos de dominio**; un
   `RealtimeEventPublisher` los traduce a eventos de socket. Los workers publican a través de Redis
   (`redis-emitter`) para que cualquier réplica de la API los entregue.
+- **Cambios del catálogo de encabezados**: crear, renombrar, desactivar o reemplazar un encabezado
+  publica `catalog.changed` (con la nueva `catalogVersion`) en la sala `project:{id}`; el
+  `FieldCatalogStore` del SPA se recarga y los selectores, editores de fórmulas e informes abiertos
+  muestran el nombre vigente sin recargar la página.
 
 ## 8. Uso de Redis
 
@@ -246,7 +290,7 @@ flowchart LR
 | Bloqueo progresivo de cuentas | `auth:failures:{userId}` (contador) | 15 min |
 | Presencia y "escribiendo…" | `presence:user:{id}` (hash), `typing:{conversationId}` (set) | 60 s renovable |
 | Caché de permisos (reglas CASL empaquetadas) | `acl:{projectId}:{userId}` | 10 min, invalidación por evento |
-| Caché de resultados de informe | `rpt:{templateId}:{version}:{paramsHash}:{dataVersion}` | 1 h, invalidación por carga |
+| Caché de resultados de informe (`catalogVersion` = `version` del `FieldCatalog` del proyecto) | `rpt:{templateId}:{version}:{paramsHash}:{dataVersion}:{catalogVersion}` | 1 h, invalidación por carga y por cambio del catálogo (`catalog.changed`) |
 | Bloqueo de producto en toma | `inv:lock:{roundId}:{itemId}` (`SET NX PX`) | 2 min renovable |
 | Progreso en vivo de toma | `inv:progress:{roundId}` (hash por usuario) | duración de la ronda |
 | Colas BullMQ | `bull:{queue}:*` | gestionado por BullMQ |
@@ -361,9 +405,10 @@ flowchart LR
 | ADR-03 | **Socket.IO** + Redis adapter. | WebSocket nativo, SSE. | Salas, reconexión, *acks* y tipado de eventos; escalado horizontal probado. |
 | ADR-04 | **CASL** para autorización (backend y frontend). | Guards ad-hoc por rol. | Permisos granulares con condiciones y campos; mismas reglas serializables al SPA para ocultar UI. |
 | ADR-05 | **Decimal** en todo cálculo monetario. | `number`. | Evitar errores de punto flotante en saldos y cuadres contables. |
-| ADR-06 | **Motor de fórmulas propio** (lexer + parser Pratt + AST + Visitor). | `eval`, librerías genéricas. | Seguridad (sin ejecución de código), tipado total, funciones de dominio (`CLASIF`, `COLECCION`, referencias a celdas y páginas). |
+| ADR-06 | **Motor de fórmulas propio** (lexer + parser Pratt + AST + Visitor) con **referencias a encabezados** `[Nombre]`: el lexer emite `FIELD_REF`, el nodo `FieldReference` guarda solo el `FieldKey` resuelto por `FieldResolver` (nombre normalizado, único entre activos); la forma canónica persistida es `=[#f_6Pw4] - [#f_2Lm5]` y `FormulaFormatter` la muestra con los nombres vigentes; en `RecordEvaluationContext` `[X]` es el valor del registro y en `AggregateEvaluationContext` es la agregación por defecto bajo los filtros de la celda (`SUMA([X])` la hace explícita); el `TypeChecker` usa `OperationCompatibility`. | `eval`, librerías genéricas; guardar el nombre en el texto de la fórmula. | Seguridad (sin ejecución de código), tipado total, funciones de dominio (`CLASIF`, `COLECCION`), referencias a celdas y páginas, y fórmulas que sobreviven a renombrar encabezados (*Debe* → *Cargos*). |
 | ADR-07 | **PDF con Chromium** sobre la ruta de impresión del SPA. | pdfmake / generación manual. | La previsualización y el PDF usan el mismo código de renderizado. |
 | ADR-08 | **GridFS** como almacenamiento inicial detrás de la abstracción `FileStorage`. | S3 desde el inicio. | Mantiene el stack pedido (MongoDB); se puede cambiar a S3/MinIO sin tocar el dominio. |
-| ADR-09 | Membresías de clasificación **materializadas** en los registros. | Evaluar reglas en cada consulta. | Las consultas de informes filtran por índice (`classifications.nodeIds`). |
+| ADR-09 | Membresías de clasificación **materializadas** en los registros. | Evaluar reglas en cada consulta. | Las consultas de informes filtran por índice (`memberships.nodeId`). |
 | ADR-10 | Asignación de inventario por **Strategy** (manual, zonas contiguas, clúster espacial). | Algoritmo único. | Se adapta a almacenes con o sin coordenadas y permite agregar estrategias sin modificar el dominio. |
 | ADR-11 | **Modo servidor local** con Docker Compose, CA local y paquetes de sincronización. | Solo nube; aplicación nativa offline. | Requisito de operar sin internet en red interna (P-04) manteniendo un único código web. |
+| ADR-12 | **Encabezados dinámicos** en un `FieldCatalog` por proyecto, referenciados por `FieldKey` y usados por nombre; compatibilidad centralizada en `OperationCompatibility` (`libs/shared/field-catalog`). | Columnas fijas (debe/haber) en el código; referencias por nombre de texto. | El usuario define cualquier nombre (*Debe*, *Haber*, *Saldo*, *Monto de venta*…) y lo usa en todo lo posterior; renombrar no rompe definiciones ni exige migraciones. |

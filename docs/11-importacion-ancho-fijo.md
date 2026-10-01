@@ -30,7 +30,7 @@ Maqueta (datos ficticios):
 ```text
              1        10        20        30        40        50        60        70        80
              ┊....┊....┊....┊....┊....┊....┊....┊....┊....┊....┊....┊....┊....┊....┊....┊....┊
-             │ codigo          │ nombre                  │  saldo_ant.│       debe│      haber│
+             │ Código de cuenta│ Nombre de cuenta        │Saldo anter…│       Debe│      Haber│
 ─────────────┼─────────────────┼─────────────────────────┼────────────┼───────────┼───────────┤
  ⊘ encabezado│ EMPRESA DEMO, S.│ A.                      │            │     Página│:    1     │
  ⊘ encabezado│ Emisión:  05/03/│26  09:15:02             │            │           │           │
@@ -42,12 +42,19 @@ Maqueta (datos ficticios):
  ⊘ en blanco │                 │                         │            │           │           │
  ⊘ encabezado│ EMPRESA DEMO, S.│ A.                      │            │     Página│:    2     │
  ✖ rechazada │ 2.001.00        │ PROVEEDORES             │    -980.00 │           │           │
-             └─ código no cumple la máscara 9.999.999.9999
+             └─ «Código de cuenta» no cumple la máscara 9.999.999.9999
 ```
 
 - `│` son las divisorias que colocó el usuario (o que el sistema sugirió y el usuario aceptó).
 - Las líneas de encabezado "cortadas" por las divisorias no importan: están **ignoradas**.
 - La línea rechazada muestra el motivo debajo, sin detener el asistente.
+- El título de cada franja es el **nombre vigente** del encabezado del catálogo asignado (aquí
+  *Código de cuenta*, *Nombre de cuenta*, *Saldo anterior*, *Debe*, *Haber*); si no cabe se recorta
+  con `…` y el nombre completo aparece en `Tooltip`. El usuario puede llamar a sus encabezados como
+  quiera (*Debe*, *Cargos*, *Monto de venta*…): la franja guarda la clave interna (`FieldKey`) del
+  encabezado, no el nombre, y todo lo posterior (pasos, consolidaciones, clasificaciones, fórmulas
+  `[Nombre]` e informes) lo usa por ese mismo nombre; ver
+  [12 §2.8](12-preconfiguraciones-y-carga-multiple.md#28-usar-los-encabezados-por-su-nombre).
 
 ## 3. Flujo del asistente
 
@@ -55,8 +62,8 @@ Maqueta (datos ficticios):
 flowchart LR
     p1["1 · Archivo de muestra<br/>y codificación"] --> p2["2 · Lienzo:<br/>trazar columnas"]
     p2 --> p3["3 · ¿Qué líneas<br/>son datos?"]
-    p3 --> p4["4 · Definir columnas<br/>(nombre, tipo, rol, formato)"]
-    p4 --> p5["5 · Metadatos del<br/>encabezado (opcional)"]
+    p3 --> p4["4 · Definir columnas<br/>(encabezado del catálogo, formato)"]
+    p4 --> p5["5 · Metadatos del archivo<br/>(opcional)"]
     p5 --> p6["6 · Previsualizar<br/>y guardar perfil"]
     p3 -. ajustar .-> p2
     p4 -. ajustar .-> p2
@@ -114,12 +121,16 @@ la marca como ignorada. Las que sobreviven se validan como datos.
 | Ignorar las primeras N líneas | `InputNumber` | Portada del reporte |
 | **Ignorar líneas como esta** | Seleccionar una línea en el lienzo → el sistema propone "comienza con", "contiene" o una máscara | "comienza con `Emisión:`" |
 | **Bloque de encabezado de página** | Seleccionar las líneas del primer encabezado → se ignora cada vez que reaparece, tolerando fecha, hora y número de página variables (se comparan con máscara) | Todas las líneas del encabezado |
-| **Máscara del identificador** (la más robusta) | Clic en un valor de la columna código → se genera la máscara; editable | `9.999.999.9999` |
-| Identificadores requeridos | Automático para columnas de rol identificador | Código vacío → rechazada |
+| **Máscaras de los identificadores** (la más robusta) | Clic en un valor de una columna identificadora → se genera la máscara para ese encabezado (una máscara opcional por cada `id`); editable | *Código de cuenta*: `9.999.999.9999`; *Código de tienda*: `AA-999` |
+| Identificadores requeridos | Automático para columnas cuyo encabezado tiene rol `id` | *Código de cuenta* vacío → rechazada |
 
 Máscaras: `9` = dígito, `A` = letra, `X` = letra o dígito, `*` = cualquier carácter; el resto
-son literales. Una línea que no es ignorada pero **no cumple** la máscara se **rechaza con motivo**
-(no se descarta en silencio), para no perder datos por un error de configuración.
+son literales. Cada máscara se asocia a la clave (`FieldKey`) de un encabezado identificador
+(`IdentifierMask`), así que un identificador compuesto (p. ej. *Código de producto* + *Código de
+tienda*) admite una máscara por componente. Una línea que no es ignorada pero **no cumple** alguna
+máscara se **rechaza con motivo** (no se descarta en silencio), para no perder datos por un error de
+configuración; el motivo nombra el encabezado con su nombre vigente, p. ej. «*Código de tienda* no
+cumple la máscara `AA-999`».
 
 Componentes: `Listbox` ordenable de reglas (`OrderList`), `Dialog` para crear la regla,
 `InputText` para la máscara, `MeterGroup` con el conteo datos / ignoradas / rechazadas.
@@ -128,38 +139,65 @@ Componentes: `Listbox` ordenable de reglas (`OrderList`), `Dialog` para crear la
 
 | Campo | Opciones |
 |---|---|
-| Encabezado | Se **elige del catálogo de encabezados** del proyecto (*Código de cuenta*, *Nombre de cuenta*, *Saldo anterior*, *Debe*, *Haber*, *Saldo actual*…); ver [12 §2](12-preconfiguraciones-y-carga-multiple.md#2-catálogo-de-encabezados-lista-previa). Las franjas sin encabezado se omiten. |
-| Rol y tipo | Vienen del encabezado elegido: rol (`id`, `id_name`, `data`), tipo de dato (texto, entero, decimal, fecha, sí/no) y naturaleza de los números (monto, cantidad, tasa, precio unitario, descriptivo). La importación no conoce conceptos de negocio (debe, haber…); ver [12 §2.1](12-preconfiguraciones-y-carga-multiple.md#27-dónde-queda-el-significado-de-negocio).
-| Requerida / omitir | Las identificadoras son requeridas; se pueden omitir columnas que no interesan. |
-| Formato numérico | Separador de miles y decimal; negativo con `-` inicial, `-` final, paréntesis o sufijo `CR`; **vacío = 0** (por defecto en montos). |
+| Encabezado | Se **elige por su nombre del catálogo de encabezados** del proyecto con `CatalogFieldSelectComponent` (*Código de cuenta*, *Nombre de cuenta*, *Saldo anterior*, *Debe*, *Haber*, *Saldo actual*… o los nombres que el usuario haya dado); solo se ofrecen encabezados activos de origen importado que no estén ya asignados en la preconfiguración (un encabezado derivado no se puede asignar a una columna: `DERIVED_FIELD_NOT_ASSIGNABLE`). Si falta, el botón «Nuevo encabezado…» lo crea con nombre libre y único. La columna guarda la clave del encabezado (`FieldKey`), nunca el nombre; ver [12 §2](12-preconfiguraciones-y-carga-multiple.md#2-catálogo-de-encabezados-lista-previa). Las franjas sin encabezado se omiten y no generan columna. |
+| Rol y tipo | Vienen del encabezado elegido y se muestran como `Tag` de solo lectura: rol (`id`, `id_name`, `data`), tipo de dato (texto, entero, decimal, fecha, sí/no) y naturaleza de los números (monto, cantidad, tasa, precio unitario, descriptivo). Al activar la versión de la preconfiguración se toma una instantánea (`FieldSnapshot`) de esos atributos. La importación no conoce conceptos de negocio (debe, haber…); ver [12 §2.7](12-preconfiguraciones-y-carga-multiple.md#27-dónde-queda-el-significado-de-negocio). |
+| Requerida / omitir | Las columnas cuyo encabezado tiene rol `id` son requeridas; se pueden omitir columnas que no interesan (`ToggleSwitch`). |
+| Formato numérico | Separador de miles y decimal; negativo con `-` inicial, `-` final, paréntesis o sufijo `CR`. Vacíos: **vacío = 0** por defecto solo en encabezados `data` de naturaleza monto o cantidad (configurable por columna: «cero» o «sin valor»); en tasa, precio unitario y número descriptivo el vacío es «sin valor» y no participa en promedios ni conteos; en un `id` el vacío rechaza la línea. |
+| Valores de sí/no | Para encabezados de tipo Sí/No: texto que significa sí y texto que significa no (`S`/`N`, `1`/`0`, `Sí`/`No`), sin distinguir mayúsculas; cualquier otro valor rechaza la línea con motivo (`ParseOptions.booleanValues`). |
 | Recorte | Quitar espacios; opción "conservar sangría" para derivar el nivel (ver abajo). |
 | Formato de fecha | Patrón (`dd/MM/yy`, `yyyyMMdd`…). |
 
 Bajo el editor se muestran las primeras 200 líneas de datos **ya convertidas** (`Table`), con las
 celdas inválidas en rojo y el motivo en `Tooltip`.
 
-**Atributos derivados** (evitan el doble conteo de cuentas de mayor y de detalle):
+**Atributos derivados** (opcionales; evitan el doble conteo cuando conviven registros agrupadores
+y de detalle en una jerarquía: cuentas de mayor y de detalle, familias de productos…). El usuario
+elige el **encabezado de origen** (un `id` con separadores o un `id_name` con sangría) y un
+**encabezado de destino** del catálogo, de origen derivado (`DERIVED`) y nombre libre, que puede
+crear en el momento con «Nuevo encabezado…». Desde ahí el destino se usa por su nombre en todo lo
+posterior (filtros, clasificaciones, consolidación, filas de informe y fórmulas `[Nombre]`).
 
-| Atributo | Cálculo | Uso |
+| Cálculo | Encabezado de destino (ejemplos de nombre) | Tipo y naturaleza del destino | Uso |
+|---|---|---|---|
+| Segmentos del código (`CodeSegmentsLevel`, con separador configurable) | *Nivel de cuenta*, *Nivel de familia* | Entero, descriptivo | Número de segmentos significativos de un `id` con separadores (`1.001.000.0000` → 2). Filtrar por nivel en informes y clasificaciones. |
+| Sangría del nombre (`IndentationLevel`, con espacios por nivel configurables) | *Nivel de cuenta* | Entero, descriptivo | Nivel según los espacios de sangría de un `id_name`. |
+| Es hoja (`LeafFlag`) | *Es cuenta de detalle*, *Es producto final* | Sí/No | Verdadero si el código no tiene segmentos en cero al final (último nivel) o si la línea siguiente no es hija. Consolidar y clasificar solo el detalle. |
+
+La comprobación «suma de los hijos = registro agrupador» se configura, si se desea, como validación
+de cuadre del paso 6 sobre un encabezado numérico agregable elegido por el usuario.
+
+### Paso 5 · Metadatos del archivo (encabezado o pie) (opcional)
+
+El usuario puede seleccionar una región dentro de una línea de encabezado o de pie (p. ej. el
+rango de fechas, la moneda o un total impreso) y asociarla a uno de estos destinos
+(`FileMetadataExtractor`, con `FileRegion` y `MetadataTarget`):
+
+| Destino | Ejemplo | Uso |
 |---|---|---|
-| `nivel` | Número de segmentos significativos de un `id` con separadores (`1.001.000.0000` → 2) **o** cantidad de espacios de sangría del nombre. | Filtrar por nivel en informes y clasificaciones. |
-| `es_detalle` | Verdadero si el código no tiene segmentos en cero al final (último nivel) o si la línea siguiente no es hija. | Consolidar y clasificar solo detalle; validar que la suma del detalle = cuenta de mayor. |
+| **Período sugerido** | Patrón `Del dd de MMMM yy al dd de MMMM yy` | Al cargar, se compara con el período elegido y **se advierte si no coincide** (evita subir enero como febrero). |
+| **Moneda sugerida** | `MONEDA: GTQ` | Se compara con la moneda de la carga y se advierte si no coincide (quetzales como dólares). |
+| **Valor de control** con nombre libre y tipo | *Total de control* (decimal) | Se cita en las validaciones de cuadre con `METADATO("Total de control")`, p. ej. `SUMA([Monto de venta]) = METADATO("Total de control")`. |
 
-### Paso 5 · Metadatos del encabezado (opcional)
-
-El usuario puede seleccionar una región dentro de una línea de encabezado (p. ej. el rango de
-fechas o la moneda) y asociarla a **período sugerido** o **moneda sugerida** con un patrón
-(`Del dd de MMMM yy al dd de MMMM yy`). Al cargar un archivo, el sistema compara ese valor con el
-período y la moneda elegidos en la carga y **advierte si no coinciden** (evita subir enero como
-febrero o quetzales como dólares).
+Los metadatos no son columnas ni encabezados del catálogo: no se guardan en los registros.
 
 ### Paso 6 · Previsualizar y guardar
 
 - Resumen: líneas leídas, datos, ignoradas por regla y rechazadas por motivo.
-- Validación de cuadre opcional (suma de debe = suma de haber; saldo anterior + debe − haber =
-  saldo actual por línea) mostrada como advertencia.
-- Al guardar se crea una **nueva versión del perfil** con: divisorias, columnas, reglas, máscaras
-  y metadatos. **No se guarda ninguna línea del archivo de muestra.**
+- Validaciones de cuadre opcionales **definidas por el usuario** (`ProfileBalanceCheck`), nunca
+  fijas a conceptos contables: se escriben como dos expresiones con encabezados por su nombre
+  entre corchetes (`FormulaInputComponent`, que solo sugiere encabezados numéricos compatibles) y
+  una tolerancia, y se muestran como advertencia:
+  - **Total** (`TOTAL`): igualdad de totales del archivo, p. ej. `SUMA([Debe]) = SUMA([Haber])`
+    en un balance o `SUMA([Monto de venta]) = METADATO("Total de control")` en ventas.
+  - **Por línea** (`PER_LINE`): identidad en cada registro, p. ej.
+    `[Saldo anterior] + [Debe] - [Haber] = [Saldo actual]`.
+
+  Las expresiones se guardan en forma canónica, con las claves de los encabezados
+  (`=SUMA([#f_6Pw4])`), y se muestran con los nombres vigentes: si el usuario renombra *Debe* a
+  *Cargos*, la validación aparece como `SUMA([Cargos]) = SUMA([Haber])` sin editarla.
+- Al guardar se crea una **nueva versión del perfil** con: divisorias, columnas (cada una con la
+  clave de su encabezado), reglas, máscaras, atributos derivados, validaciones de cuadre y
+  metadatos. **No se guarda ninguna línea del archivo de muestra.**
 
 ## 4. Sugerencia automática de columnas
 
@@ -184,9 +222,12 @@ resultado de la muestra actual.
 | Validación | Severidad | Mensaje |
 |---|---|---|
 | Divisoria corta un valor (hay caracteres no blancos a ambos lados en la misma línea de datos) | Error | "La divisoria 58 corta `12,500.00` en 3 líneas" |
-| Columna vacía en todas las líneas de datos | Advertencia | "La columna `c7` no tiene datos; ¿omitirla?" |
-| Identificador vacío | Error (línea rechazada) | "Código vacío" |
-| Valor no convertible al tipo | Error (línea rechazada) | "`1.300,00` no es decimal con el formato configurado" |
+| Columna vacía en todas las líneas de datos | Advertencia | "La columna *Haber* no tiene datos; ¿omitirla?" (franja sin encabezado: "La franja 7 no tiene datos") |
+| Identificador vacío | Error (línea rechazada) | "*Código de cuenta* vacío" |
+| Identificador que no cumple su máscara | Error (línea rechazada) | "*Código de tienda* no cumple la máscara `AA-999`" |
+| Valor no convertible al tipo | Error (línea rechazada) | "*Debe*: `1.300,00` no es decimal con el formato configurado" |
+| Valor de sí/no no reconocido | Error (línea rechazada) | "*Activo*: `T` no es un valor de sí/no configurado" |
+| Validación de cuadre no se cumple | Advertencia | "`SUMA([Debe]) = SUMA([Haber])` difiere en 12.50" |
 | Texto a la derecha de la última divisoria | Advertencia | "Hay texto después de la posición 132" |
 | Encabezado de página no reconocido en una página | Advertencia | "La línea 88 parece encabezado pero no coincide con el bloque" |
 | Más de X % de líneas rechazadas | Bloquea guardar | "Revise la máscara o las divisorias" |
@@ -239,9 +280,15 @@ classDiagram
         +isBlank() boolean
     }
     class LineClassifier {
-        -LineRule[] rules
-        -TextMask identifierMask
+        -RowRule[] rowRules
+        -IdentifierMask[] identifierMasks
         +classify(line TextLine, layout FixedWidthLayout) LineClassification
+    }
+    class IdentifierMask {
+        <<ValueObject>>
+        -FieldKey field
+        -TextMask mask
+        +check(value string) Result~string~
     }
     class LineClassification {
         <<abstract>>
@@ -253,15 +300,17 @@ classDiagram
     class RejectedLine {
         -RowIssue[] issues
     }
-    class LineRule {
+    class RowRule {
         <<abstract>>
-        +matches(line TextLine)* boolean
+        +shouldSkip(line TextLine)* boolean
         +describe()* string
     }
-    class BlankLineRule
-    class PageBreakRule
-    class LeadingLinesRule
-    class TextPatternRule {
+    class SkipBlankLinesRule
+    class SkipPageBreaksRule
+    class SkipLeadingLinesRule {
+        -number count
+    }
+    class SkipMatchingTextRule {
         -TextOperator operator
         -string text
     }
@@ -281,38 +330,94 @@ classDiagram
     class CrossingDetector {
         +detect(document SampleDocument, layout FixedWidthLayout) DividerCrossing[]
     }
-    class HeaderFieldExtractor {
-        -HeaderRegion region
-        -DatePattern pattern
-        +extractPeriod(document SampleDocument) Optional~Period~
+    class FileMetadataExtractor {
+        <<ValueObject>>
+        -FileRegion region
+        -MetadataTarget target
+        +extract(document SampleDocument) Optional~FieldValue~
     }
-    class DerivedLevelCalculator {
+    class MetadataTarget {
         <<abstract>>
-        +levelOf(record MappedRecord)* number
     }
-    class CodeSegmentsLevel
-    class IndentationLevel
+    class DerivedAttribute {
+        <<ValueObject>>
+        -FieldKey source
+        -FieldKey target
+        -DerivedAttributeCalculator calculator
+    }
+    class DerivedAttributeCalculator {
+        <<abstract>>
+        +derive(source FieldValue, context DerivationContext)* FieldValue
+    }
+    class CodeSegmentsLevel {
+        -string separator
+    }
+    class IndentationLevel {
+        -number spacesPerLevel
+    }
+    class LeafFlag
+    class ProfileBalanceCheck {
+        <<ValueObject>>
+        -CheckScope scope
+        -CompiledFormula left
+        -CompiledFormula right
+        -Decimal tolerance
+    }
+    class CheckScope {
+        <<enumeration>>
+        TOTAL
+        PER_LINE
+    }
 
     FixedWidthLayout "1" *-- "0..*" ColumnDivider
     FixedWidthLayout ..> ColumnBand : deriva
     SampleDocument "1" *-- "1..*" TextLine
-    LineClassifier "1" *-- "0..*" LineRule
-    LineClassifier *-- TextMask
+    LineClassifier "1" *-- "0..*" RowRule
+    LineClassifier "1" *-- "0..*" IdentifierMask
+    IdentifierMask *-- TextMask
     LineClassifier ..> LineClassification
     LineClassification <|-- DataLine
     LineClassification <|-- IgnoredLine
     LineClassification <|-- RejectedLine
-    LineRule <|-- BlankLineRule
-    LineRule <|-- PageBreakRule
-    LineRule <|-- LeadingLinesRule
-    LineRule <|-- TextPatternRule
-    LineRule <|-- PageHeaderBlockRule
+    RowRule <|-- SkipBlankLinesRule
+    RowRule <|-- SkipPageBreaksRule
+    RowRule <|-- SkipLeadingLinesRule
+    RowRule <|-- SkipMatchingTextRule
+    RowRule <|-- PageHeaderBlockRule
     PageHeaderBlockRule *-- TextMask
     BoundarySuggester ..> SampleDocument
     CrossingDetector ..> FixedWidthLayout
-    DerivedLevelCalculator <|-- CodeSegmentsLevel
-    DerivedLevelCalculator <|-- IndentationLevel
+    FileMetadataExtractor *-- MetadataTarget
+    FileMetadataExtractor ..> SampleDocument
+    DerivedAttribute *-- DerivedAttributeCalculator
+    DerivedAttributeCalculator <|-- CodeSegmentsLevel
+    DerivedAttributeCalculator <|-- IndentationLevel
+    DerivedAttributeCalculator <|-- LeafFlag
+    ProfileBalanceCheck --> CheckScope
 ```
+
+`IdentifierMask`, `DerivedAttribute`, `ProfileBalanceCheck` y `FileMetadataExtractor` son parte de
+la preconfiguración (`DataSourceProfile.identifierMasks`, `derivedAttributes`, `balanceChecks` y
+`metadata`; ver [04](04-modelo-de-dominio.md) y
+[12 §5](12-preconfiguraciones-y-carga-multiple.md#5-modelo-de-clases)); aquí se muestran porque
+`ingestion-core` los ejecuta igual en el navegador y en el worker. Todas las referencias a
+encabezados son `FieldKey` (`IdentifierMask.field`, `DerivedAttribute.source` y `target`, las
+fórmulas canónicas de `ProfileBalanceCheck`); los mensajes y la interfaz los muestran con el
+nombre vigente del catálogo. `MetadataTarget` puede ser período sugerido, moneda sugerida o valor
+de control con nombre y tipo.
+
+Las reglas de líneas son la misma jerarquía `RowRule` de [04 §6](04-modelo-de-dominio.md) que
+guarda `DataSourceProfile.rowRules`; no existe una jerarquía paralela para el asistente. Cada fila
+de la tabla del Paso 3 corresponde a una subclase: «Ignorar líneas en blanco» →
+`SkipBlankLinesRule`; «Ignorar saltos de página» → `SkipPageBreaksRule`; «Ignorar las primeras N
+líneas» → `SkipLeadingLinesRule` (`count` = N); «Ignorar líneas como esta» →
+`SkipMatchingTextRule` (operador y texto; la variante con máscara se guarda como
+`PageHeaderBlockRule` de una sola línea); «Bloque de encabezado de página» → `PageHeaderBlockRule`,
+subclase de `RowRule` propia del formato de ancho fijo que compara cada línea del bloque con su
+`TextMask`. Las máscaras de identificadores no son `RowRule`: las aplica `LineClassifier` mediante
+`IdentifierMask` y producen `RejectedLine`, no `IgnoredLine`. En el navegador las reglas reciben
+la `TextLine` del documento de muestra; en el worker, la `RawLine` que entrega el lector; en ambos
+casos `ingestion-core` ejecuta el mismo `shouldSkip`.
 
 Del lado del frontend:
 
@@ -423,7 +528,8 @@ sequenceDiagram
 
 - La muestra se decodifica y analiza **en el navegador**; no se envía al servidor hasta que el
   usuario ejecuta una carga real.
-- El perfil guarda únicamente posiciones, reglas, máscaras y nombres de columna.
+- El perfil guarda únicamente posiciones, reglas, máscaras, claves de los encabezados asignados
+  (`FieldKey`) y expresiones en forma canónica; los nombres viven solo en el catálogo.
 - Los archivos de carga se eliminan del almacenamiento después de importarse (retención
   configurable, 0 días por defecto) y los registros quedan protegidos por los permisos del proyecto.
 - Los incidentes de filas rechazadas guardan un fragmento de la línea solo para usuarios con
