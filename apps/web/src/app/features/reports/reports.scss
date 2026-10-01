@@ -62,3 +62,23 @@
   font-variant-numeric: tabular-nums;
   text-align: end;
 }
+
+.reports__split {
+  display: grid;
+  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+
+  @media (width <= 768px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.reports__scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.reports__total td {
+  font-weight: 600;
+}

@@ -13,7 +13,7 @@ export class ProjectSections {
     const sections: ProjectSection[] = [{ path: '', label: 'Resumen', icon: 'pi pi-info-circle' }];
     const configure: boolean = project.can(ProjectPermission.DATA_CONFIGURE);
     if (configure || project.can(ProjectPermission.DATA_LOAD)) {
-      sections.push({ path: 'org', label: 'Estructura', icon: 'pi pi-sitemap' });
+      sections.push({ path: 'org', label: 'Estructura', icon: 'pi pi-building' });
     }
     if (configure) {
       sections.push({ path: 'catalog', label: 'Encabezados', icon: 'pi pi-tags' });
@@ -24,6 +24,12 @@ export class ProjectSections {
     }
     if (project.can(ProjectPermission.DATA_VIEW)) {
       sections.push({ path: 'data', label: 'Datos', icon: 'pi pi-table' });
+    }
+    if (configure) {
+      sections.push({ path: 'classifications', label: 'Clasificaciones', icon: 'pi pi-sitemap' });
+    }
+    if (project.can(ProjectPermission.REPORTS_VIEW)) {
+      sections.push({ path: 'reports', label: 'Informes', icon: 'pi pi-chart-bar' });
     }
     sections.push({ path: 'members', label: 'Miembros', icon: 'pi pi-users' });
     sections.push({ path: 'chat', label: 'Chat', icon: 'pi pi-comments' });

@@ -3,7 +3,9 @@ import { CellValue } from '@asisteglt/shared-ingestion-core';
 import { DataSourceProfile } from './data-source-profile';
 import { FieldCatalog } from './field-catalog';
 import { ImportBatch } from './import-batch';
+import { Classification } from './classification';
 import { OrgStructure } from './org-structure';
+import { ReportDefinition } from './report-definition';
 
 export abstract class OrgStructureRepository {
   public abstract findByProject(projectId: EntityId): Promise<Optional<OrgStructure>>;
@@ -81,4 +83,18 @@ export abstract class FileStorage {
 export abstract class ImportQueue {
   public abstract enqueue(batchId: string, itemId: string): void;
   public abstract idle(): Promise<void>;
+}
+
+export abstract class ClassificationRepository {
+  public abstract findById(id: EntityId): Promise<Optional<Classification>>;
+  public abstract findByProject(projectId: EntityId): Promise<Classification[]>;
+  public abstract save(classification: Classification): Promise<void>;
+  public abstract delete(id: EntityId): Promise<void>;
+}
+
+export abstract class ReportDefinitionRepository {
+  public abstract findById(id: EntityId): Promise<Optional<ReportDefinition>>;
+  public abstract findByProject(projectId: EntityId): Promise<ReportDefinition[]>;
+  public abstract save(definition: ReportDefinition): Promise<void>;
+  public abstract delete(id: EntityId): Promise<void>;
 }

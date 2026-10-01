@@ -205,18 +205,14 @@ export class ProfileWizardPage implements OnInit {
   });
 
   protected readonly previewColumns: Signal<Option<string>[]> = computed((): Option<string>[] => [
-    ...this.store
-      .spec()
-      .columns.map((c): Option<string> => ({
-        value: c.fieldKey,
-        label: this.store.catalog().labelOf(c.fieldKey),
-      })),
-    ...this.store
-      .derived()
-      .map((d: DerivedAttributeSpec): Option<string> => ({
-        value: d.targetKey,
-        label: this.store.catalog().labelOf(d.targetKey),
-      })),
+    ...this.store.spec().columns.map((c): Option<string> => ({
+      value: c.fieldKey,
+      label: this.store.catalog().labelOf(c.fieldKey),
+    })),
+    ...this.store.derived().map((d: DerivedAttributeSpec): Option<string> => ({
+      value: d.targetKey,
+      label: this.store.catalog().labelOf(d.targetKey),
+    })),
   ]);
 
   protected readonly previewRows: Signal<PreviewRow[]> = computed((): PreviewRow[] => {

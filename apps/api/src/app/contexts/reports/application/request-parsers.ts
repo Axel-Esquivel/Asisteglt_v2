@@ -39,8 +39,8 @@ export class ReportsRequestParser {
     } catch {
       parsed = null;
     }
-    return new FieldDecoder<ImportManifest>(
-      (f: FieldReader): ImportManifest => ({ items: f.list('items', ReportsRequestParser.ITEM) }),
-    ).decode(parsed);
+    return new FieldDecoder<ImportManifest>((f: FieldReader): ImportManifest => ({
+      items: f.list('items', ReportsRequestParser.ITEM),
+    })).decode(parsed);
   }
 }

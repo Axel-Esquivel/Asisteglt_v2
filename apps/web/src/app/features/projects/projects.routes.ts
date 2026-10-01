@@ -60,6 +60,16 @@ export const PROJECTS_ROUTES: Route[] = [
         loadComponent: () => import('../reports/data/data.page').then((m) => m.DataPage),
       },
       {
+        path: 'classifications',
+        title: 'Clasificaciones · AsisteGLT',
+        loadComponent: () => import('../reports/classifications/classifications.page').then((m) => m.ClassificationsPage),
+      },
+      {
+        path: 'reports',
+        title: 'Informes · AsisteGLT',
+        loadComponent: () => import('../reports/report-viewer/reports.page').then((m) => m.ReportsPage),
+      },
+      {
         path: 'chat',
         title: 'Chat del proyecto · AsisteGLT',
         loadComponent: () => import('./chat/project-chat.page').then((m) => m.ProjectChatPage),

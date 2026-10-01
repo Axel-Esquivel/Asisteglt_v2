@@ -1,0 +1,128 @@
+<div class="reports__split">
+  <p-card header="Informes">
+    <div class="reports__stack">
+      <p-table
+        [value]="definitions()"
+        dataKey="id"
+        selectionMode="single"
+        [selection]="selectedItem()"
+        (selectionChange)="select($event === null ? null : $event.id)"
+        [attr.aria-label]="'Informes'"
+        data-testid="report-list"
+      >
+        <ng-template #body let-item>
+          <tr [pSelectableRow]="item">
+            <td>{{ item.name }}</td>
+          </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+          <tr>
+            <td>Aún no hay informes</td>
+          </tr>
+        </ng-template>
+      </p-table>
+      @if (canDesign()) {
+        <p-button label="Nuevo informe" icon="pi pi-plus" size="small" [outlined]="true" (onClick)="openNew()" />
+      }
+    </div>
+  </p-card>
+
+  <p-card>
+    <ng-template #title>
+      <div class="reports__title">
+        <span>{{ reportTitle() }}</span>
+        <div class="reports__toolbar">
+          <p-datepicker
+            view="month"
+            dateFormat="mm/yy"
+            [ngModel]="period()"
+            (ngModelChange)="changePeriod($event)"
+            [readonlyInput]="true"
+            ariaLabel="Período del informe"
+            appendTo="body"
+          />
+          @if (canDesign() && selectedId() !== null) {
+            <p-button icon="pi pi-pencil" [text]="true" ariaLabel="Editar informe" (onClick)="openEdit()" />
+          }
+          <p-button label="CSV" icon="pi pi-download" size="small" [outlined]="true" [disabled]="report() === null" (onClick)="exportCsv()" />
+        </div>
+      </div>
+    </ng-template>
+    @if (report(); as current) {
+      <p class="reports__hint">{{ current.records }} registros del período {{ current.period }}</p>
+      <div class="reports__scroll">
+        <p-table [value]="current.rows" [loading]="running()" [tableStyle]="{ 'min-width': '32rem' }" data-testid="report-table">
+          <ng-template #header>
+            <tr>
+              <th>Fila</th>
+              @for (column of current.columns; track column.fieldKey) {
+                <th class="reports__number">{{ column.label }}</th>
+              }
+            </tr>
+          </ng-template>
+          <ng-template #body let-row>
+            <tr [class.reports__total]="row.total">
+              <td [style.padding-inline-start]="indent(row)">{{ row.label }}</td>
+              @for (value of row.values; track $index) {
+                <td class="reports__number">{{ format(value) }}</td>
+              }
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    } @else {
+      <p-message severity="secondary">Elige un informe de la lista para calcularlo.</p-message>
+    }
+  </p-card>
+</div>
+
+<p-dialog header="Diseño del informe" [modal]="true" [visible]="draft() !== null" (visibleChange)="$event ? null : draft.set(null)" [style]="{ width: 'min(36rem, 95vw)' }">
+  @if (draft(); as d) {
+    <form class="reports__form" (ngSubmit)="saveDraft()">
+      <p-floatlabel variant="on">
+        <input pInputText id="reportName" name="name" [(ngModel)]="d.name" class="full-width" />
+        <label for="reportName">Nombre</label>
+      </p-floatlabel>
+      <p-selectbutton name="rowSource" [options]="sourceOptions" optionLabel="label" optionValue="value" [(ngModel)]="d.rowSource" (ngModelChange)="touch()" [allowEmpty]="false" ariaLabelledBy="rowsLabel" />
+      <span id="rowsLabel" class="reports__hint">Filas del informe</span>
+      @if (d.rowSource === RowSource.CLASSIFICATION) {
+        <p-floatlabel variant="on">
+          <p-select inputId="reportClassification" ariaLabel="Clasificación" name="classification" [options]="classificationOptions()" optionLabel="label" optionValue="value" [(ngModel)]="d.classificationId" styleClass="full-width" appendTo="body" />
+          <label for="reportClassification">Clasificación</label>
+        </p-floatlabel>
+        <span class="reports__toolbar">
+          <p-checkbox inputId="reportUnclassified" name="unclassified" [binary]="true" [(ngModel)]="d.includeUnclassified" />
+          <label for="reportUnclassified">Mostrar la fila «Sin clasificar»</label>
+        </span>
+      } @else {
+        <p-floatlabel variant="on">
+          <p-select inputId="reportRowField" ariaLabel="Agrupar por" name="rowField" [options]="groupOptions()" optionLabel="label" optionValue="value" [(ngModel)]="d.rowFieldKey" styleClass="full-width" appendTo="body" />
+          <label for="reportRowField">Agrupar por</label>
+        </p-floatlabel>
+      }
+      <p-floatlabel variant="on">
+        <p-multiselect inputId="reportMeasures" ariaLabel="Columnas (medidas)" name="measures" [options]="measureOptions()" optionLabel="label" optionValue="value" [(ngModel)]="d.measures" display="chip" styleClass="full-width" appendTo="body" />
+        <label for="reportMeasures">Columnas (medidas)</label>
+      </p-floatlabel>
+      <div class="reports__grid">
+        <p-floatlabel variant="on">
+          <p-select inputId="reportProfile" ariaLabel="Preconfiguración (todas)" name="profile" [options]="profileOptions()" optionLabel="label" optionValue="value" [(ngModel)]="d.profileId" [showClear]="true" styleClass="full-width" appendTo="body" />
+          <label for="reportProfile">Preconfiguración (todas)</label>
+        </p-floatlabel>
+        <p-floatlabel variant="on">
+          <p-select inputId="reportCompany" ariaLabel="Compañía (todas)" name="company" [options]="companyOptions()" optionLabel="label" optionValue="value" [(ngModel)]="d.companyId" [showClear]="true" styleClass="full-width" appendTo="body" />
+          <label for="reportCompany">Compañía (todas)</label>
+        </p-floatlabel>
+        <p-floatlabel variant="on">
+          <p-select inputId="reportOnly" ariaLabel="Solo registros donde… (sí)" name="only" [options]="flagOptions()" optionLabel="label" optionValue="value" [(ngModel)]="d.onlyWhenFieldKey" [showClear]="true" styleClass="full-width" appendTo="body" />
+          <label for="reportOnly">Solo registros donde… (sí)</label>
+        </p-floatlabel>
+      </div>
+      <p class="reports__hint">Usa «Solo registros donde» con un atributo como «Es cuenta de detalle» para no sumar dos veces las cuentas agrupadoras.</p>
+      <div class="reports__dialog-actions">
+        <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="draft.set(null)" />
+        <p-button type="submit" label="Guardar" icon="pi pi-check" />
+      </div>
+    </form>
+  }
+</p-dialog>

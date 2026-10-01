@@ -117,4 +117,37 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
   await page.getByRole('tab', { name: 'Datos', exact: true }).click();
   await expect(page.getByTestId('data-table')).toContainText('CAJA Y BANCOS');
   await expect(page.getByTestId('data-table')).toContainText('5,200');
+
+  // Clasificación e informe
+  await page.getByRole('tab', { name: 'Clasificaciones' }).click();
+  await page.getByRole('button', { name: 'Nueva clasificación' }).click();
+  await page.getByLabel('Nombre', { exact: true }).fill('Balance general');
+  await page.getByRole('combobox', { name: 'Clasificar por' }).click();
+  await page.getByRole('option', { name: 'Código de cuenta' }).click();
+  await page.getByRole('button', { name: 'Agregar nodo raíz' }).click();
+  const node = page.getByRole('dialog', { name: 'Nodo' });
+  await node.getByLabel('Nombre').fill('Activo');
+  const patterns = node.locator('#nodePatterns');
+  await patterns.fill('1.*');
+  await patterns.press('Enter');
+  await node.getByRole('button', { name: 'Aceptar' }).click();
+  await expect(page.getByTestId('classification-tree')).toContainText('1.*');
+  await page.getByRole('button', { name: 'Guardar' }).click();
+  await expect(page.getByTestId('classification-list')).toContainText('Balance general');
+
+  await page.getByRole('tab', { name: 'Informes' }).click();
+  await page.getByRole('button', { name: 'Nuevo informe' }).click();
+  const design = page.getByRole('dialog', { name: 'Diseño del informe' });
+  await design.getByLabel('Nombre').fill('Saldos por clasificación');
+  await design.getByRole('combobox', { name: 'Clasificación' }).click();
+  await page.getByRole('option', { name: 'Balance general' }).click();
+  await design.locator('p-multiselect').click();
+  for (const measure of ['Saldo anterior', 'Debe', 'Haber']) {
+    await page.getByRole('option', { name: measure, exact: true }).click();
+  }
+  await page.keyboard.press('Escape');
+  await design.getByRole('button', { name: 'Guardar' }).click();
+  await expect(page.getByTestId('report-table')).toContainText('Activo');
+  await expect(page.getByTestId('report-table')).toContainText('15,600.00');
+  await expect(page.getByTestId('report-table')).toContainText('Sin clasificar');
 });

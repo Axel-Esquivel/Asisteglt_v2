@@ -1,6 +1,7 @@
 import { DynamicModule, Module, Provider } from '@nestjs/common';
 import { DataStore } from '../../common/persistence/data-store';
 import { RepositoryBinding } from '../../common/persistence/persistence.module';
+import { AnalysisService } from './application/analysis.service';
 import { CatalogService } from './application/catalog.service';
 import { ImportProcessor } from './application/import.processor';
 import { ImportService } from './application/import.service';
@@ -9,6 +10,7 @@ import { ProfileService } from './application/profile.service';
 import { RecordsService } from './application/records.service';
 import { ReportsAccess } from './application/reports-access';
 import {
+  ClassificationRepository,
   DataRecordRepository,
   FieldCatalogRepository,
   FileStorage,
@@ -16,7 +18,16 @@ import {
   ImportQueue,
   OrgStructureRepository,
   ProfileRepository,
+  ReportDefinitionRepository,
 } from './domain/ports';
+import {
+  InMemoryClassificationRepository,
+  InMemoryReportDefinitionRepository,
+} from './infrastructure/memory/in-memory-analysis.repositories';
+import {
+  MongoClassificationRepository,
+  MongoReportDefinitionRepository,
+} from './infrastructure/mongo/mongo-analysis.repositories';
 import { InProcessImportQueue } from './infrastructure/in-process-import.queue';
 import {
   InMemoryDataRecordRepository,
@@ -33,6 +44,7 @@ import {
   MongoProfileRepository,
 } from './infrastructure/mongo/mongo-reports.repositories';
 import { InMemoryFileStorage, LocalDiskFileStorage } from './infrastructure/storage/file-storages';
+import { AnalysisController } from './presentation/analysis.controller';
 import { ImportsController } from './presentation/imports.controller';
 import { ProfilesController } from './presentation/profiles.controller';
 import { ReportsConfigController } from './presentation/reports-config.controller';
@@ -48,7 +60,7 @@ export class ReportsModule {
     return {
       module: ReportsModule,
       global: true,
-      controllers: [ReportsConfigController, ProfilesController, ImportsController],
+      controllers: [ReportsConfigController, ProfilesController, ImportsController, AnalysisController],
       providers: [
         RepositoryBinding.bind(
           OrgStructureRepository,
@@ -75,6 +87,18 @@ export class ReportsModule {
           InMemoryDataRecordRepository,
           MongoDataRecordRepository,
         ),
+        RepositoryBinding.bind(
+          ClassificationRepository,
+          store,
+          InMemoryClassificationRepository,
+          MongoClassificationRepository,
+        ),
+        RepositoryBinding.bind(
+          ReportDefinitionRepository,
+          store,
+          InMemoryReportDefinitionRepository,
+          MongoReportDefinitionRepository,
+        ),
         storage,
         { provide: ImportQueue, useClass: InProcessImportQueue },
         ReportsAccess,
@@ -84,6 +108,7 @@ export class ReportsModule {
         ImportService,
         ImportProcessor,
         RecordsService,
+        AnalysisService,
       ],
       exports: [
         CatalogService,

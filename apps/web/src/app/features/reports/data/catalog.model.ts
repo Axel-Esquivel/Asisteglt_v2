@@ -90,6 +90,23 @@ export class CatalogFieldView {
     return this.s.origin === FieldOrigin.IMPORTED;
   }
 
+  public isAggregatable(): boolean {
+    return this.isNumeric() && this.s.nature !== null && this.s.nature !== NumericNature.DESCRIPTIVE;
+  }
+
+  public isGroupable(): boolean {
+    return !this.isAggregatable();
+  }
+
+  public isClassifiable(): boolean {
+    const byRole: boolean = this.s.role === FieldRole.IDENTIFIER || this.s.role === FieldRole.IDENTIFIER_NAME;
+    return byRole && (this.s.dataType === DataType.TEXT || this.s.dataType === DataType.INTEGER);
+  }
+
+  public isBoolean(): boolean {
+    return this.s.dataType === DataType.BOOLEAN;
+  }
+
   public isNumeric(): boolean {
     return this.s.dataType === DataType.INTEGER || this.s.dataType === DataType.DECIMAL;
   }

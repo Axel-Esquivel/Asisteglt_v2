@@ -1,14 +1,17 @@
 import { Injectable } from '@angular/core';
 import {
   CatalogFieldRequest,
+  ClassificationRequest,
   CatalogTemplate,
   CreateOrgUnitRequest,
   ImportManifest,
   ProfileRequest,
+  ReportDefinitionRequest,
   UpdateOrgUnitRequest,
 } from '@asisteglt/shared-contracts';
 import { ArrayDecoder, EmptyDecoder, FieldDecoder, Nullable, Result } from '@asisteglt/shared-kernel';
 import { ApiClient } from '@asisteglt/web-core';
+import { ClassificationView, ComputedReport, ReportDefinitionView } from './analysis.model';
 import { CatalogFieldView, CatalogView } from './catalog.model';
 import { RecordPage, ImportBatchView } from './import.model';
 import { OrgTree, OrgUnitView } from './org.model';
@@ -34,6 +37,13 @@ export class ReportsApiClient extends ApiClient {
   );
   private readonly page: FieldDecoder<RecordPage> = RecordPage.decoder();
   private readonly empty: EmptyDecoder = new EmptyDecoder();
+  private readonly classificationDecoder: FieldDecoder<ClassificationView> = ClassificationView.decoder();
+  private readonly classificationsDecoder: ArrayDecoder<ClassificationView> =
+    new ArrayDecoder<ClassificationView>(ClassificationView.decoder());
+  private readonly reportDecoder: FieldDecoder<ReportDefinitionView> = ReportDefinitionView.decoder();
+  private readonly reportsDecoder: ArrayDecoder<ReportDefinitionView> =
+    new ArrayDecoder<ReportDefinitionView>(ReportDefinitionView.decoder());
+  private readonly computedDecoder: FieldDecoder<ComputedReport> = ComputedReport.decoder();
 
   public orgStructure(projectId: string): Promise<Result<OrgTree>> {
     return this.get(`${ReportsApiClient.base(projectId)}/org-structure`, this.org);
@@ -181,6 +191,57 @@ export class ReportsApiClient extends ApiClient {
       query.set('companyId', filters.companyId);
     }
     return this.get(`${ReportsApiClient.base(projectId)}/records?${query.toString()}`, this.page);
+  }
+
+  public classificationList(projectId: string): Promise<Result<ClassificationView[]>> {
+    return this.get(`${ReportsApiClient.base(projectId)}/classifications`, this.classificationsDecoder);
+  }
+
+  public saveClassification(
+    projectId: string,
+    id: Nullable<string>,
+    request: ClassificationRequest,
+  ): Promise<Result<ClassificationView>> {
+    const path: string = `${ReportsApiClient.base(projectId)}/classifications`;
+    return id === null
+      ? this.post(path, request, this.classificationDecoder)
+      : this.put(`${path}/${encodeURIComponent(id)}`, request, this.classificationDecoder);
+  }
+
+  public deleteClassification(projectId: string, id: string): Promise<Result<true>> {
+    return this.delete(
+      `${ReportsApiClient.base(projectId)}/classifications/${encodeURIComponent(id)}`,
+      this.empty,
+    );
+  }
+
+  public reportList(projectId: string): Promise<Result<ReportDefinitionView[]>> {
+    return this.get(`${ReportsApiClient.base(projectId)}/report-definitions`, this.reportsDecoder);
+  }
+
+  public saveReport(
+    projectId: string,
+    id: Nullable<string>,
+    request: ReportDefinitionRequest,
+  ): Promise<Result<ReportDefinitionView>> {
+    const path: string = `${ReportsApiClient.base(projectId)}/report-definitions`;
+    return id === null
+      ? this.post(path, request, this.reportDecoder)
+      : this.put(`${path}/${encodeURIComponent(id)}`, request, this.reportDecoder);
+  }
+
+  public deleteReport(projectId: string, id: string): Promise<Result<true>> {
+    return this.delete(
+      `${ReportsApiClient.base(projectId)}/report-definitions/${encodeURIComponent(id)}`,
+      this.empty,
+    );
+  }
+
+  public runReport(projectId: string, id: string, period: string): Promise<Result<ComputedReport>> {
+    return this.get(
+      `${ReportsApiClient.base(projectId)}/report-definitions/${encodeURIComponent(id)}/run?period=${encodeURIComponent(period)}`,
+      this.computedDecoder,
+    );
   }
 
   private static base(projectId: string): string {

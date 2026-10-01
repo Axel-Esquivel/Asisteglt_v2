@@ -260,6 +260,84 @@ describe('Reportes: importación (e2e)', () => {
     ]);
   });
 
+  it('clasifica por código de cuenta y calcula el informe con subtotales y filtro de detalle', async (): Promise<void> => {
+    const catalog: Response = await request(app.server())
+      .get(api('/catalog'))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    const fields: CatalogFieldResponse[] = Body.list(Reflect.get(catalog.body, 'fields')).filter(
+      (f: unknown): f is CatalogFieldResponse => typeof f === 'object' && f !== null && 'key' in f,
+    );
+    const key = (label: string): string => {
+      const field: CatalogFieldResponse | null =
+        fields.find((f: CatalogFieldResponse): boolean => f.label === label) ?? null;
+      return field === null ? '' : field.key;
+    };
+    const classification: Response = await request(app.server())
+      .post(api('/classifications'))
+      .set('authorization', owner.bearer())
+      .send({
+        name: 'Balance general',
+        fieldKey: key('Código de cuenta'),
+        nodes: [
+          { id: 'n1', parentId: null, code: '1', name: 'Activo', patterns: ['1.*'] },
+          { id: 'n2', parentId: 'n1', code: '1.1', name: 'Caja y bancos', patterns: ['1.001.001.*'] },
+        ],
+      })
+      .expect(201);
+    await request(app.server())
+      .post(api('/classifications'))
+      .set('authorization', owner.bearer())
+      .send({ name: 'Inválida', fieldKey: key('Debe'), nodes: [] })
+      .expect(400);
+    const base = {
+      rowSource: 'CLASSIFICATION',
+      classificationId: Body.text(classification.body, 'id'),
+      rowFieldKey: null,
+      measures: [key('Saldo anterior'), key('Debe'), key('Haber')],
+      profileId: null,
+      companyId: null,
+      includeUnclassified: true,
+    };
+    const all: Response = await request(app.server())
+      .post(api('/report-definitions'))
+      .set('authorization', owner.bearer())
+      .send({ ...base, name: 'Todo', onlyWhenFieldKey: null })
+      .expect(201);
+    const detail: Response = await request(app.server())
+      .post(api('/report-definitions'))
+      .set('authorization', owner.bearer())
+      .send({ ...base, name: 'Solo detalle', onlyWhenFieldKey: key('Es cuenta de detalle') })
+      .expect(201);
+    const runAll: Response = await request(app.server())
+      .get(api(`/report-definitions/${Body.text(all.body, 'id')}/run?period=2026-08`))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    const allBody: unknown = runAll.body;
+    expect(allBody).toMatchObject({
+      records: 2,
+      rows: [
+        { label: '1 Activo', level: 0, total: true, values: ['7200', '1300', '500'] },
+        { label: '1.1 Caja y bancos', level: 1, values: ['7200', '1300', '500'] },
+        { label: 'Total', total: true, values: ['7200', '1300', '500'] },
+      ],
+    });
+    const runDetail: Response = await request(app.server())
+      .get(api(`/report-definitions/${Body.text(detail.body, 'id')}/run?period=2026-08`))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    const detailBody: unknown = runDetail.body;
+    expect(detailBody).toMatchObject({
+      records: 1,
+      rows: [{ values: ['200', '0', '50'] }, {}, { label: 'Total', values: ['200', '0', '50'] }],
+    });
+    await request(app.server())
+      .post(api('/report-definitions'))
+      .set('authorization', owner.bearer())
+      .send({ ...base, name: 'Malo', measures: [key('Nombre de cuenta')], onlyWhenFieldKey: null })
+      .expect(400);
+  });
+
   it('rechaza alcances incoherentes y marca como fallido un archivo con demasiados rechazos', async (): Promise<void> => {
     await request(app.server())
       .post(api('/imports'))
