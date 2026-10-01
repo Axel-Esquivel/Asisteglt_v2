@@ -4,6 +4,7 @@ import { DataSourceProfile } from './data-source-profile';
 import { FieldCatalog } from './field-catalog';
 import { ImportBatch } from './import-batch';
 import { Classification } from './classification';
+import { OperationPipeline } from './operation-pipeline';
 import { OrgStructure } from './org-structure';
 import { ReportDefinition } from './report-definition';
 
@@ -55,7 +56,18 @@ export class RecordQuery {
     public readonly profileId: Nullable<string>,
     public readonly companyId: Nullable<string>,
     public readonly loadIds: ReadonlyArray<string>,
+    /** Con valor, el filtro de período es el rango [periodFrom, period]. */
+    public readonly periodFrom: Nullable<string>,
   ) {}
+
+  public matchesPeriod(period: string): boolean {
+    if (this.period === null) {
+      return true;
+    }
+    return this.periodFrom === null
+      ? period === this.period
+      : period >= this.periodFrom && period <= this.period;
+  }
 }
 
 export class RecordPage {
@@ -97,4 +109,9 @@ export abstract class ReportDefinitionRepository {
   public abstract findByProject(projectId: EntityId): Promise<ReportDefinition[]>;
   public abstract save(definition: ReportDefinition): Promise<void>;
   public abstract delete(id: EntityId): Promise<void>;
+}
+
+export abstract class OperationPipelineRepository {
+  public abstract findByProject(projectId: EntityId): Promise<Optional<OperationPipeline>>;
+  public abstract save(pipeline: OperationPipeline): Promise<void>;
 }

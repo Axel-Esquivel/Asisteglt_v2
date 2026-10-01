@@ -26,6 +26,7 @@ export class ProjectSections {
       sections.push({ path: 'data', label: 'Datos', icon: 'pi pi-table' });
     }
     if (configure) {
+      sections.push({ path: 'operations', label: 'Operaciones', icon: 'pi pi-calculator' });
       sections.push({ path: 'classifications', label: 'Clasificaciones', icon: 'pi pi-sitemap' });
     }
     if (project.can(ProjectPermission.REPORTS_VIEW)) {

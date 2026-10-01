@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { EntityId, Nullable, Result } from '@asisteglt/shared-kernel';
 import { Project } from '../../projects/domain/project';
-import { DataRecordRepository, RecordPage, RecordQuery } from '../domain/ports';
+import { OperationRunner } from '../domain/operation-runner';
+import { DataRecordRepository, DataRecordSnapshot, RecordPage, RecordQuery } from '../domain/ports';
+import { OperationsService } from './operations.service';
 import { ReportsAccess } from './reports-access';
 
 export class RecordFilter {
@@ -20,6 +22,7 @@ export class RecordsService {
 
   public constructor(
     private readonly records: DataRecordRepository,
+    private readonly operations: OperationsService,
     private readonly access: ReportsAccess,
   ) {}
 
@@ -38,9 +41,21 @@ export class RecordsService {
           filter.profileId,
           filter.companyId,
           filter.loadId === null ? [] : [filter.loadId],
+          null,
         );
         const safeSize: number = Math.min(Math.max(1, size), RecordsService.MAX_PAGE_SIZE);
-        return Result.ok(await this.records.page(query, Math.max(0, page), safeSize));
+        const found: RecordPage = await this.records.page(query, Math.max(0, page), safeSize);
+        const runner: OperationRunner = await this.operations.runner(
+          project.getId(),
+          query,
+          found.rows.map((r: DataRecordSnapshot): string => r.period),
+        );
+        return Result.ok(
+          new RecordPage(
+            found.total,
+            found.rows.map((r: DataRecordSnapshot): DataRecordSnapshot => runner.apply(r)),
+          ),
+        );
       },
     );
   }

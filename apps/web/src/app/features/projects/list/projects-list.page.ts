@@ -1,5 +1,11 @@
 import { ChangeDetectionStrategy, Component, OnInit, WritableSignal, inject, signal } from '@angular/core';
-import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormControl,
+  FormGroup,
+  NonNullableFormBuilder,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { Router } from '@angular/router';
 import { ModuleType } from '@asisteglt/shared-contracts';
 import { Result } from '@asisteglt/shared-kernel';
@@ -28,7 +34,19 @@ interface CreateProjectControls {
 @Component({
   selector: 'app-projects-list-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, Button, Card, Dialog, FloatLabel, InputText, Message, SelectButton, Skeleton, Tag, Textarea],
+  imports: [
+    ReactiveFormsModule,
+    Button,
+    Card,
+    Dialog,
+    FloatLabel,
+    InputText,
+    Message,
+    SelectButton,
+    Skeleton,
+    Tag,
+    Textarea,
+  ],
   templateUrl: './projects-list.page.html',
   styleUrl: './projects-list.page.scss',
 })

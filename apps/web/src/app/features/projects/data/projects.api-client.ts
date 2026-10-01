@@ -13,11 +13,15 @@ import { CreatedShareLink, ProjectMemberView, ProjectSummary, ShareLinkView } fr
 @Injectable({ providedIn: 'root' })
 export class ProjectsApiClient extends ApiClient {
   private readonly project: FieldDecoder<ProjectSummary> = ProjectSummary.decoder();
-  private readonly projects: ArrayDecoder<ProjectSummary> = new ArrayDecoder<ProjectSummary>(ProjectSummary.decoder());
+  private readonly projects: ArrayDecoder<ProjectSummary> = new ArrayDecoder<ProjectSummary>(
+    ProjectSummary.decoder(),
+  );
   private readonly members: ArrayDecoder<ProjectMemberView> = new ArrayDecoder<ProjectMemberView>(
     ProjectMemberView.decoder(),
   );
-  private readonly links: ArrayDecoder<ShareLinkView> = new ArrayDecoder<ShareLinkView>(ShareLinkView.decoder());
+  private readonly links: ArrayDecoder<ShareLinkView> = new ArrayDecoder<ShareLinkView>(
+    ShareLinkView.decoder(),
+  );
   private readonly empty: EmptyDecoder = new EmptyDecoder();
 
   public list(): Promise<Result<ProjectSummary[]>> {
@@ -49,11 +53,18 @@ export class ProjectsApiClient extends ApiClient {
   }
 
   public changeRole(id: string, userId: string, role: ProjectRole): Promise<Result<true>> {
-    return this.patch(`projects/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`, { role }, this.empty);
+    return this.patch(
+      `projects/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`,
+      { role },
+      this.empty,
+    );
   }
 
   public removeMember(id: string, userId: string): Promise<Result<true>> {
-    return this.delete(`projects/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`, this.empty);
+    return this.delete(
+      `projects/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`,
+      this.empty,
+    );
   }
 
   public shareLinks(id: string): Promise<Result<ShareLinkView[]>> {
@@ -65,6 +76,9 @@ export class ProjectsApiClient extends ApiClient {
   }
 
   public revokeShareLink(id: string, linkId: string): Promise<Result<true>> {
-    return this.delete(`projects/${encodeURIComponent(id)}/share-links/${encodeURIComponent(linkId)}`, this.empty);
+    return this.delete(
+      `projects/${encodeURIComponent(id)}/share-links/${encodeURIComponent(linkId)}`,
+      this.empty,
+    );
   }
 }

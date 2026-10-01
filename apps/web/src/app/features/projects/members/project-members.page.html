@@ -3,11 +3,16 @@
     <div class="members__title">
       <span>Miembros</span>
       @if (canManage()) {
-        <p-button label="Agregar miembro" icon="pi pi-user-plus" size="small" (onClick)="openDialog()" />
+      <p-button label="Agregar miembro" icon="pi pi-user-plus" size="small" (onClick)="openDialog()" />
       }
     </div>
   </ng-template>
-  <p-table [value]="members()" dataKey="userId" [tableStyle]="{ 'min-width': '40rem' }" data-testid="members-table">
+  <p-table
+    [value]="members()"
+    dataKey="userId"
+    [tableStyle]="{ 'min-width': '40rem' }"
+    data-testid="members-table"
+  >
     <ng-template #header>
       <tr>
         <th>Nombre</th>
@@ -20,37 +25,36 @@
     <ng-template #body let-member>
       <tr>
         <td>
-          {{ member.displayName }}
-          @if (isMe(member)) {
-            <p-tag value="Tú" severity="info" />
+          {{ member.displayName }} @if (isMe(member)) {
+          <p-tag value="Tú" severity="info" />
           }
         </td>
         <td>{{ member.email }}</td>
         <td>
           @if (canManage() && !member.isOwner()) {
-            <p-select
-              [options]="roleOptions()"
-              optionLabel="label"
-              optionValue="value"
-              [ngModel]="member.role"
-              (ngModelChange)="changeRole(member, $event)"
-              [ariaLabel]="'Rol de ' + member.displayName"
-              appendTo="body"
-            />
+          <p-select
+            [options]="roleOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="member.role"
+            (ngModelChange)="changeRole(member, $event)"
+            [ariaLabel]="'Rol de ' + member.displayName"
+            appendTo="body"
+          />
           } @else {
-            <p-tag [value]="member.roleLabel()" [severity]="member.isOwner() ? 'contrast' : 'secondary'" />
+          <p-tag [value]="member.roleLabel()" [severity]="member.isOwner() ? 'contrast' : 'secondary'" />
           }
         </td>
         <td>{{ member.joinedAt | date: 'mediumDate' }}</td>
         <td>
           @if (!member.isOwner() && (canManage() || isMe(member))) {
-            <p-button
-              [icon]="isMe(member) ? 'pi pi-sign-out' : 'pi pi-user-minus'"
-              [text]="true"
-              severity="danger"
-              [ariaLabel]="isMe(member) ? 'Salir del proyecto' : 'Quitar a ' + member.displayName"
-              (onClick)="confirmRemove(member)"
-            />
+          <p-button
+            [icon]="isMe(member) ? 'pi pi-sign-out' : 'pi pi-user-minus'"
+            [text]="true"
+            severity="danger"
+            [ariaLabel]="isMe(member) ? 'Salir del proyecto' : 'Quitar a ' + member.displayName"
+            (onClick)="confirmRemove(member)"
+          />
           }
         </td>
       </tr>

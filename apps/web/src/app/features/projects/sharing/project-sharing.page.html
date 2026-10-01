@@ -14,24 +14,38 @@
         <label for="linkRole">Rol al unirse</label>
       </p-floatlabel>
       <p-floatlabel variant="on">
-        <p-inputnumber inputId="linkDays" formControlName="expiresInDays" [min]="1" [max]="365" [showButtons]="true" styleClass="full-width" />
+        <p-inputnumber
+          inputId="linkDays"
+          formControlName="expiresInDays"
+          [min]="1"
+          [max]="365"
+          [showButtons]="true"
+          styleClass="full-width"
+        />
         <label for="linkDays">Días de vigencia (vacío = sin caducidad)</label>
       </p-floatlabel>
       <p-floatlabel variant="on">
-        <p-inputnumber inputId="linkUses" formControlName="maxUses" [min]="1" [max]="10000" [showButtons]="true" styleClass="full-width" />
+        <p-inputnumber
+          inputId="linkUses"
+          formControlName="maxUses"
+          [min]="1"
+          [max]="10000"
+          [showButtons]="true"
+          styleClass="full-width"
+        />
         <label for="linkUses">Usos máximos (vacío = ilimitados)</label>
       </p-floatlabel>
       <p-button type="submit" label="Generar vínculo" icon="pi pi-link" [loading]="saving()" />
     </form>
 
     @if (createdUrl(); as url) {
-      <div class="sharing__created" data-testid="share-url">
-        <p-message severity="success">Comparte este vínculo; solo se muestra una vez.</p-message>
-        <div class="sharing__url">
-          <input pInputText [value]="url" [readonly]="true" class="full-width" aria-label="Vínculo generado" />
-          <p-button icon="pi pi-copy" ariaLabel="Copiar vínculo" (onClick)="copy(url)" />
-        </div>
+    <div class="sharing__created" data-testid="share-url">
+      <p-message severity="success">Comparte este vínculo; solo se muestra una vez.</p-message>
+      <div class="sharing__url">
+        <input pInputText [value]="url" [readonly]="true" class="full-width" aria-label="Vínculo generado" />
+        <p-button icon="pi pi-copy" ariaLabel="Copiar vínculo" (onClick)="copy(url)" />
       </div>
+    </div>
     }
   </p-card>
 
@@ -52,11 +66,20 @@
           <td>{{ link.expiresAt === null ? 'Nunca' : (link.expiresAt | date: 'short') }}</td>
           <td>{{ link.usesLabel() }}</td>
           <td>
-            <p-tag [value]="link.active ? 'Activo' : 'Inactivo'" [severity]="link.active ? 'success' : 'secondary'" />
+            <p-tag
+              [value]="link.active ? 'Activo' : 'Inactivo'"
+              [severity]="link.active ? 'success' : 'secondary'"
+            />
           </td>
           <td>
             @if (link.active) {
-              <p-button icon="pi pi-ban" [text]="true" severity="danger" ariaLabel="Revocar vínculo" (onClick)="revoke(link)" />
+            <p-button
+              icon="pi pi-ban"
+              [text]="true"
+              severity="danger"
+              ariaLabel="Revocar vínculo"
+              (onClick)="revoke(link)"
+            />
             }
           </td>
         </tr>

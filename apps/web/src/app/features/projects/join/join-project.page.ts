@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, InputSignal, OnInit, WritableSignal, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  InputSignal,
+  OnInit,
+  WritableSignal,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { Nullable, Result } from '@asisteglt/shared-kernel';
 import { Notifier } from '@asisteglt/web-core';

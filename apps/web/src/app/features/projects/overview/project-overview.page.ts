@@ -1,6 +1,12 @@
 import { ChangeDetectionStrategy, Component, WritableSignal, effect, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormControl,
+  FormGroup,
+  NonNullableFormBuilder,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { ProjectPermission } from '@asisteglt/shared-contracts';
 import { Nullable, Result } from '@asisteglt/shared-kernel';
 import { Notifier } from '@asisteglt/web-core';

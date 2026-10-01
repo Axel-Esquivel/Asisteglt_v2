@@ -82,3 +82,8 @@
 .reports__total td {
   font-weight: 600;
 }
+
+.reports__grow {
+  flex: 1 1 14rem;
+  min-width: 0;
+}

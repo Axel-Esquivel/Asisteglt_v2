@@ -2,6 +2,10 @@ import { DynamicModule, Module, Provider } from '@nestjs/common';
 import { DataStore } from '../../common/persistence/data-store';
 import { RepositoryBinding } from '../../common/persistence/persistence.module';
 import { AnalysisService } from './application/analysis.service';
+import { OperationsService } from './application/operations.service';
+import { InMemoryOperationPipelineRepository } from './infrastructure/memory/in-memory-operations.repository';
+import { MongoOperationPipelineRepository } from './infrastructure/mongo/mongo-operations.repository';
+import { OperationsController } from './presentation/operations.controller';
 import { CatalogService } from './application/catalog.service';
 import { ImportProcessor } from './application/import.processor';
 import { ImportService } from './application/import.service';
@@ -11,6 +15,7 @@ import { RecordsService } from './application/records.service';
 import { ReportsAccess } from './application/reports-access';
 import {
   ClassificationRepository,
+  OperationPipelineRepository,
   DataRecordRepository,
   FieldCatalogRepository,
   FileStorage,
@@ -60,7 +65,13 @@ export class ReportsModule {
     return {
       module: ReportsModule,
       global: true,
-      controllers: [ReportsConfigController, ProfilesController, ImportsController, AnalysisController],
+      controllers: [
+        ReportsConfigController,
+        ProfilesController,
+        ImportsController,
+        AnalysisController,
+        OperationsController,
+      ],
       providers: [
         RepositoryBinding.bind(
           OrgStructureRepository,
@@ -99,6 +110,12 @@ export class ReportsModule {
           InMemoryReportDefinitionRepository,
           MongoReportDefinitionRepository,
         ),
+        RepositoryBinding.bind(
+          OperationPipelineRepository,
+          store,
+          InMemoryOperationPipelineRepository,
+          MongoOperationPipelineRepository,
+        ),
         storage,
         { provide: ImportQueue, useClass: InProcessImportQueue },
         ReportsAccess,
@@ -109,6 +126,7 @@ export class ReportsModule {
         ImportProcessor,
         RecordsService,
         AnalysisService,
+        OperationsService,
       ],
       exports: [
         CatalogService,
@@ -116,6 +134,7 @@ export class ReportsModule {
         ProfileService,
         ImportService,
         AnalysisService,
+        OperationsService,
         DataRecordRepository,
         ImportQueue,
         ReportsAccess,

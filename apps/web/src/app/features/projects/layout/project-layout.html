@@ -1,39 +1,39 @@
-@switch (context.status()) {
-  @case (LoadStatus.FAILED) {
-    <p-message severity="error" data-testid="project-error">{{ context.errorMessage() }}</p-message>
-    <p-button label="Volver a proyectos" icon="pi pi-arrow-left" [text]="true" routerLink="/app/projects" />
-  }
-  @case (LoadStatus.LOADED) {
-    @if (context.project(); as project) {
-      <header class="project__header">
-        <p-button icon="pi pi-arrow-left" [text]="true" [rounded]="true" ariaLabel="Volver a proyectos" routerLink="/app/projects" />
-        <div class="project__heading">
-          <h1 class="project__title">{{ project.name }}</h1>
-          <div class="project__tags">
-            <p-tag [value]="project.moduleLabel()" [icon]="project.moduleIcon()" />
-            <p-tag [value]="project.roleLabel()" severity="secondary" data-testid="project-role" />
-          </div>
-        </div>
-      </header>
+@switch (context.status()) { @case (LoadStatus.FAILED) {
+<p-message severity="error" data-testid="project-error">{{ context.errorMessage() }}</p-message>
+<p-button label="Volver a proyectos" icon="pi pi-arrow-left" [text]="true" routerLink="/app/projects" />
+} @case (LoadStatus.LOADED) { @if (context.project(); as project) {
+<header class="project__header">
+  <p-button
+    icon="pi pi-arrow-left"
+    [text]="true"
+    [rounded]="true"
+    ariaLabel="Volver a proyectos"
+    routerLink="/app/projects"
+  />
+  <div class="project__heading">
+    <h1 class="project__title">{{ project.name }}</h1>
+    <div class="project__tags">
+      <p-tag [value]="project.moduleLabel()" [icon]="project.moduleIcon()" />
+      <p-tag [value]="project.roleLabel()" severity="secondary" data-testid="project-role" />
+    </div>
+  </div>
+</header>
 
-      <p-tabs [value]="activeSection()" [scrollable]="true">
-        <p-tablist>
-          @for (section of sections(); track section.path) {
-            <p-tab [value]="section.path" [routerLink]="link(section)">
-              <i [class]="section.icon" aria-hidden="true"></i>
-              <span>{{ section.label }}</span>
-            </p-tab>
-          }
-        </p-tablist>
-      </p-tabs>
-
-      <section class="project__content">
-        <router-outlet />
-      </section>
+<p-tabs [value]="activeSection()" [scrollable]="true">
+  <p-tablist>
+    @for (section of sections(); track section.path) {
+    <p-tab [value]="section.path" [routerLink]="link(section)">
+      <i [class]="section.icon" aria-hidden="true"></i>
+      <span>{{ section.label }}</span>
+    </p-tab>
     }
-  }
-  @default {
-    <p-skeleton width="40%" height="2rem" />
-    <p-skeleton height="3rem" styleClass="project__skeleton" />
-  }
-}
+  </p-tablist>
+</p-tabs>
+
+<section class="project__content">
+  <router-outlet />
+</section>
+} } @default {
+<p-skeleton width="40%" height="2rem" />
+<p-skeleton height="3rem" styleClass="project__skeleton" />
+} }

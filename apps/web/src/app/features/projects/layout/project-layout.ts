@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, Signal, computed, effect, inject, input, InputSignal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  Signal,
+  computed,
+  effect,
+  inject,
+  input,
+  InputSignal,
+} from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Nullable } from '@asisteglt/shared-kernel';
@@ -59,6 +68,8 @@ export class ProjectLayout {
   }
 
   protected link(section: ProjectSection): string[] {
-    return section.path === '' ? ['/app/projects', this.projectId()] : ['/app/projects', this.projectId(), section.path];
+    return section.path === ''
+      ? ['/app/projects', this.projectId()]
+      : ['/app/projects', this.projectId(), section.path];
   }
 }

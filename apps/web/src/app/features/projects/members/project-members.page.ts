@@ -1,6 +1,22 @@
-import { ChangeDetectionStrategy, Component, Signal, WritableSignal, computed, inject, signal, OnInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  Signal,
+  WritableSignal,
+  computed,
+  inject,
+  signal,
+  OnInit,
+} from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { FormControl, FormGroup, FormsModule, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormControl,
+  FormGroup,
+  FormsModule,
+  NonNullableFormBuilder,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { Router } from '@angular/router';
 import { ModuleType, ProjectPermission, ProjectRole } from '@asisteglt/shared-contracts';
 import { DomainError, Nullable, Result } from '@asisteglt/shared-kernel';
@@ -28,7 +44,19 @@ interface AddMemberControls {
 @Component({
   selector: 'app-project-members-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, FormsModule, DatePipe, Button, Card, Dialog, FloatLabel, InputText, Select, TableModule, Tag],
+  imports: [
+    ReactiveFormsModule,
+    FormsModule,
+    DatePipe,
+    Button,
+    Card,
+    Dialog,
+    FloatLabel,
+    InputText,
+    Select,
+    TableModule,
+    Tag,
+  ],
   templateUrl: './project-members.page.html',
   styleUrl: './project-members.page.scss',
 })

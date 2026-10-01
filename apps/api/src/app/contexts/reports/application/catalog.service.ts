@@ -4,7 +4,8 @@ import { ConflictError, EntityId, Nullable, Result } from '@asisteglt/shared-ker
 import { Project } from '../../projects/domain/project';
 import { DataSourceProfile } from '../domain/data-source-profile';
 import { CatalogField, FieldCatalog, FieldDefinition, FieldLabel } from '../domain/field-catalog';
-import { FieldCatalogRepository, ProfileRepository } from '../domain/ports';
+import { OperationPipeline } from '../domain/operation-pipeline';
+import { FieldCatalogRepository, OperationPipelineRepository, ProfileRepository } from '../domain/ports';
 import { CatalogTemplates } from './catalog-templates';
 import { ReportsAccess } from './reports-access';
 
@@ -21,6 +22,7 @@ export class CatalogService {
   public constructor(
     private readonly catalogs: FieldCatalogRepository,
     private readonly profiles: ProfileRepository,
+    private readonly pipelines: OperationPipelineRepository,
     private readonly access: ReportsAccess,
   ) {}
 
@@ -114,9 +116,15 @@ export class CatalogService {
   /** Dónde se usa un encabezado (por ahora: preconfiguraciones), mostrado por nombre. */
   public async usages(projectId: EntityId, key: string): Promise<string[]> {
     const profiles: DataSourceProfile[] = await this.profiles.findByProject(projectId);
-    return profiles
-      .filter((p: DataSourceProfile): boolean => p.fieldKeys().includes(key))
-      .map((p: DataSourceProfile): string => `Preconfiguración ${p.getName()}`);
+    const operations: string[] = (await this.pipelines.findByProject(projectId))
+      .map((pipeline: OperationPipeline): string[] => pipeline.usages(key))
+      .orElseGet((): string[] => []);
+    return [
+      ...profiles
+        .filter((p: DataSourceProfile): boolean => p.fieldKeys().includes(key))
+        .map((p: DataSourceProfile): string => `Preconfiguración ${p.getName()}`),
+      ...operations,
+    ];
   }
 
   private async mutate<T>(

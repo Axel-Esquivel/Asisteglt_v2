@@ -6,96 +6,224 @@
       </div>
     </ng-template>
     @if (!canLoad()) {
-      <p-message severity="warn">No tienes permiso para cargar datos en este proyecto.</p-message>
+    <p-message severity="warn">No tienes permiso para cargar datos en este proyecto.</p-message>
     } @else {
-      <div class="reports__stack">
-        <p-fileupload
-          #upload
-          name="files"
-          [multiple]="true"
-          [customUpload]="true"
-          [auto]="false"
-          [showUploadButton]="false"
-          [showCancelButton]="false"
-          chooseLabel="Agregar archivos"
-          (onSelect)="onFiles($event, upload)"
-        >
-          <ng-template #empty>
-            <p class="reports__hint">Arrastra aquí tus archivos o usa «Agregar archivos». La preconfiguración se elige sola según la extensión.</p>
-          </ng-template>
-          <ng-template #content></ng-template>
-        </p-fileupload>
+    <div class="reports__stack">
+      <p-fileupload
+        #upload
+        name="files"
+        [multiple]="true"
+        [customUpload]="true"
+        [auto]="false"
+        [showUploadButton]="false"
+        [showCancelButton]="false"
+        chooseLabel="Agregar archivos"
+        (onSelect)="onFiles($event, upload)"
+      >
+        <ng-template #empty>
+          <p class="reports__hint">
+            Arrastra aquí tus archivos o usa «Agregar archivos». La preconfiguración se elige sola según la
+            extensión.
+          </p>
+        </ng-template>
+        <ng-template #content></ng-template>
+      </p-fileupload>
 
-        @if (rows().length > 0) {
-          <div class="reports__toolbar">
-            <p-button label="Copiar fila anterior" icon="pi pi-arrow-down" size="small" [outlined]="true" (onClick)="copyPrevious()" />
-            <p-button label="Aplicar la primera seleccionada" icon="pi pi-clone" size="small" [outlined]="true" (onClick)="applyFirstToSelected()" />
-            <p-button label="Quitar seleccionados" icon="pi pi-trash" size="small" severity="danger" [text]="true" (onClick)="removeSelected()" />
-          </div>
-          <p-table [value]="rows()" dataKey="id" [scrollable]="true" [tableStyle]="{ 'min-width': '96rem' }" data-testid="upload-table">
-            <ng-template #header>
-              <tr>
-                <th></th>
-                <th>Archivo</th>
-                <th>Preconfiguración</th>
-                <th>Período</th>
-                <th>Organización</th>
-                <th>País</th>
-                <th>Moneda</th>
-                <th>Compañía</th>
-                <th>Empresa</th>
-                <th>Sucursal</th>
-                <th>Estado</th>
-                <th></th>
-              </tr>
-            </ng-template>
-            <ng-template #body let-row>
-              <tr>
-                <td><p-checkbox [binary]="true" [(ngModel)]="row.selected" [ariaLabel]="'Seleccionar ' + row.file.name" /></td>
-                <td>{{ row.file.name }}</td>
-                <td>
-                  <p-select [options]="profileOptions()" optionLabel="label" optionValue="value" [(ngModel)]="row.profileId" (ngModelChange)="changed(row)" placeholder="(ninguna)" [ariaLabel]="'Preconfiguración de ' + row.file.name" appendTo="body" />
-                </td>
-                <td>
-                  <p-datepicker view="month" dateFormat="mm/yy" [(ngModel)]="row.period" (ngModelChange)="changed(row)" [readonlyInput]="true" placeholder="mm/aaaa" [ariaLabel]="'Período de ' + row.file.name" appendTo="body" />
-                </td>
-                <td>
-                  <p-select [options]="children(null, OrgLevel.ORGANIZATION)" optionLabel="label" optionValue="value" [(ngModel)]="row.organizationId" (ngModelChange)="changed(row)" [ariaLabel]="'Organización de ' + row.file.name" appendTo="body" />
-                </td>
-                <td>
-                  <p-select [options]="children(row.organizationId, OrgLevel.COUNTRY)" optionLabel="label" optionValue="value" [(ngModel)]="row.countryId" (ngModelChange)="changed(row)" [ariaLabel]="'País de ' + row.file.name" appendTo="body" />
-                </td>
-                <td>
-                  <p-select [options]="currencies(row.countryId)" optionLabel="label" optionValue="value" [(ngModel)]="row.currency" (ngModelChange)="changed(row)" [ariaLabel]="'Moneda de ' + row.file.name" appendTo="body" />
-                </td>
-                <td>
-                  <p-select [options]="children(row.countryId, OrgLevel.COMPANY)" optionLabel="label" optionValue="value" [(ngModel)]="row.companyId" (ngModelChange)="changed(row)" [ariaLabel]="'Compañía de ' + row.file.name" appendTo="body" />
-                </td>
-                <td>
-                  <p-select [options]="children(row.companyId, OrgLevel.ENTERPRISE)" optionLabel="label" optionValue="value" [(ngModel)]="row.enterpriseId" (ngModelChange)="changed(row)" [showClear]="true" placeholder="—" [ariaLabel]="'Empresa de ' + row.file.name" appendTo="body" />
-                </td>
-                <td>
-                  <p-select [options]="children(row.enterpriseId, OrgLevel.BRANCH)" optionLabel="label" optionValue="value" [(ngModel)]="row.branchId" (ngModelChange)="changed(row)" [showClear]="true" placeholder="—" [ariaLabel]="'Sucursal de ' + row.file.name" appendTo="body" />
-                </td>
-                <td>
-                  <p-tag [value]="check(row).label()" [severity]="check(row).severity()" [pTooltip]="check(row).message" tooltipPosition="left" [attr.data-testid]="'row-state-' + row.file.name" />
-                </td>
-                <td>
-                  <p-button icon="pi pi-times" [text]="true" size="small" severity="danger" [ariaLabel]="'Quitar ' + row.file.name" (onClick)="remove(row)" />
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
-          <div class="reports__dialog-actions">
-            <p-button [label]="'Cargar ' + readyCount() + ' archivos'" icon="pi pi-upload" [disabled]="readyCount() === 0" [loading]="uploading()" (onClick)="submit()" />
-          </div>
-        }
+      @if (rows().length > 0) {
+      <div class="reports__toolbar">
+        <p-button
+          label="Copiar fila anterior"
+          icon="pi pi-arrow-down"
+          size="small"
+          [outlined]="true"
+          (onClick)="copyPrevious()"
+        />
+        <p-button
+          label="Aplicar la primera seleccionada"
+          icon="pi pi-clone"
+          size="small"
+          [outlined]="true"
+          (onClick)="applyFirstToSelected()"
+        />
+        <p-button
+          label="Quitar seleccionados"
+          icon="pi pi-trash"
+          size="small"
+          severity="danger"
+          [text]="true"
+          (onClick)="removeSelected()"
+        />
       </div>
+      <p-table
+        [value]="rows()"
+        dataKey="id"
+        [scrollable]="true"
+        [tableStyle]="{ 'min-width': '96rem' }"
+        data-testid="upload-table"
+      >
+        <ng-template #header>
+          <tr>
+            <th></th>
+            <th>Archivo</th>
+            <th>Preconfiguración</th>
+            <th>Período</th>
+            <th>Organización</th>
+            <th>País</th>
+            <th>Moneda</th>
+            <th>Compañía</th>
+            <th>Empresa</th>
+            <th>Sucursal</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-row>
+          <tr>
+            <td>
+              <p-checkbox
+                [binary]="true"
+                [(ngModel)]="row.selected"
+                [ariaLabel]="'Seleccionar ' + row.file.name"
+              />
+            </td>
+            <td>{{ row.file.name }}</td>
+            <td>
+              <p-select
+                [options]="profileOptions()"
+                optionLabel="label"
+                optionValue="value"
+                [(ngModel)]="row.profileId"
+                (ngModelChange)="changed(row)"
+                placeholder="(ninguna)"
+                [ariaLabel]="'Preconfiguración de ' + row.file.name"
+                appendTo="body"
+              />
+            </td>
+            <td>
+              <p-datepicker
+                view="month"
+                dateFormat="mm/yy"
+                [(ngModel)]="row.period"
+                (ngModelChange)="changed(row)"
+                [readonlyInput]="true"
+                placeholder="mm/aaaa"
+                [ariaLabel]="'Período de ' + row.file.name"
+                appendTo="body"
+              />
+            </td>
+            <td>
+              <p-select
+                [options]="children(null, OrgLevel.ORGANIZATION)"
+                optionLabel="label"
+                optionValue="value"
+                [(ngModel)]="row.organizationId"
+                (ngModelChange)="changed(row)"
+                [ariaLabel]="'Organización de ' + row.file.name"
+                appendTo="body"
+              />
+            </td>
+            <td>
+              <p-select
+                [options]="children(row.organizationId, OrgLevel.COUNTRY)"
+                optionLabel="label"
+                optionValue="value"
+                [(ngModel)]="row.countryId"
+                (ngModelChange)="changed(row)"
+                [ariaLabel]="'País de ' + row.file.name"
+                appendTo="body"
+              />
+            </td>
+            <td>
+              <p-select
+                [options]="currencies(row.countryId)"
+                optionLabel="label"
+                optionValue="value"
+                [(ngModel)]="row.currency"
+                (ngModelChange)="changed(row)"
+                [ariaLabel]="'Moneda de ' + row.file.name"
+                appendTo="body"
+              />
+            </td>
+            <td>
+              <p-select
+                [options]="children(row.countryId, OrgLevel.COMPANY)"
+                optionLabel="label"
+                optionValue="value"
+                [(ngModel)]="row.companyId"
+                (ngModelChange)="changed(row)"
+                [ariaLabel]="'Compañía de ' + row.file.name"
+                appendTo="body"
+              />
+            </td>
+            <td>
+              <p-select
+                [options]="children(row.companyId, OrgLevel.ENTERPRISE)"
+                optionLabel="label"
+                optionValue="value"
+                [(ngModel)]="row.enterpriseId"
+                (ngModelChange)="changed(row)"
+                [showClear]="true"
+                placeholder="—"
+                [ariaLabel]="'Empresa de ' + row.file.name"
+                appendTo="body"
+              />
+            </td>
+            <td>
+              <p-select
+                [options]="children(row.enterpriseId, OrgLevel.BRANCH)"
+                optionLabel="label"
+                optionValue="value"
+                [(ngModel)]="row.branchId"
+                (ngModelChange)="changed(row)"
+                [showClear]="true"
+                placeholder="—"
+                [ariaLabel]="'Sucursal de ' + row.file.name"
+                appendTo="body"
+              />
+            </td>
+            <td>
+              <p-tag
+                [value]="check(row).label()"
+                [severity]="check(row).severity()"
+                [pTooltip]="check(row).message"
+                tooltipPosition="left"
+                [attr.data-testid]="'row-state-' + row.file.name"
+              />
+            </td>
+            <td>
+              <p-button
+                icon="pi pi-times"
+                [text]="true"
+                size="small"
+                severity="danger"
+                [ariaLabel]="'Quitar ' + row.file.name"
+                (onClick)="remove(row)"
+              />
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+      <div class="reports__dialog-actions">
+        <p-button
+          [label]="'Cargar ' + readyCount() + ' archivos'"
+          icon="pi pi-upload"
+          [disabled]="readyCount() === 0"
+          [loading]="uploading()"
+          (onClick)="submit()"
+        />
+      </div>
+      }
+    </div>
     }
   </p-card>
 
   <p-card header="Historial de cargas">
-    <p-table [value]="items()" dataKey="id" [tableStyle]="{ 'min-width': '60rem' }" data-testid="history-table">
+    <p-table
+      [value]="items()"
+      dataKey="id"
+      [tableStyle]="{ 'min-width': '60rem' }"
+      data-testid="history-table"
+    >
       <ng-template #header>
         <tr>
           <th></th>
@@ -114,14 +242,27 @@
         <tr>
           <td>
             @if (item.s.issues.length > 0 || item.s.error !== null) {
-              <p-button type="button" [pRowToggler]="item" [text]="true" size="small" [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" ariaLabel="Ver incidencias" />
+            <p-button
+              type="button"
+              [pRowToggler]="item"
+              [text]="true"
+              size="small"
+              [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"
+              ariaLabel="Ver incidencias"
+            />
             }
           </td>
           <td>{{ item.s.fileName }}</td>
           <td>{{ item.s.profileName }} v{{ item.s.profileVersion }}</td>
           <td>{{ item.s.period }}</td>
           <td>{{ orgName(item.s.companyId) }} · {{ item.s.currency }}</td>
-          <td><p-tag [value]="item.status().label" [severity]="item.status().severity" [attr.data-testid]="'status-' + item.s.fileName" /></td>
+          <td>
+            <p-tag
+              [value]="item.status().label"
+              [severity]="item.status().severity"
+              [attr.data-testid]="'status-' + item.s.fileName"
+            />
+          </td>
           <td>{{ item.s.data }}</td>
           <td>{{ item.s.ignored }}</td>
           <td>{{ item.s.rejected }}</td>
@@ -132,10 +273,9 @@
         <tr>
           <td colspan="10">
             @if (item.s.error !== null) {
-              <p-message severity="error">{{ item.s.error }}</p-message>
-            }
-            @for (issue of item.s.issues; track issue.line) {
-              <div class="reports__hint">Línea {{ issue.line }}: {{ issue.messages.join(' · ') }}</div>
+            <p-message severity="error">{{ item.s.error }}</p-message>
+            } @for (issue of item.s.issues; track issue.line) {
+            <div class="reports__hint">Línea {{ issue.line }}: {{ issue.messages.join(' · ') }}</div>
             }
           </td>
         </tr>

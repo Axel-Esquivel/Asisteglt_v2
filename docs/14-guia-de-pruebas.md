@@ -57,6 +57,10 @@ Proyecto de demostración: **Demo · Balance ficticio** (o crea uno nuevo).
 | 5.2 | Informes → nuevo: filas por clasificación, columnas *Saldo anterior*, *Debe*, *Haber* | Subtotales por nodo superior, fila «Sin clasificar» y total |
 | 5.3 | Activar «Solo registros donde… *Es cuenta de detalle*» | Los totales ya no duplican las cuentas de mayor |
 | 5.4 | Cambiar el período y exportar CSV | El CSV abre en hojas de cálculo (separador `;`, UTF-8) |
+| 5.5 | Operaciones → Agregar paso «Campo calculado», «Nuevo encabezado…» *Saldo final* (Decimal, Monto), fórmula `=[Saldo anterior] + [Debe] - [Haber]` | La fórmula se valida al escribir («Resultado: Monto»); una mezcla de texto y número se rechaza |
+| 5.6 | Guardar y abrir Datos | Aparece la columna *Saldo final* calculada en cada registro |
+| 5.7 | Paso «Acumulado del año» sobre *Debe* (destino Monto) con cargas de dos meses del mismo año | El acumulado suma el mes y los meses anteriores del mismo identificador |
+| 5.8 | Usar *Saldo final* como columna de un informe; intentar desactivar el encabezado | El informe lo totaliza; la desactivación avisa «se usa en: Operación 1» |
 
 ## 6. Inventarios
 
@@ -76,7 +80,7 @@ Proyecto de demostración: **Demo · Bodega ficticia** (toma ya iniciada; entra 
 ## 7. Pendiente después de esta fase
 
 - Diseñador de informes multipágina con fórmulas (`[Nombre]`), gráficos, KPI y PDF (docs/04 §10-11).
-- Consolidación, operaciones (acumulados, conversión de moneda) y colecciones complementarias.
+- Consolidación, conversión de moneda y colecciones complementarias (tasas de cambio).
 - Otros tipos de fuente (delimitado, hoja de cálculo, BD), metadatos de archivo y validaciones de cuadre.
 - Inventarios: evidencias fotográficas, mapeo desde un conjunto de datos de Reportes, visibilidad por rol.
 - 2FA, invitación por correo, colas BullMQ/Redis para varias instancias y la decisión de licencia PrimeUI.

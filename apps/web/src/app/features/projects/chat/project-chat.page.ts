@@ -27,7 +27,8 @@ import { ProjectContext } from '../data/project-context';
   `,
 })
 export class ProjectChatPage implements OnInit {
-  protected readonly conversation: WritableSignal<Nullable<ConversationSummary>> = signal<Nullable<ConversationSummary>>(null);
+  protected readonly conversation: WritableSignal<Nullable<ConversationSummary>> =
+    signal<Nullable<ConversationSummary>>(null);
   protected readonly errorMessage: WritableSignal<Nullable<string>> = signal<Nullable<string>>(null);
 
   private readonly api: ChatApiClient = inject(ChatApiClient);

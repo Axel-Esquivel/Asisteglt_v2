@@ -21,6 +21,8 @@ import {
 import { ReportDefinition } from '../domain/report-definition';
 import { ReportEngine } from '../domain/report-engine';
 import { CatalogService } from './catalog.service';
+import { OperationsService } from './operations.service';
+import { OperationRunner } from '../domain/operation-runner';
 
 /** Clasificaciones e informes matriciales calculados sobre los datos publicados. */
 @Injectable()
@@ -30,6 +32,7 @@ export class AnalysisService {
     private readonly definitions: ReportDefinitionRepository,
     private readonly records: DataRecordRepository,
     private readonly catalogs: CatalogService,
+    private readonly operations: OperationsService,
     private readonly access: ProjectAccess,
     private readonly clock: Clock,
   ) {}
@@ -172,9 +175,11 @@ export class AnalysisService {
               spec.profileId,
               spec.companyId,
               [],
+              null,
             );
+            const runner: OperationRunner = await this.operations.runner(p.getId(), query, [period]);
             for await (const record of this.records.stream(query)) {
-              engine.add(record);
+              engine.add(runner.apply(record));
             }
             return Result.ok(engine.result(definition.getId().toString(), period));
           },

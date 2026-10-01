@@ -1,6 +1,21 @@
-import { ChangeDetectionStrategy, Component, OnInit, Signal, WritableSignal, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  Signal,
+  WritableSignal,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormControl,
+  FormGroup,
+  NonNullableFormBuilder,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { ModuleType, ProjectRole } from '@asisteglt/shared-contracts';
 import { Nullable, Result } from '@asisteglt/shared-kernel';
 import { Notifier } from '@asisteglt/web-core';
@@ -28,7 +43,19 @@ interface ShareLinkControls {
 @Component({
   selector: 'app-project-sharing-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, DatePipe, Button, Card, FloatLabel, InputNumber, InputText, Message, Select, TableModule, Tag],
+  imports: [
+    ReactiveFormsModule,
+    DatePipe,
+    Button,
+    Card,
+    FloatLabel,
+    InputNumber,
+    InputText,
+    Message,
+    Select,
+    TableModule,
+    Tag,
+  ],
   templateUrl: './project-sharing.page.html',
   styleUrl: './project-sharing.page.scss',
 })

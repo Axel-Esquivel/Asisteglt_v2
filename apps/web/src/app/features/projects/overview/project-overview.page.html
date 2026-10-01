@@ -1,34 +1,40 @@
 @if (context.project(); as project) {
-  <div class="overview">
-    <p-card header="Datos generales">
-      @if (canManage()) {
-        <form class="overview__form" [formGroup]="form" (ngSubmit)="save()">
-          <p-floatlabel variant="on">
-            <input pInputText id="overviewName" formControlName="name" class="full-width" />
-            <label for="overviewName">Nombre</label>
-          </p-floatlabel>
-          <p-floatlabel variant="on">
-            <textarea pTextarea id="overviewDescription" formControlName="description" rows="4" class="full-width"></textarea>
-            <label for="overviewDescription">Descripción</label>
-          </p-floatlabel>
-          <p-button type="submit" label="Guardar cambios" icon="pi pi-check" [loading]="saving()" />
-        </form>
-      } @else {
-        <p class="overview__text">{{ project.description === '' ? 'Sin descripción' : project.description }}</p>
-      }
-    </p-card>
+<div class="overview">
+  <p-card header="Datos generales">
+    @if (canManage()) {
+    <form class="overview__form" [formGroup]="form" (ngSubmit)="save()">
+      <p-floatlabel variant="on">
+        <input pInputText id="overviewName" formControlName="name" class="full-width" />
+        <label for="overviewName">Nombre</label>
+      </p-floatlabel>
+      <p-floatlabel variant="on">
+        <textarea
+          pTextarea
+          id="overviewDescription"
+          formControlName="description"
+          rows="4"
+          class="full-width"
+        ></textarea>
+        <label for="overviewDescription">Descripción</label>
+      </p-floatlabel>
+      <p-button type="submit" label="Guardar cambios" icon="pi pi-check" [loading]="saving()" />
+    </form>
+    } @else {
+    <p class="overview__text">{{ project.description === '' ? 'Sin descripción' : project.description }}</p>
+    }
+  </p-card>
 
-    <p-card header="Información">
-      <dl class="overview__facts">
-        <dt>Módulo</dt>
-        <dd>{{ project.moduleLabel() }}</dd>
-        <dt>Tu rol</dt>
-        <dd>{{ project.roleLabel() }}</dd>
-        <dt>Miembros</dt>
-        <dd>{{ project.memberCount }}</dd>
-        <dt>Creado</dt>
-        <dd>{{ project.createdAt | date: 'longDate' }}</dd>
-      </dl>
-    </p-card>
-  </div>
+  <p-card header="Información">
+    <dl class="overview__facts">
+      <dt>Módulo</dt>
+      <dd>{{ project.moduleLabel() }}</dd>
+      <dt>Tu rol</dt>
+      <dd>{{ project.roleLabel() }}</dd>
+      <dt>Miembros</dt>
+      <dd>{{ project.memberCount }}</dd>
+      <dt>Creado</dt>
+      <dd>{{ project.createdAt | date: 'longDate' }}</dd>
+    </dl>
+  </p-card>
+</div>
 }

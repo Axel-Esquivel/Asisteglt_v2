@@ -119,7 +119,9 @@ export class ShareLinkView {
   }
 
   public usesLabel(): string {
-    return this.maxUses === null ? `${String(this.uses)} usos` : `${String(this.uses)} de ${String(this.maxUses)}`;
+    return this.maxUses === null
+      ? `${String(this.uses)} usos`
+      : `${String(this.uses)} de ${String(this.maxUses)}`;
   }
 }
 

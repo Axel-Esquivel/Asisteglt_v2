@@ -43,18 +43,29 @@ export class ProjectContext extends BaseStore<ProjectContextState> {
 
   public async open(projectId: string): Promise<void> {
     this.projectId = projectId;
-    this.update((): ProjectContextState => ({ status: LoadStatus.LOADING, project: null, errorMessage: null }));
+    this.update((): ProjectContextState => ({
+      status: LoadStatus.LOADING,
+      project: null,
+      errorMessage: null,
+    }));
     await this.reload();
   }
 
   public async reload(): Promise<void> {
     const result: Result<ProjectSummary> = await this.api.find(this.projectId);
-    this.update(
-      (current: ProjectContextState): ProjectContextState =>
-        result.match(
-          (project: ProjectSummary): ProjectContextState => ({ status: LoadStatus.LOADED, project, errorMessage: null }),
-          (error): ProjectContextState => ({ ...current, status: LoadStatus.FAILED, errorMessage: error.message }),
-        ),
+    this.update((current: ProjectContextState): ProjectContextState =>
+      result.match(
+        (project: ProjectSummary): ProjectContextState => ({
+          status: LoadStatus.LOADED,
+          project,
+          errorMessage: null,
+        }),
+        (error): ProjectContextState => ({
+          ...current,
+          status: LoadStatus.FAILED,
+          errorMessage: error.message,
+        }),
+      ),
     );
   }
 

@@ -1,8 +1,8 @@
 <p-card header="Unirse a un proyecto">
   @if (errorMessage(); as message) {
-    <p-message severity="error" data-testid="join-error">{{ message }}</p-message>
-    <p-button label="Ir a mis proyectos" icon="pi pi-folder" [text]="true" routerLink="/app/projects" />
+  <p-message severity="error" data-testid="join-error">{{ message }}</p-message>
+  <p-button label="Ir a mis proyectos" icon="pi pi-folder" [text]="true" routerLink="/app/projects" />
   } @else {
-    <p-progressspinner ariaLabel="Uniéndote al proyecto" />
+  <p-progressspinner ariaLabel="Uniéndote al proyecto" />
   }
 </p-card>

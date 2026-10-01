@@ -162,7 +162,7 @@ export class InMemoryDataRecordRepository extends DataRecordRepository {
       .filter(
         (r: DataRecordSnapshot): boolean =>
           r.projectId === query.projectId &&
-          (query.period === null || r.period === query.period) &&
+          query.matchesPeriod(r.period) &&
           (query.profileId === null || r.profileId === query.profileId) &&
           (query.companyId === null || r.companyId === query.companyId) &&
           (query.loadIds.length === 0 || query.loadIds.includes(r.loadId)),

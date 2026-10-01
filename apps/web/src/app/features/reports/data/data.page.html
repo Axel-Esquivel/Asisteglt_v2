@@ -3,9 +3,36 @@
     <div class="reports__title">
       <span>Datos cargados</span>
       <div class="reports__toolbar">
-        <p-select [options]="periodOptions()" optionLabel="label" optionValue="value" [ngModel]="period()" (ngModelChange)="period.set($event); filtersChanged()" [showClear]="true" placeholder="Todos los períodos" ariaLabel="Período" />
-        <p-select [options]="profileOptions()" optionLabel="label" optionValue="value" [ngModel]="profileId()" (ngModelChange)="profileId.set($event); filtersChanged()" [showClear]="true" placeholder="Todas las preconfiguraciones" ariaLabel="Preconfiguración" />
-        <p-select [options]="companyOptions()" optionLabel="label" optionValue="value" [ngModel]="companyId()" (ngModelChange)="companyId.set($event); filtersChanged()" [showClear]="true" placeholder="Todas las compañías" ariaLabel="Compañía" />
+        <p-select
+          [options]="periodOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="period()"
+          (ngModelChange)="period.set($event); filtersChanged()"
+          [showClear]="true"
+          placeholder="Todos los períodos"
+          ariaLabel="Período"
+        />
+        <p-select
+          [options]="profileOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="profileId()"
+          (ngModelChange)="profileId.set($event); filtersChanged()"
+          [showClear]="true"
+          placeholder="Todas las preconfiguraciones"
+          ariaLabel="Preconfiguración"
+        />
+        <p-select
+          [options]="companyOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="companyId()"
+          (ngModelChange)="companyId.set($event); filtersChanged()"
+          [showClear]="true"
+          placeholder="Todas las compañías"
+          ariaLabel="Compañía"
+        />
       </div>
     </div>
   </ng-template>
@@ -26,7 +53,7 @@
         <th>Período</th>
         <th>Compañía</th>
         @for (field of columns(); track field.key) {
-          <th>{{ field.label }}</th>
+        <th>{{ field.label }}</th>
         }
       </tr>
     </ng-template>
@@ -35,7 +62,7 @@
         <td>{{ row.period }}</td>
         <td>{{ companyName(row.companyId) }} · {{ row.currency }}</td>
         @for (field of columns(); track field.key) {
-          <td [class.reports__number]="field.isNumeric()">{{ cell(row, field) }}</td>
+        <td [class.reports__number]="field.isNumeric()">{{ cell(row, field) }}</td>
         }
       </tr>
     </ng-template>

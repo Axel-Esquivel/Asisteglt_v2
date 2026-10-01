@@ -251,7 +251,11 @@ export class MongoDataRecordRepository extends DataRecordRepository {
   private static filter(query: RecordQuery): QueryFilter<DataRecordDocument> {
     return {
       projectId: query.projectId,
-      ...(query.period === null ? {} : { period: query.period }),
+      ...(query.period === null
+        ? {}
+        : query.periodFrom === null
+          ? { period: query.period }
+          : { period: { $gte: query.periodFrom, $lte: query.period } }),
       ...(query.profileId === null ? {} : { profileId: query.profileId }),
       ...(query.companyId === null ? {} : { companyId: query.companyId }),
       ...(query.loadIds.length === 0 ? {} : { loadId: { $in: [...query.loadIds] } }),

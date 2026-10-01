@@ -118,6 +118,26 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
   await expect(page.getByTestId('data-table')).toContainText('CAJA Y BANCOS');
   await expect(page.getByTestId('data-table')).toContainText('5,200');
 
+  // Operaciones: campo calculado con fórmula por nombre
+  await page.getByRole('tab', { name: 'Operaciones' }).click();
+  await page.getByRole('button', { name: 'Agregar paso' }).click();
+  const step = page.getByRole('dialog', { name: 'Paso' });
+  await step.getByRole('button', { name: 'Nuevo encabezado…' }).click();
+  const newField = page.getByRole('dialog', { name: 'Nuevo encabezado derivado' });
+  await newField.getByLabel('Nombre').fill('Saldo final');
+  await newField.getByRole('button', { name: 'Crear' }).click();
+  await expect(newField).toBeHidden();
+  await step.getByLabel('Fórmula').fill('=[saldo anterior] + [Debe] - [Nombre de cuenta]');
+  await expect(step.getByTestId('formula-check')).not.toContainText('Resultado');
+  await step.getByLabel('Fórmula').fill('=[saldo anterior] + [Debe] - [Haber]');
+  await expect(step.getByTestId('formula-check')).toContainText('Resultado: Monto');
+  await step.getByRole('button', { name: 'Aceptar' }).click();
+  await page.getByRole('button', { name: 'Guardar' }).click();
+  await expect(page.getByTestId('operations-table')).toContainText('=[Saldo anterior] + [Debe] - [Haber]');
+  await page.getByRole('tab', { name: 'Datos', exact: true }).click();
+  await expect(page.getByTestId('data-table')).toContainText('Saldo final');
+  await expect(page.getByTestId('data-table')).toContainText('6,050');
+
   // Clasificación e informe
   await page.getByRole('tab', { name: 'Clasificaciones' }).click();
   await page.getByRole('button', { name: 'Nueva clasificación' }).click();

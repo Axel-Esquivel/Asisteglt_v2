@@ -338,6 +338,131 @@ describe('Reportes: importación (e2e)', () => {
       .expect(400);
   });
 
+  it('aplica operaciones: campo calculado y acumulado del año en datos e informes', async (): Promise<void> => {
+    const field = async (label: string): Promise<string> => {
+      const created: Response = await request(app.server())
+        .post(api('/catalog/fields'))
+        .set('authorization', owner.bearer())
+        .send({
+          label,
+          origin: 'DERIVED',
+          role: 'DATA',
+          dataType: 'DECIMAL',
+          nature: 'AMOUNT',
+          aggregation: null,
+          describes: null,
+          weightField: null,
+        })
+        .expect(201);
+      return Body.text(created.body, 'key');
+    };
+    const finalKey: string = await field('Saldo final');
+    const ytdKey: string = await field('Debe acumulado');
+    const catalog: Response = await request(app.server())
+      .get(api('/catalog'))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    const fields: CatalogFieldResponse[] = Body.list(Reflect.get(catalog.body, 'fields')).filter(
+      (f: unknown): f is CatalogFieldResponse => typeof f === 'object' && f !== null && 'key' in f,
+    );
+    const keyOf = (label: string): string =>
+      fields
+        .filter((f: CatalogFieldResponse): boolean => f.label === label)
+        .map((f: CatalogFieldResponse): string => f.key)[0] ?? '';
+    const debeKey: string = keyOf('Debe');
+    const step = (
+      id: string,
+      kind: string,
+      targetKey: string,
+      formula: string | null,
+      sourceKey: string | null,
+    ): Record<string, string | null> => ({
+      id,
+      kind,
+      targetKey,
+      formula,
+      sourceKey,
+      collectionId: null,
+      rateFieldKey: null,
+      targetCurrency: null,
+    });
+
+    const mismatch: Response = await request(app.server())
+      .put(api('/operations'))
+      .set('authorization', owner.bearer())
+      .send({ steps: [step('s1', 'CALCULATED', finalKey, '=[Nombre de cuenta]', null)] })
+      .expect(400);
+    const mismatchBody: unknown = mismatch.body;
+    expect(mismatchBody).toMatchObject({ code: 'TARGET_TYPE_MISMATCH' });
+
+    const saved: Response = await request(app.server())
+      .put(api('/operations'))
+      .set('authorization', owner.bearer())
+      .send({
+        steps: [
+          step('s1', 'CALCULATED', finalKey, '=[saldo anterior] + [Debe] - [Haber]', null),
+          step('s2', 'YEAR_TO_DATE', ytdKey, null, debeKey),
+        ],
+      })
+      .expect(200);
+    const savedBody: unknown = saved.body;
+    expect(savedBody).toMatchObject({
+      version: 1,
+      steps: [{ formula: '=[Saldo anterior] + [Debe] - [Haber]' }, { sourceKey: debeKey }],
+    });
+
+    await request(app.server())
+      .post(api('/imports'))
+      .set('authorization', owner.bearer())
+      .field(
+        'manifest',
+        JSON.stringify({
+          items: [{ fileName: 'balance_julio.txt', profileId, period: '2026-07', ...scope }],
+        }),
+      )
+      .attach('files', Buffer.from(balance('5,000.00'), 'latin1'), 'balance_julio.txt')
+      .expect(201);
+    await app.app.get(ImportQueue).idle();
+
+    const records: Response = await request(app.server())
+      .get(api('/records?period=2026-08'))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    const firstRow: unknown = Body.list(Reflect.get(records.body, 'rows'))[0];
+    expect(firstRow).toMatchObject({ values: { [finalKey]: '7850', [ytdKey]: '2600' } });
+
+    const report: Response = await request(app.server())
+      .post(api('/report-definitions'))
+      .set('authorization', owner.bearer())
+      .send({
+        name: 'Saldos finales',
+        rowSource: 'FIELD',
+        classificationId: null,
+        rowFieldKey: keyOf('Código de cuenta'),
+        measures: [finalKey, ytdKey],
+        profileId: null,
+        companyId: null,
+        onlyWhenFieldKey: null,
+        includeUnclassified: true,
+      })
+      .expect(201);
+    const run: Response = await request(app.server())
+      .get(api(`/report-definitions/${Body.text(report.body, 'id')}/run?period=2026-08`))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    const runBody: unknown = run.body;
+    expect(runBody).toMatchObject({ records: 2 });
+    expect(Body.list(Reflect.get(run.body, 'rows'))).toContainEqual(
+      expect.objectContaining({ values: ['7850', '2600'] }),
+    );
+
+    const inUse: Response = await request(app.server())
+      .post(api(`/catalog/fields/${finalKey}/deactivate`))
+      .set('authorization', owner.bearer())
+      .expect(409);
+    expect(Body.text(inUse.body, 'message')).toContain('Operación 1');
+  });
+
   it('rechaza alcances incoherentes y marca como fallido un archivo con demasiados rechazos', async (): Promise<void> => {
     await request(app.server())
       .post(api('/imports'))

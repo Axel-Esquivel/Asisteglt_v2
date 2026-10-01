@@ -30,7 +30,10 @@ export class ProjectLabels {
 
   private static readonly ASSIGNABLE: ReadonlyMap<ModuleType, ReadonlyArray<ProjectRole>> = new Map([
     [ModuleType.REPORTS, [ProjectRole.ADMIN, ProjectRole.ANALYST, ProjectRole.DESIGNER, ProjectRole.VIEWER]],
-    [ModuleType.INVENTORY, [ProjectRole.ADMIN, ProjectRole.SUPERVISOR, ProjectRole.COUNTER, ProjectRole.AUDITOR]],
+    [
+      ModuleType.INVENTORY,
+      [ProjectRole.ADMIN, ProjectRole.SUPERVISOR, ProjectRole.COUNTER, ProjectRole.AUDITOR],
+    ],
   ]);
 
   public static module(module: ModuleType): string {
@@ -46,9 +49,10 @@ export class ProjectLabels {
   }
 
   public static assignableRoles(module: ModuleType): RoleOption[] {
-    return (ProjectLabels.ASSIGNABLE.get(module) ?? []).map(
-      (value: ProjectRole): RoleOption => ({ value, label: ProjectLabels.role(value) }),
-    );
+    return (ProjectLabels.ASSIGNABLE.get(module) ?? []).map((value: ProjectRole): RoleOption => ({
+      value,
+      label: ProjectLabels.role(value),
+    }));
   }
 
   /** Rol propuesto al invitar: lector en Reportes, contador en Inventarios. */

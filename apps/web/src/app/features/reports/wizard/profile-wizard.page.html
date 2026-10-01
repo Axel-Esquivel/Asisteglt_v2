@@ -3,7 +3,7 @@
     <div class="wizard__title">
       <span>{{ isNew() ? 'Nueva preconfiguración' : 'Editar preconfiguración' }}</span>
       @if (store.name() !== '') {
-        <p-tag [value]="store.name()" />
+      <p-tag [value]="store.name()" />
       }
     </div>
   </ng-template>
@@ -23,24 +23,59 @@
           <div class="wizard__stack">
             <div class="wizard__grid">
               <p-floatlabel variant="on">
-                <input pInputText id="profileName" name="name" [ngModel]="store.name()" (ngModelChange)="store.name.set($event)" class="full-width" />
+                <input
+                  pInputText
+                  id="profileName"
+                  name="name"
+                  [ngModel]="store.name()"
+                  (ngModelChange)="store.name.set($event)"
+                  class="full-width"
+                />
                 <label for="profileName">Nombre (p. ej. balancetxt)</label>
               </p-floatlabel>
               <p-floatlabel variant="on">
-                <input pInputText id="profilePattern" name="pattern" [ngModel]="store.fileNamePattern()" (ngModelChange)="store.fileNamePattern.set($event)" class="full-width" />
+                <input
+                  pInputText
+                  id="profilePattern"
+                  name="pattern"
+                  [ngModel]="store.fileNamePattern()"
+                  (ngModelChange)="store.fileNamePattern.set($event)"
+                  class="full-width"
+                />
                 <label for="profilePattern">Patrón de nombre (opcional, p. ej. balance_*.txt)</label>
               </p-floatlabel>
             </div>
             <p-floatlabel variant="on">
-              <textarea pTextarea id="profileDescription" name="description" rows="2" [ngModel]="store.description()" (ngModelChange)="store.description.set($event)" class="full-width"></textarea>
+              <textarea
+                pTextarea
+                id="profileDescription"
+                name="description"
+                rows="2"
+                [ngModel]="store.description()"
+                (ngModelChange)="store.description.set($event)"
+                class="full-width"
+              ></textarea>
               <label for="profileDescription">Descripción</label>
             </p-floatlabel>
             <div>
-              <label for="profileExtensions" class="wizard__label">Extensiones aceptadas (Enter para agregar)</label>
-              <p-autocomplete inputId="profileExtensions" name="extensions" [multiple]="true" [typeahead]="false" [addOnBlur]="true" separator="," [ngModel]="store.extensions()" (ngModelChange)="store.extensions.set($event)" styleClass="full-width" />
+              <label for="profileExtensions" class="wizard__label"
+                >Extensiones aceptadas (Enter para agregar)</label
+              >
+              <p-autocomplete
+                inputId="profileExtensions"
+                name="extensions"
+                [multiple]="true"
+                [typeahead]="false"
+                [addOnBlur]="true"
+                separator=","
+                [ngModel]="store.extensions()"
+                (ngModelChange)="store.extensions.set($event)"
+                styleClass="full-width"
+              />
             </div>
             <p-message severity="info" icon="pi pi-lock">
-              El archivo de muestra se lee en tu navegador y no se envía al servidor. Solo se guarda la configuración.
+              El archivo de muestra se lee en tu navegador y no se envía al servidor. Solo se guarda la
+              configuración.
             </p-message>
             <div class="wizard__row">
               <p-fileupload
@@ -53,27 +88,45 @@
                 (onSelect)="onSample($event)"
               />
               @if (store.sampleName() !== '') {
-                <p-tag [value]="store.sampleName()" severity="secondary" />
+              <p-tag [value]="store.sampleName()" severity="secondary" />
               }
             </div>
             <div class="wizard__grid">
               <p-floatlabel variant="on">
-                <p-select inputId="encoding" [options]="encodingOptions" optionLabel="label" optionValue="value" [ngModel]="store.encoding()" (ngModelChange)="store.encoding.set($event)" styleClass="full-width" />
+                <p-select
+                  inputId="encoding"
+                  [options]="encodingOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  [ngModel]="store.encoding()"
+                  (ngModelChange)="store.encoding.set($event)"
+                  styleClass="full-width"
+                />
                 <label for="encoding">Codificación</label>
               </p-floatlabel>
               <p-floatlabel variant="on">
-                <p-inputnumber inputId="tabSize" [ngModel]="store.tabSize()" (ngModelChange)="store.tabSize.set($event ?? 8)" [min]="1" [max]="16" [showButtons]="true" styleClass="full-width" />
+                <p-inputnumber
+                  inputId="tabSize"
+                  [ngModel]="store.tabSize()"
+                  (ngModelChange)="store.tabSize.set($event ?? 8)"
+                  [min]="1"
+                  [max]="16"
+                  [showButtons]="true"
+                  styleClass="full-width"
+                />
                 <label for="tabSize">Espacios por tabulador</label>
               </p-floatlabel>
             </div>
             @if (store.document(); as document) {
-              <div class="wizard__row">
-                <p-tag [value]="stats(document)" severity="info" />
-                <p-tag [value]="'Codificación: ' + store.resolvedEncoding()" severity="secondary" />
-                @if (document.replacementChars() > 0) {
-                  <p-message severity="warn">Hay {{ document.replacementChars() }} caracteres «�»: prueba otra codificación.</p-message>
-                }
-              </div>
+            <div class="wizard__row">
+              <p-tag [value]="stats(document)" severity="info" />
+              <p-tag [value]="'Codificación: ' + store.resolvedEncoding()" severity="secondary" />
+              @if (document.replacementChars() > 0) {
+              <p-message severity="warn"
+                >Hay {{ document.replacementChars() }} caracteres «�»: prueba otra codificación.</p-message
+              >
+              }
+            </div>
             }
             <div class="wizard__nav">
               <p-button label="Siguiente" icon="pi pi-arrow-right" iconPos="right" (onClick)="step.set(2)" />
@@ -87,31 +140,76 @@
         <ng-template #content>
           <div class="wizard__stack">
             @if (!store.hasSample()) {
-              <p-message severity="warn">Elige un archivo de muestra en el paso 1 para ver el lienzo.</p-message>
+            <p-message severity="warn"
+              >Elige un archivo de muestra en el paso 1 para ver el lienzo.</p-message
+            >
             }
             <p-toolbar>
               <ng-template #start>
                 <div class="wizard__row">
-                  <p-button label="Sugerir columnas" icon="pi pi-sparkles" size="small" [disabled]="!store.hasSample()" (onClick)="suggest()" />
-                  <p-button icon="pi pi-undo" size="small" [text]="true" ariaLabel="Deshacer" [disabled]="!store.canUndo()" (onClick)="store.undo()" />
-                  <p-button icon="pi pi-refresh" size="small" [text]="true" ariaLabel="Rehacer" [disabled]="!store.canRedo()" (onClick)="store.redo()" />
-                  <p-button icon="pi pi-eraser" size="small" [text]="true" severity="danger" ariaLabel="Quitar todas las divisorias" (onClick)="clearDividers()" />
+                  <p-button
+                    label="Sugerir columnas"
+                    icon="pi pi-sparkles"
+                    size="small"
+                    [disabled]="!store.hasSample()"
+                    (onClick)="suggest()"
+                  />
+                  <p-button
+                    icon="pi pi-undo"
+                    size="small"
+                    [text]="true"
+                    ariaLabel="Deshacer"
+                    [disabled]="!store.canUndo()"
+                    (onClick)="store.undo()"
+                  />
+                  <p-button
+                    icon="pi pi-refresh"
+                    size="small"
+                    [text]="true"
+                    ariaLabel="Rehacer"
+                    [disabled]="!store.canRedo()"
+                    (onClick)="store.redo()"
+                  />
+                  <p-button
+                    icon="pi pi-eraser"
+                    size="small"
+                    [text]="true"
+                    severity="danger"
+                    ariaLabel="Quitar todas las divisorias"
+                    (onClick)="clearDividers()"
+                  />
                 </div>
               </ng-template>
               <ng-template #end>
                 <div class="wizard__row">
-                  <p-selectbutton [options]="filterOptions" optionLabel="label" optionValue="value" [ngModel]="filter()" (ngModelChange)="filter.set($event)" [allowEmpty]="false" size="small" />
+                  <p-selectbutton
+                    [options]="filterOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    [ngModel]="filter()"
+                    (ngModelChange)="filter.set($event)"
+                    [allowEmpty]="false"
+                    size="small"
+                  />
                   <span class="wizard__zoom">
                     <i class="pi pi-search-minus" aria-hidden="true"></i>
-                    <p-slider [ngModel]="zoom()" (ngModelChange)="zoom.set($event)" [min]="0.7" [max]="1.6" [step]="0.1" ariaLabel="Zoom" styleClass="wizard__slider" />
+                    <p-slider
+                      [ngModel]="zoom()"
+                      (ngModelChange)="zoom.set($event)"
+                      [min]="0.7"
+                      [max]="1.6"
+                      [step]="0.1"
+                      ariaLabel="Zoom"
+                      styleClass="wizard__slider"
+                    />
                     <i class="pi pi-search-plus" aria-hidden="true"></i>
                   </span>
                 </div>
               </ng-template>
             </p-toolbar>
             <p class="wizard__hint">
-              Clic en el texto para agregar una divisoria · arrastra para moverla · doble clic o Supr para quitarla · con el teclado, ← → y
-              Enter. Las divisorias rojas cortan valores.
+              Clic en el texto para agregar una divisoria · arrastra para moverla · doble clic o Supr para
+              quitarla · con el teclado, ← → y Enter. Las divisorias rojas cortan valores.
             </p>
             <app-fixed-width-canvas
               [lines]="store.lines()"
@@ -129,7 +227,7 @@
               (dividerRemoved)="removeDivider($event)"
             />
             @for (message of crossingMessages(); track message) {
-              <p-message severity="error" icon="pi pi-exclamation-triangle">{{ message }}</p-message>
+            <p-message severity="error" icon="pi pi-exclamation-triangle">{{ message }}</p-message>
             }
             <div class="wizard__nav">
               <p-button label="Anterior" [text]="true" (onClick)="step.set(1)" />
@@ -146,22 +244,58 @@
             <p-metergroup [value]="meter()" />
             <div class="wizard__grid">
               <span class="wizard__switch">
-                <p-toggleswitch inputId="skipBlank" [ngModel]="store.hasRule(RowRuleKind.SKIP_BLANK)" (ngModelChange)="store.toggleRule(RowRuleKind.SKIP_BLANK, $event)" />
+                <p-toggleswitch
+                  inputId="skipBlank"
+                  [ngModel]="store.hasRule(RowRuleKind.SKIP_BLANK)"
+                  (ngModelChange)="store.toggleRule(RowRuleKind.SKIP_BLANK, $event)"
+                />
                 <label for="skipBlank">Ignorar líneas en blanco</label>
               </span>
               <span class="wizard__switch">
-                <p-toggleswitch inputId="skipBreaks" [ngModel]="store.hasRule(RowRuleKind.SKIP_PAGE_BREAKS)" (ngModelChange)="store.toggleRule(RowRuleKind.SKIP_PAGE_BREAKS, $event)" />
+                <p-toggleswitch
+                  inputId="skipBreaks"
+                  [ngModel]="store.hasRule(RowRuleKind.SKIP_PAGE_BREAKS)"
+                  (ngModelChange)="store.toggleRule(RowRuleKind.SKIP_PAGE_BREAKS, $event)"
+                />
                 <label for="skipBreaks">Ignorar saltos de página</label>
               </span>
               <p-floatlabel variant="on">
-                <p-inputnumber inputId="leading" [ngModel]="store.leadingLines()" (ngModelChange)="store.setLeadingLines($event ?? 0)" [min]="0" [max]="500" [showButtons]="true" styleClass="full-width" />
+                <p-inputnumber
+                  inputId="leading"
+                  [ngModel]="store.leadingLines()"
+                  (ngModelChange)="store.setLeadingLines($event ?? 0)"
+                  [min]="0"
+                  [max]="500"
+                  [showButtons]="true"
+                  styleClass="full-width"
+                />
                 <label for="leading">Ignorar las primeras N líneas</label>
               </p-floatlabel>
             </div>
             <div class="wizard__row">
-              <p-select [options]="operatorOptions" optionLabel="label" optionValue="value" [ngModel]="matchOperator()" (ngModelChange)="matchOperator.set($event)" ariaLabel="Operador" />
-              <input pInputText name="matchText" placeholder="Texto (p. ej. Emisión:)" aria-label="Texto de la regla" [ngModel]="matchText()" (ngModelChange)="matchText.set($event)" />
-              <p-button label="Ignorar líneas así" icon="pi pi-plus" size="small" [outlined]="true" (onClick)="addMatchingRule()" />
+              <p-select
+                [options]="operatorOptions"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="matchOperator()"
+                (ngModelChange)="matchOperator.set($event)"
+                ariaLabel="Operador"
+              />
+              <input
+                pInputText
+                name="matchText"
+                placeholder="Texto (p. ej. Emisión:)"
+                aria-label="Texto de la regla"
+                [ngModel]="matchText()"
+                (ngModelChange)="matchText.set($event)"
+              />
+              <p-button
+                label="Ignorar líneas así"
+                icon="pi pi-plus"
+                size="small"
+                [outlined]="true"
+                (onClick)="addMatchingRule()"
+              />
             </div>
             <div class="wizard__row">
               <p-button
@@ -171,9 +305,16 @@
                 [outlined]="true"
                 (onClick)="addHeaderBlock()"
               />
-              <span class="wizard__hint">Selecciona en la canaleta (números de línea) las líneas del encabezado; fecha, hora y página pueden variar.</span>
+              <span class="wizard__hint"
+                >Selecciona en la canaleta (números de línea) las líneas del encabezado; fecha, hora y página
+                pueden variar.</span
+              >
             </div>
-            <p-table [value]="store.rules()" [tableStyle]="{ 'min-width': '24rem' }" data-testid="rules-table">
+            <p-table
+              [value]="store.rules()"
+              [tableStyle]="{ 'min-width': '24rem' }"
+              data-testid="rules-table"
+            >
               <ng-template #header>
                 <tr>
                   <th>Regla (en orden)</th>
@@ -184,7 +325,14 @@
                 <tr>
                   <td>{{ describeRule(rule) }}</td>
                   <td class="wizard__actions">
-                    <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger" ariaLabel="Quitar regla" (onClick)="store.removeRule(index)" />
+                    <p-button
+                      icon="pi pi-trash"
+                      [text]="true"
+                      size="small"
+                      severity="danger"
+                      ariaLabel="Quitar regla"
+                      (onClick)="store.removeRule(index)"
+                    />
                   </td>
                 </tr>
               </ng-template>
@@ -218,83 +366,180 @@
         <ng-template #content>
           <div class="wizard__stack">
             <p class="wizard__hint">
-              Elige para cada franja su encabezado del catálogo (por nombre). Las franjas sin encabezado se omiten. Se necesita al menos un
-              identificador.
+              Elige para cada franja su encabezado del catálogo (por nombre). Las franjas sin encabezado se
+              omiten. Se necesita al menos un identificador.
             </p>
             <div class="wizard__scroll">
-<p-table [value]="store.bands()" [tableStyle]="{ 'min-width': '60rem' }" data-testid="bands-table">
-              <ng-template #header>
-                <tr>
-                  <th>Franja</th>
-                  <th>Posición</th>
-                  <th>Ejemplo</th>
-                  <th>Encabezado</th>
-                  <th>Formato</th>
-                </tr>
-              </ng-template>
-              <ng-template #body let-view>
-                <tr>
-                  <td>{{ bandLabel(view.band) }}</td>
-                  <td>{{ view.band.start + 1 }}–{{ view.band.end }}</td>
-                  <td><span class="wizard__mono">{{ view.sample }}</span></td>
-                  <td>
-                    <p-select
-                      [options]="fieldOptions(view)"
-                      optionLabel="label"
-                      optionValue="value"
-                      [ngModel]="view.settings === null ? null : view.settings.fieldKey"
-                      (ngModelChange)="assign(view, $event)"
-                      [showClear]="true"
-                      [filter]="true"
-                      placeholder="(omitir)"
-                      [ariaLabel]="'Encabezado de la franja ' + bandLabel(view.band)"
-                      appendTo="body"
-                      styleClass="wizard__field"
-                    />
-                  </td>
-                  <td>
-                    @if (view.settings; as s) {
+              <p-table
+                [value]="store.bands()"
+                [tableStyle]="{ 'min-width': '60rem' }"
+                data-testid="bands-table"
+              >
+                <ng-template #header>
+                  <tr>
+                    <th>Franja</th>
+                    <th>Posición</th>
+                    <th>Ejemplo</th>
+                    <th>Encabezado</th>
+                    <th>Formato</th>
+                  </tr>
+                </ng-template>
+                <ng-template #body let-view>
+                  <tr>
+                    <td>{{ bandLabel(view.band) }}</td>
+                    <td>{{ view.band.start + 1 }}–{{ view.band.end }}</td>
+                    <td><span class="wizard__mono">{{ view.sample }}</span></td>
+                    <td>
+                      <p-select
+                        [options]="fieldOptions(view)"
+                        optionLabel="label"
+                        optionValue="value"
+                        [ngModel]="view.settings === null ? null : view.settings.fieldKey"
+                        (ngModelChange)="assign(view, $event)"
+                        [showClear]="true"
+                        [filter]="true"
+                        placeholder="(omitir)"
+                        [ariaLabel]="'Encabezado de la franja ' + bandLabel(view.band)"
+                        appendTo="body"
+                        styleClass="wizard__field"
+                      />
+                    </td>
+                    <td>
+                      @if (view.settings; as s) {
                       <div class="wizard__format">
                         @if (s.role === FieldRole.IDENTIFIER) {
-                          <input pInputText class="wizard__mask" placeholder="Máscara (9 A X *)" [attr.aria-label]="'Máscara de ' + bandLabel(view.band)" [ngModel]="store.maskOf(s.fieldKey)" (ngModelChange)="store.setMask(s.fieldKey, $event)" />
-                          <p-button icon="pi pi-sparkles" [text]="true" size="small" ariaLabel="Proponer máscara desde el ejemplo" (onClick)="store.suggestMask(s.fieldKey)" />
-                        }
-                        @if (isNumeric(s)) {
-                          <p-select [options]="separatorOptions" optionLabel="label" optionValue="value" [ngModel]="s.thousandsSeparator" (ngModelChange)="change(view, { ...s, thousandsSeparator: $event })" ariaLabel="Separador de miles" appendTo="body" />
-                          <p-select [options]="decimalOptions" optionLabel="label" optionValue="value" [ngModel]="s.decimalSeparator" (ngModelChange)="change(view, { ...s, decimalSeparator: $event })" ariaLabel="Separador decimal" appendTo="body" />
-                          @if (s.role === FieldRole.DATA) {
-                            <p-select [options]="emptyOptions" optionLabel="label" optionValue="value" [ngModel]="s.emptyHandling" (ngModelChange)="change(view, { ...s, emptyHandling: $event })" ariaLabel="Celdas vacías" appendTo="body" />
-                          }
-                        }
-                        @if (s.dataType === DataType.DATE) {
-                          <input pInputText class="wizard__mask" [ngModel]="s.datePattern" (ngModelChange)="change(view, { ...s, datePattern: $event })" aria-label="Formato de fecha" />
-                        }
-                        @if (s.dataType === DataType.BOOLEAN) {
-                          <input pInputText class="wizard__short" [ngModel]="s.trueText" (ngModelChange)="change(view, { ...s, trueText: $event })" aria-label="Texto que significa sí" />
-                          <input pInputText class="wizard__short" [ngModel]="s.falseText" (ngModelChange)="change(view, { ...s, falseText: $event })" aria-label="Texto que significa no" />
+                        <input
+                          pInputText
+                          class="wizard__mask"
+                          placeholder="Máscara (9 A X *)"
+                          [attr.aria-label]="'Máscara de ' + bandLabel(view.band)"
+                          [ngModel]="store.maskOf(s.fieldKey)"
+                          (ngModelChange)="store.setMask(s.fieldKey, $event)"
+                        />
+                        <p-button
+                          icon="pi pi-sparkles"
+                          [text]="true"
+                          size="small"
+                          ariaLabel="Proponer máscara desde el ejemplo"
+                          (onClick)="store.suggestMask(s.fieldKey)"
+                        />
+                        } @if (isNumeric(s)) {
+                        <p-select
+                          [options]="separatorOptions"
+                          optionLabel="label"
+                          optionValue="value"
+                          [ngModel]="s.thousandsSeparator"
+                          (ngModelChange)="change(view, { ...s, thousandsSeparator: $event })"
+                          ariaLabel="Separador de miles"
+                          appendTo="body"
+                        />
+                        <p-select
+                          [options]="decimalOptions"
+                          optionLabel="label"
+                          optionValue="value"
+                          [ngModel]="s.decimalSeparator"
+                          (ngModelChange)="change(view, { ...s, decimalSeparator: $event })"
+                          ariaLabel="Separador decimal"
+                          appendTo="body"
+                        />
+                        @if (s.role === FieldRole.DATA) {
+                        <p-select
+                          [options]="emptyOptions"
+                          optionLabel="label"
+                          optionValue="value"
+                          [ngModel]="s.emptyHandling"
+                          (ngModelChange)="change(view, { ...s, emptyHandling: $event })"
+                          ariaLabel="Celdas vacías"
+                          appendTo="body"
+                        />
+                        } } @if (s.dataType === DataType.DATE) {
+                        <input
+                          pInputText
+                          class="wizard__mask"
+                          [ngModel]="s.datePattern"
+                          (ngModelChange)="change(view, { ...s, datePattern: $event })"
+                          aria-label="Formato de fecha"
+                        />
+                        } @if (s.dataType === DataType.BOOLEAN) {
+                        <input
+                          pInputText
+                          class="wizard__short"
+                          [ngModel]="s.trueText"
+                          (ngModelChange)="change(view, { ...s, trueText: $event })"
+                          aria-label="Texto que significa sí"
+                        />
+                        <input
+                          pInputText
+                          class="wizard__short"
+                          [ngModel]="s.falseText"
+                          (ngModelChange)="change(view, { ...s, falseText: $event })"
+                          aria-label="Texto que significa no"
+                        />
                         }
                       </div>
-                    }
-                  </td>
-                </tr>
-              </ng-template>
-            </p-table>
-</div>
+                      }
+                    </td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </div>
 
             <h3 class="wizard__subtitle">Atributos derivados (opcional)</h3>
-            <p class="wizard__hint">Evitan el doble conteo cuando conviven registros agrupadores y de detalle (cuentas de mayor y de detalle).</p>
+            <p class="wizard__hint">
+              Evitan el doble conteo cuando conviven registros agrupadores y de detalle (cuentas de mayor y de
+              detalle).
+            </p>
             <div class="wizard__row">
-              <p-select [options]="derivedKinds" optionLabel="label" optionValue="value" [ngModel]="derivedKind()" (ngModelChange)="derivedKind.set($event)" ariaLabel="Cálculo" />
-              <p-select [options]="derivedSources()" optionLabel="label" optionValue="value" [ngModel]="derivedSource()" (ngModelChange)="derivedSource.set($event)" placeholder="Origen" ariaLabel="Encabezado de origen" />
-              <p-select [options]="derivedTargets()" optionLabel="label" optionValue="value" [ngModel]="derivedTarget()" (ngModelChange)="derivedTarget.set($event)" placeholder="Destino (derivado)" ariaLabel="Encabezado de destino" />
-              <p-button label="Agregar" icon="pi pi-plus" size="small" [outlined]="true" (onClick)="addDerived()" />
+              <p-select
+                [options]="derivedKinds"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="derivedKind()"
+                (ngModelChange)="derivedKind.set($event)"
+                ariaLabel="Cálculo"
+              />
+              <p-select
+                [options]="derivedSources()"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="derivedSource()"
+                (ngModelChange)="derivedSource.set($event)"
+                placeholder="Origen"
+                ariaLabel="Encabezado de origen"
+              />
+              <p-select
+                [options]="derivedTargets()"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="derivedTarget()"
+                (ngModelChange)="derivedTarget.set($event)"
+                placeholder="Destino (derivado)"
+                ariaLabel="Encabezado de destino"
+              />
+              <p-button
+                label="Agregar"
+                icon="pi pi-plus"
+                size="small"
+                [outlined]="true"
+                (onClick)="addDerived()"
+              />
             </div>
             @for (item of store.derived(); track item.targetKey) {
-              <div class="wizard__row">
-                <p-tag [value]="kindLabel(item.kind)" severity="secondary" />
-                <span>{{ store.catalog().labelOf(item.sourceKey) }} → {{ store.catalog().labelOf(item.targetKey) }}</span>
-                <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger" ariaLabel="Quitar atributo derivado" (onClick)="store.removeDerived(item.targetKey)" />
-              </div>
+            <div class="wizard__row">
+              <p-tag [value]="kindLabel(item.kind)" severity="secondary" />
+              <span
+                >{{ store.catalog().labelOf(item.sourceKey) }} → {{ store.catalog().labelOf(item.targetKey)
+                }}</span
+              >
+              <p-button
+                icon="pi pi-trash"
+                [text]="true"
+                size="small"
+                severity="danger"
+                ariaLabel="Quitar atributo derivado"
+                (onClick)="store.removeDerived(item.targetKey)"
+              />
+            </div>
             }
             <div class="wizard__nav">
               <p-button label="Anterior" [text]="true" (onClick)="step.set(3)" />
@@ -310,43 +555,61 @@
           <div class="wizard__stack">
             <p-metergroup [value]="meter()" />
             @for (message of crossingMessages(); track message) {
-              <p-message severity="error">{{ message }}</p-message>
+            <p-message severity="error">{{ message }}</p-message>
             }
             <div class="wizard__scroll">
-<p-table [value]="previewRows()" [scrollable]="true" scrollHeight="24rem" [tableStyle]="{ 'min-width': '40rem' }" data-testid="preview-table">
-              <ng-template #header>
-                <tr>
-                  <th>Línea</th>
-                  @for (column of previewColumns(); track column.value) {
+              <p-table
+                [value]="previewRows()"
+                [scrollable]="true"
+                scrollHeight="24rem"
+                [tableStyle]="{ 'min-width': '40rem' }"
+                data-testid="preview-table"
+              >
+                <ng-template #header>
+                  <tr>
+                    <th>Línea</th>
+                    @for (column of previewColumns(); track column.value) {
                     <th>{{ column.label }}</th>
-                  }
-                </tr>
-              </ng-template>
-              <ng-template #body let-row>
-                <tr>
-                  <td>{{ row.line }}</td>
-                  @for (column of previewColumns(); track column.value) {
+                    }
+                  </tr>
+                </ng-template>
+                <ng-template #body let-row>
+                  <tr>
+                    <td>{{ row.line }}</td>
+                    @for (column of previewColumns(); track column.value) {
                     <td>{{ row.values[column.value] }}</td>
-                  }
-                </tr>
-              </ng-template>
-              <ng-template #emptymessage>
-                <tr>
-                  <td [attr.colspan]="previewColumns().length + 1">Sin líneas de datos todavía: revisa las divisorias, las reglas y los encabezados.</td>
-                </tr>
-              </ng-template>
-            </p-table>
-</div>
+                    }
+                  </tr>
+                </ng-template>
+                <ng-template #emptymessage>
+                  <tr>
+                    <td [attr.colspan]="previewColumns().length + 1">
+                      Sin líneas de datos todavía: revisa las divisorias, las reglas y los encabezados.
+                    </td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </div>
             @if (rejected().length > 0) {
-              <h3 class="wizard__subtitle">Líneas rechazadas</h3>
-              @for (line of rejected(); track line.lineNumber) {
-                <p-message severity="error">Línea {{ line.lineNumber }}: {{ line.issues.join(' · ') }}</p-message>
-              }
-            }
+            <h3 class="wizard__subtitle">Líneas rechazadas</h3>
+            @for (line of rejected(); track line.lineNumber) {
+            <p-message severity="error">Línea {{ line.lineNumber }}: {{ line.issues.join(' · ') }}</p-message>
+            } }
             <div class="wizard__nav">
               <p-button label="Anterior" [text]="true" (onClick)="step.set(4)" />
-              <p-button label="Guardar borrador" icon="pi pi-save" [outlined]="true" [loading]="saving()" (onClick)="save(false)" />
-              <p-button label="Guardar y activar" icon="pi pi-check" [loading]="saving()" (onClick)="save(true)" />
+              <p-button
+                label="Guardar borrador"
+                icon="pi pi-save"
+                [outlined]="true"
+                [loading]="saving()"
+                (onClick)="save(false)"
+              />
+              <p-button
+                label="Guardar y activar"
+                icon="pi pi-check"
+                [loading]="saving()"
+                (onClick)="save(true)"
+              />
             </div>
           </div>
         </ng-template>

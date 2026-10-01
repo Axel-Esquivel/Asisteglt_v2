@@ -5,6 +5,7 @@ import {
   CatalogTemplate,
   CreateOrgUnitRequest,
   ImportManifest,
+  OperationsRequest,
   ProfileRequest,
   ReportDefinitionRequest,
   UpdateOrgUnitRequest,
@@ -14,6 +15,7 @@ import { ApiClient } from '@asisteglt/web-core';
 import { ClassificationView, ComputedReport, ReportDefinitionView } from './analysis.model';
 import { CatalogFieldView, CatalogView } from './catalog.model';
 import { RecordPage, ImportBatchView } from './import.model';
+import { OperationsView } from './operations.model';
 import { OrgTree, OrgUnitView } from './org.model';
 import { ProfileView } from './profile.model';
 
@@ -43,6 +45,7 @@ export class ReportsApiClient extends ApiClient {
   private readonly reportDecoder: FieldDecoder<ReportDefinitionView> = ReportDefinitionView.decoder();
   private readonly reportsDecoder: ArrayDecoder<ReportDefinitionView> =
     new ArrayDecoder<ReportDefinitionView>(ReportDefinitionView.decoder());
+  private readonly operationsDecoder: FieldDecoder<OperationsView> = OperationsView.decoder();
   private readonly computedDecoder: FieldDecoder<ComputedReport> = ComputedReport.decoder();
 
   public orgStructure(projectId: string): Promise<Result<OrgTree>> {
@@ -242,6 +245,14 @@ export class ReportsApiClient extends ApiClient {
       `${ReportsApiClient.base(projectId)}/report-definitions/${encodeURIComponent(id)}/run?period=${encodeURIComponent(period)}`,
       this.computedDecoder,
     );
+  }
+
+  public operations(projectId: string): Promise<Result<OperationsView>> {
+    return this.get(`${ReportsApiClient.base(projectId)}/operations`, this.operationsDecoder);
+  }
+
+  public saveOperations(projectId: string, request: OperationsRequest): Promise<Result<OperationsView>> {
+    return this.put(`${ReportsApiClient.base(projectId)}/operations`, request, this.operationsDecoder);
   }
 
   private static base(projectId: string): string {
