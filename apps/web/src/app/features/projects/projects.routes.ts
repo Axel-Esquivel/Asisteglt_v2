@@ -24,6 +24,42 @@ export const PROJECTS_ROUTES: Route[] = [
         loadComponent: () => import('./members/project-members.page').then((m) => m.ProjectMembersPage),
       },
       {
+        path: 'org',
+        title: 'Estructura · AsisteGLT',
+        loadComponent: () => import('../reports/org/org-structure.page').then((m) => m.OrgStructurePage),
+      },
+      {
+        path: 'catalog',
+        title: 'Encabezados · AsisteGLT',
+        loadComponent: () => import('../reports/catalog/catalog.page').then((m) => m.CatalogPage),
+      },
+      {
+        path: 'profiles',
+        title: 'Preconfiguraciones · AsisteGLT',
+        loadComponent: () => import('../reports/profiles/profiles.page').then((m) => m.ProfilesPage),
+      },
+      {
+        path: 'profiles/new',
+        title: 'Nueva preconfiguración · AsisteGLT',
+        data: { profileId: 'new' },
+        loadComponent: () => import('../reports/wizard/profile-wizard.page').then((m) => m.ProfileWizardPage),
+      },
+      {
+        path: 'profiles/:profileId',
+        title: 'Preconfiguración · AsisteGLT',
+        loadComponent: () => import('../reports/wizard/profile-wizard.page').then((m) => m.ProfileWizardPage),
+      },
+      {
+        path: 'imports',
+        title: 'Cargar datos · AsisteGLT',
+        loadComponent: () => import('../reports/imports/imports.page').then((m) => m.ImportsPage),
+      },
+      {
+        path: 'data',
+        title: 'Datos · AsisteGLT',
+        loadComponent: () => import('../reports/data/data.page').then((m) => m.DataPage),
+      },
+      {
         path: 'chat',
         title: 'Chat del proyecto · AsisteGLT',
         loadComponent: () => import('./chat/project-chat.page').then((m) => m.ProjectChatPage),

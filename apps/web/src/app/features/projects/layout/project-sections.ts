@@ -11,6 +11,20 @@ export interface ProjectSection {
 export class ProjectSections {
   public static for(project: ProjectSummary): ProjectSection[] {
     const sections: ProjectSection[] = [{ path: '', label: 'Resumen', icon: 'pi pi-info-circle' }];
+    const configure: boolean = project.can(ProjectPermission.DATA_CONFIGURE);
+    if (configure || project.can(ProjectPermission.DATA_LOAD)) {
+      sections.push({ path: 'org', label: 'Estructura', icon: 'pi pi-sitemap' });
+    }
+    if (configure) {
+      sections.push({ path: 'catalog', label: 'Encabezados', icon: 'pi pi-tags' });
+      sections.push({ path: 'profiles', label: 'Preconfiguraciones', icon: 'pi pi-sliders-h' });
+    }
+    if (project.can(ProjectPermission.DATA_LOAD)) {
+      sections.push({ path: 'imports', label: 'Cargar datos', icon: 'pi pi-upload' });
+    }
+    if (project.can(ProjectPermission.DATA_VIEW)) {
+      sections.push({ path: 'data', label: 'Datos', icon: 'pi pi-table' });
+    }
     sections.push({ path: 'members', label: 'Miembros', icon: 'pi pi-users' });
     sections.push({ path: 'chat', label: 'Chat', icon: 'pi pi-comments' });
     if (project.can(ProjectPermission.MEMBERS_MANAGE)) {

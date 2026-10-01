@@ -1,0 +1,122 @@
+<p-card>
+  <ng-template #title>
+    <div class="reports__title">
+      <span>Encabezados</span>
+      @if (canConfigure()) {
+        <div class="reports__toolbar">
+          <p-button label="Desde plantilla" icon="pi pi-list" size="small" [outlined]="true" (onClick)="templateMenu.toggle($event)" />
+          <p-menu #templateMenu [model]="templateItems" [popup]="true" appendTo="body" />
+          <p-button label="Nuevo encabezado" icon="pi pi-plus" size="small" (onClick)="openNew()" />
+        </div>
+      }
+    </div>
+  </ng-template>
+  <p class="reports__hint">
+    Cada encabezado tiene un nombre libre y único que se usa en todo lo posterior (operaciones, clasificaciones, fórmulas e
+    informes). Renombrarlo no rompe nada.
+  </p>
+  <p-table [value]="catalog().fields" dataKey="key" [tableStyle]="{ 'min-width': '56rem' }" data-testid="catalog-table">
+    <ng-template #header>
+      <tr>
+        <th>Nombre</th>
+        <th>Rol</th>
+        <th>Tipo</th>
+        <th>Naturaleza</th>
+        <th>Agregación</th>
+        <th>Origen</th>
+        <th></th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-field>
+      <tr>
+        <td>
+          {{ field.displayLabel() }}
+          @if (field.raw().describes !== null) {
+            <span class="reports__hint">nombre de {{ labelOf(field.raw().describes) }}</span>
+          }
+        </td>
+        <td><p-tag [value]="field.roleLabel()" severity="secondary" /></td>
+        <td>{{ field.typeLabel() }}</td>
+        <td>{{ field.natureLabel() }}</td>
+        <td>
+          {{ field.aggregationLabel() }}
+          @if (field.raw().weightField !== null) {
+            <span class="reports__hint">por {{ labelOf(field.raw().weightField) }}</span>
+          }
+        </td>
+        <td>{{ field.isImported() ? 'Importado' : 'Derivado' }}</td>
+        <td class="reports__actions">
+          @if (canConfigure() && field.active) {
+            <p-button icon="pi pi-pencil" [text]="true" size="small" [ariaLabel]="'Editar ' + field.label" (onClick)="openEdit(field)" />
+            <p-button icon="pi pi-ban" [text]="true" size="small" severity="danger" [ariaLabel]="'Desactivar ' + field.label" (onClick)="confirmDeactivate(field)" />
+          }
+        </td>
+      </tr>
+    </ng-template>
+    <ng-template #emptymessage>
+      <tr>
+        <td colspan="7">El catálogo está vacío. Crea tus encabezados o parte de una plantilla.</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</p-card>
+
+<p-dialog
+  [header]="draft() === null ? '' : 'Encabezado'"
+  [modal]="true"
+  [visible]="draft() !== null"
+  (visibleChange)="$event ? null : draft.set(null)"
+  [style]="{ width: 'min(34rem, 95vw)' }"
+>
+  @if (draft(); as d) {
+    <form class="reports__form" (ngSubmit)="save()">
+      <p-floatlabel variant="on">
+        <input pInputText id="fieldLabel" name="label" [(ngModel)]="d.label" class="full-width" />
+        <label for="fieldLabel">Nombre</label>
+      </p-floatlabel>
+      <div class="reports__grid">
+        <p-floatlabel variant="on">
+          <p-select inputId="fieldOrigin" name="origin" [options]="labels.ORIGINS" optionLabel="label" optionValue="value" [(ngModel)]="d.origin" styleClass="full-width" appendTo="body" />
+          <label for="fieldOrigin">Origen</label>
+        </p-floatlabel>
+        <p-floatlabel variant="on">
+          <p-select inputId="fieldRole" name="role" [options]="labels.ROLES" optionLabel="label" optionValue="value" [(ngModel)]="d.role" (ngModelChange)="touch()" styleClass="full-width" appendTo="body" />
+          <label for="fieldRole">Rol</label>
+        </p-floatlabel>
+        <p-floatlabel variant="on">
+          <p-select inputId="fieldType" name="dataType" [options]="labels.TYPES" optionLabel="label" optionValue="value" [(ngModel)]="d.dataType" (ngModelChange)="touch()" styleClass="full-width" appendTo="body" />
+          <label for="fieldType">Tipo de dato</label>
+        </p-floatlabel>
+        @if (d.role === FieldRole.DATA && d.isNumeric()) {
+          <p-floatlabel variant="on">
+            <p-select inputId="fieldNature" name="nature" [options]="labels.NATURES" optionLabel="label" optionValue="value" [(ngModel)]="d.nature" (ngModelChange)="touch()" styleClass="full-width" appendTo="body" />
+            <label for="fieldNature">Naturaleza</label>
+          </p-floatlabel>
+          <p-floatlabel variant="on">
+            <p-select inputId="fieldAggregation" name="aggregation" [options]="aggregationOptions()" optionLabel="label" optionValue="value" [(ngModel)]="d.aggregation" [showClear]="true" styleClass="full-width" appendTo="body" />
+            <label for="fieldAggregation">Agregación (por defecto según naturaleza)</label>
+          </p-floatlabel>
+          @if (d.isWeighted()) {
+            <p-floatlabel variant="on">
+              <p-select inputId="fieldWeight" name="weight" [options]="weightOptions()" optionLabel="label" optionValue="value" [(ngModel)]="d.weightField" [showClear]="true" styleClass="full-width" appendTo="body" />
+              <label for="fieldWeight">Ponderado por</label>
+            </p-floatlabel>
+          }
+        }
+        @if (d.role === FieldRole.IDENTIFIER_NAME) {
+          <p-floatlabel variant="on">
+            <p-select inputId="fieldDescribes" name="describes" [options]="identifierOptions()" optionLabel="label" optionValue="value" [(ngModel)]="d.describes" styleClass="full-width" appendTo="body" />
+            <label for="fieldDescribes">Nombre de…</label>
+          </p-floatlabel>
+        }
+      </div>
+      @if (d.role === FieldRole.IDENTIFIER) {
+        <p-message severity="secondary">Recomendación: declara los códigos como Texto para conservar los ceros a la izquierda.</p-message>
+      }
+      <div class="reports__dialog-actions">
+        <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="draft.set(null)" />
+        <p-button type="submit" label="Guardar" icon="pi pi-check" [loading]="saving()" />
+      </div>
+    </form>
+  }
+</p-dialog>

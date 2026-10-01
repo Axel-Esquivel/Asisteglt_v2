@@ -12,7 +12,10 @@ const createProject = async (page: Page, name: string, module: 'Reportes' | 'Inv
   await expect(page.getByRole('heading', { name })).toBeVisible();
 };
 
-const newUserPage = async (browser: Browser, prefix: string): Promise<{ page: Page; context: BrowserContext; user: TestUser }> => {
+const newUserPage = async (
+  browser: Browser,
+  prefix: string,
+): Promise<{ page: Page; context: BrowserContext; user: TestUser }> => {
   const context: BrowserContext = await browser.newContext();
   const page: Page = await context.newPage();
   const user: TestUser = TestUser.unique(prefix);

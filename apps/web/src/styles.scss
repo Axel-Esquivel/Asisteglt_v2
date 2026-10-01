@@ -34,3 +34,18 @@ body {
   font-size: 1.5rem;
   color: var(--p-text-color);
 }
+
+// El panel del Stepper es una rejilla con columna implícita `auto`: sin esto, una tabla ancha
+// ensancha toda la página en móviles en lugar de desplazarse dentro de su contenedor.
+.p-steppanel {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.p-steppanel-content-wrapper {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.p-steppanel-content {
+  min-width: 0;
+}

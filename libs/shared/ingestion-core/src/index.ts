@@ -13,3 +13,4 @@ export * from './lib/reader/line-classification';
 export * from './lib/reader/fixed-width-spec';
 export * from './lib/reader/derived-attributes';
 export * from './lib/reader/fixed-width-reader';
+export * from './lib/json/spec-decoders';

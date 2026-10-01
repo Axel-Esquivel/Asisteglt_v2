@@ -1,0 +1,81 @@
+<p-card>
+  <ng-template #title>
+    <div class="reports__title">
+      <span>Estructura organizacional</span>
+      @if (canConfigure()) {
+        <p-button label="Agregar organización" icon="pi pi-plus" size="small" (onClick)="openNew(OrgLevel.ORGANIZATION, null)" />
+      }
+    </div>
+  </ng-template>
+  @if (nodes().length === 0) {
+    <p-message severity="info">Aún no hay unidades. Empieza por la organización y después agrega países, compañías, empresas y sucursales.</p-message>
+  } @else {
+    <p-treetable [value]="nodes()" [tableStyle]="{ 'min-width': '44rem' }" data-testid="org-tree">
+      <ng-template #header>
+        <tr>
+          <th>Nombre</th>
+          <th>Nivel</th>
+          <th>Código</th>
+          <th>Monedas</th>
+          <th></th>
+        </tr>
+      </ng-template>
+      <ng-template #body let-rowNode let-unit="rowData">
+        <tr [ttRow]="rowNode">
+          <td>
+            <p-treetable-toggler [rowNode]="rowNode" />
+            {{ unit.s.name }}
+          </td>
+          <td>{{ unit.levelLabel() }}</td>
+          <td>{{ unit.s.code }}</td>
+          <td>
+            @for (currency of unit.s.currencies; track currency) {
+              <p-tag [value]="currency" severity="secondary" />
+            }
+          </td>
+          <td class="reports__actions">
+            @if (canConfigure()) {
+              @if (childLevel(unit); as child) {
+                <p-button icon="pi pi-plus" [text]="true" size="small" [ariaLabel]="'Agregar ' + levelLabel(child) + ' en ' + unit.s.name" (onClick)="openNew(child, unit)" />
+              }
+              <p-button icon="pi pi-pencil" [text]="true" size="small" [ariaLabel]="'Editar ' + unit.s.name" (onClick)="openEdit(unit)" />
+              <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger" [ariaLabel]="'Eliminar ' + unit.s.name" (onClick)="confirmRemove(unit)" />
+            }
+          </td>
+        </tr>
+      </ng-template>
+    </p-treetable>
+  }
+</p-card>
+
+<p-dialog
+  [header]="dialogTitle()"
+  [modal]="true"
+  [visible]="draft() !== null"
+  (visibleChange)="$event ? null : draft.set(null)"
+  [style]="{ width: 'min(28rem, 95vw)' }"
+>
+  @if (draft(); as current) {
+    <form class="reports__form" (ngSubmit)="save()">
+      @if (current.parentName !== '') {
+        <p class="reports__hint">Dentro de {{ current.parentName }}</p>
+      }
+      <p-floatlabel variant="on">
+        <input pInputText id="unitCode" name="code" [ngModel]="code()" (ngModelChange)="code.set($event)" class="full-width" />
+        <label for="unitCode">Código</label>
+      </p-floatlabel>
+      <p-floatlabel variant="on">
+        <input pInputText id="unitName" name="name" [ngModel]="name()" (ngModelChange)="name.set($event)" class="full-width" />
+        <label for="unitName">Nombre</label>
+      </p-floatlabel>
+      @if (current.level === OrgLevel.COUNTRY) {
+        <label for="unitCurrencies" class="reports__hint">Monedas habilitadas (ISO 4217, Enter para agregar)</label>
+        <p-autocomplete inputId="unitCurrencies" name="currencies" (keydown.enter)="$event.preventDefault()" [multiple]="true" [typeahead]="false" [addOnBlur]="true" separator="," [ngModel]="currencies()" (ngModelChange)="currencies.set($event)" styleClass="full-width" />
+      }
+      <div class="reports__dialog-actions">
+        <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="draft.set(null)" />
+        <p-button type="submit" label="Guardar" icon="pi pi-check" [loading]="saving()" />
+      </div>
+    </form>
+  }
+</p-dialog>

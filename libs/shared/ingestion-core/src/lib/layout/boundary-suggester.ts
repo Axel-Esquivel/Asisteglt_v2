@@ -11,8 +11,41 @@ export class BoundarySuggester {
     return new BoundarySuggester(0.98);
   }
 
+  /**
+   * Evalúa cada «forma» de línea frecuente (columna del primer carácter no blanco y si es dígito,
+   * letra u otro) y se queda con la que produce más columnas consistentes: así los encabezados de
+   * página repetidos no tapan los huecos entre las columnas de datos.
+   */
   public suggest(lines: ReadonlyArray<TextLine>): number[] {
-    const candidates: TextLine[] = lines.filter((line: TextLine): boolean => !line.isBlank());
+    const nonBlank: TextLine[] = lines.filter((line: TextLine): boolean => !line.isBlank());
+    const groups: Map<string, TextLine[]> = new Map<string, TextLine[]>();
+    for (const line of nonBlank) {
+      const key: string = BoundarySuggester.shape(line);
+      groups.set(key, [...(groups.get(key) ?? []), line]);
+    }
+    const minimum: number = Math.max(2, nonBlank.length * 0.15);
+    let best: number[] = this.suggestFor(nonBlank);
+    let bestSize: number = nonBlank.length;
+    groups.forEach((group: TextLine[]): void => {
+      if (group.length >= minimum) {
+        const candidate: number[] = this.suggestFor(group);
+        if (candidate.length > best.length || (candidate.length === best.length && group.length > bestSize)) {
+          best = candidate;
+          bestSize = group.length;
+        }
+      }
+    });
+    return best;
+  }
+
+  private static shape(line: TextLine): string {
+    const index: number = line.text.search(/\S/);
+    const char: string = line.text.charAt(index);
+    const kind: string = /\p{Nd}/u.test(char) ? 'd' : /\p{L}/u.test(char) ? 'l' : 'o';
+    return `${String(index)}:${kind}`;
+  }
+
+  private suggestFor(candidates: ReadonlyArray<TextLine>): number[] {
     if (candidates.length === 0) {
       return [];
     }

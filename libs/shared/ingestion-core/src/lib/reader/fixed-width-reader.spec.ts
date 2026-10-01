@@ -92,7 +92,8 @@ describe('FixedWidthReader', () => {
 
   it('sugiere divisorias que no cortan valores', () => {
     const dataLines: TextLine[] = lines.filter((l: TextLine): boolean => /^\d/.test(l.text));
-    const suggested: number[] = BoundarySuggester.standard().suggest(dataLines);
+    const suggested: number[] = BoundarySuggester.standard().suggest(lines);
+    expect(BoundarySuggester.standard().suggest(dataLines)).toEqual(suggested);
     const layout: FixedWidthLayout = FixedWidthLayout.of(suggested, document.maxLineLength()).unwrap();
     expect(suggested.length).toBeGreaterThanOrEqual(4);
     expect(new CrossingDetector().detect(dataLines, layout)).toEqual([]);

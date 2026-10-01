@@ -1,0 +1,87 @@
+<div class="canvas" [style.font-size.px]="fontSize()">
+  <span #probe class="canvas__probe" aria-hidden="true">0000000000</span>
+  <div class="canvas__scroller">
+    <div class="canvas__content">
+      <div class="canvas__gutter">
+        <div class="canvas__corner">línea</div>
+        <div class="canvas__corner"></div>
+        @for (row of rows(); track row.line.number) {
+          <div
+            class="canvas__gutter-cell"
+            [class.canvas__gutter-cell--selected]="row.selected"
+            [class.canvas__gutter-cell--data]="row.status === LineStatus.DATA"
+            [class.canvas__gutter-cell--ignored]="row.status === LineStatus.IGNORED"
+            [class.canvas__gutter-cell--rejected]="row.status === LineStatus.REJECTED"
+            [attr.role]="selectable() ? 'checkbox' : null"
+            [attr.aria-checked]="selectable() ? row.selected : null"
+            [attr.tabindex]="selectable() ? 0 : null"
+            [attr.aria-label]="'Línea ' + row.line.number + ' ' + statusLabel(row)"
+            [pTooltip]="row.reason === '' ? '' : row.reason"
+            tooltipPosition="right"
+            (click)="onGutterClick(row.line.number)"
+            (keydown)="onGutterKey($event, row.line.number)"
+          >
+            <i [class]="statusIcon(row.status)" aria-hidden="true"></i>
+            <span>{{ row.line.number }}</span>
+          </div>
+        }
+      </div>
+
+      <div
+        #textColumn
+        class="canvas__text"
+        [style.width]="left(width())"
+        tabindex="0"
+        role="group"
+        aria-label="Lienzo: clic para agregar una divisoria; con el teclado, ← → mueven el cursor y Enter agrega"
+        data-testid="canvas-surface"
+        (click)="onSurfaceClick($event)"
+        (keydown)="onSurfaceKey($event)"
+        (blur)="caret.set(null)"
+      >
+        @if (caret(); as position) {
+          <div class="canvas__caret" [style.left]="left(position)" aria-hidden="true"></div>
+        }
+        <div class="canvas__titles">
+          @for (band of bands(); track band.start) {
+            <span class="canvas__title" [style.left]="left(band.start)" [style.width]="left(band.width())" [pTooltip]="bandTitle(band)">{{ bandTitle(band) }}</span>
+          }
+        </div>
+        <div class="canvas__ruler" aria-hidden="true">
+          @for (tick of ticks(); track tick) {
+            <span class="canvas__tick" [style.left]="left(tick - 1)">{{ tick }}</span>
+          }
+        </div>
+        @for (band of bands(); track band.start; let odd = $odd) {
+          <div class="canvas__band" [class.canvas__band--odd]="odd" [style.left]="left(band.start)" [style.width]="left(band.width())"></div>
+        }
+        @for (row of rows(); track row.line.number) {
+          <div
+            class="canvas__line"
+            [class.canvas__line--ignored]="row.status === LineStatus.IGNORED"
+            [class.canvas__line--rejected]="row.status === LineStatus.REJECTED"
+          >{{ row.line.text }}</div>
+        }
+        @for (position of layout().dividers(); track position) {
+          <div
+            class="canvas__divider"
+            [class.canvas__divider--crossing]="crossingByPosition().has(position)"
+            [style.left]="left(displayed(position))"
+            role="slider"
+            tabindex="0"
+            [attr.aria-valuenow]="position"
+            [attr.aria-label]="'Divisoria en la posición ' + position"
+            [pTooltip]="dividerHint(position)"
+            data-testid="canvas-divider"
+            (pointerdown)="startDrag($event, position)"
+            (pointermove)="drag($event)"
+            (pointerup)="endDrag($event)"
+            (click)="$event.stopPropagation()"
+            (dblclick)="dividerRemoved.emit(position)"
+            (keydown)="onDividerKey($event, position)"
+          ></div>
+        }
+      </div>
+    </div>
+  </div>
+</div>

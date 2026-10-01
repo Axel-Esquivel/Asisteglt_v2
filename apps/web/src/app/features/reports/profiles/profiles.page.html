@@ -1,0 +1,66 @@
+<p-card>
+  <ng-template #title>
+    <div class="reports__title">
+      <span>Preconfiguraciones</span>
+      @if (canConfigure()) {
+        <p-button label="Nueva preconfiguración" icon="pi pi-plus" size="small" [routerLink]="['/app/projects', context.id(), 'profiles', 'new']" />
+      }
+    </div>
+  </ng-template>
+  <p class="reports__hint">Al cargar archivos, la preconfiguración se elige sola según la extensión y el patrón de nombre.</p>
+  <p-table [value]="profiles()" dataKey="id" [tableStyle]="{ 'min-width': '48rem' }" data-testid="profiles-table">
+    <ng-template #header>
+      <tr>
+        <th>Nombre</th>
+        <th>Extensiones</th>
+        <th>Estado</th>
+        <th>Versión</th>
+        <th>Actualizada</th>
+        <th></th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-profile>
+      <tr>
+        <td>
+          <strong>{{ profile.name }}</strong>
+          @if (profile.s.description !== '') {
+            <div class="reports__hint">{{ profile.s.description }}</div>
+          }
+        </td>
+        <td>{{ profile.s.extensions.join(' ') }}</td>
+        <td><p-tag [value]="profile.status().label" [severity]="profile.status().severity" /></td>
+        <td>v{{ profile.s.version }}</td>
+        <td>{{ profile.s.updatedAt | date: 'short' }}</td>
+        <td class="reports__actions">
+          @if (canConfigure()) {
+            <p-button icon="pi pi-pencil" [text]="true" size="small" [ariaLabel]="'Editar ' + profile.name" [routerLink]="['/app/projects', context.id(), 'profiles', profile.id]" />
+            @if (!profile.isActive()) {
+              <p-button icon="pi pi-check-circle" [text]="true" size="small" severity="success" [ariaLabel]="'Activar ' + profile.name" (onClick)="act(profile, 'activate')" />
+            } @else {
+              <p-button icon="pi pi-inbox" [text]="true" size="small" severity="secondary" [ariaLabel]="'Archivar ' + profile.name" (onClick)="act(profile, 'archive')" />
+            }
+            <p-button icon="pi pi-copy" [text]="true" size="small" [ariaLabel]="'Duplicar ' + profile.name" (onClick)="openDuplicate(profile)" />
+          }
+        </td>
+      </tr>
+    </ng-template>
+    <ng-template #emptymessage>
+      <tr>
+        <td colspan="6">No hay preconfiguraciones. Crea la primera con un archivo de muestra.</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</p-card>
+
+<p-dialog header="Duplicar preconfiguración" [modal]="true" [visible]="duplicating() !== null" (visibleChange)="$event ? null : duplicating.set(null)" [style]="{ width: 'min(26rem, 95vw)' }">
+  <form class="reports__form" (ngSubmit)="duplicate()">
+    <p-floatlabel variant="on">
+      <input pInputText id="duplicateName" name="duplicateName" [ngModel]="duplicateName()" (ngModelChange)="duplicateName.set($event)" class="full-width" />
+      <label for="duplicateName">Nombre de la copia</label>
+    </p-floatlabel>
+    <div class="reports__dialog-actions">
+      <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="duplicating.set(null)" />
+      <p-button type="submit" label="Duplicar" icon="pi pi-copy" />
+    </div>
+  </form>
+</p-dialog>

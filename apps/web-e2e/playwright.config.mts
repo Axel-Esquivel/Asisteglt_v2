@@ -18,6 +18,7 @@ export default defineConfig({
   use: {
     baseURL,
     trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
   },
   // API en memoria (sin MongoDB) + web con proxy /api → :3000.
   webServer: [
