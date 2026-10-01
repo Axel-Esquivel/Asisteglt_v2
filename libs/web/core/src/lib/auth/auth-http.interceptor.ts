@@ -1,4 +1,10 @@
-import { HttpErrorResponse, HttpEvent, HttpHandlerFn, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
+import {
+  HttpErrorResponse,
+  HttpEvent,
+  HttpHandlerFn,
+  HttpInterceptorFn,
+  HttpRequest,
+} from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Nullable } from '@asisteglt/shared-kernel';
@@ -13,7 +19,12 @@ import { TokenStore } from './token-store';
  */
 @Injectable({ providedIn: 'root' })
 export class AuthHttpInterceptor {
-  private static readonly AUTH_PATHS: ReadonlyArray<string> = ['auth/login', 'auth/register', 'auth/refresh', 'auth/logout'];
+  private static readonly AUTH_PATHS: ReadonlyArray<string> = [
+    'auth/login',
+    'auth/register',
+    'auth/refresh',
+    'auth/logout',
+  ];
 
   private readonly tokens: TokenStore = inject(TokenStore);
   private readonly session: AuthSession = inject(AuthSession);

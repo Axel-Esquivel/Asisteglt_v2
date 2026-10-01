@@ -1,4 +1,5 @@
-import { Result, ValidationError } from '@asisteglt/shared-kernel';
+import { Result } from '../core/result';
+import { ValidationError } from '../errors/domain-error';
 
 /** Convierte una respuesta JSON (`unknown`) en un tipo del frontend validado. */
 export abstract class Decoder<T> {

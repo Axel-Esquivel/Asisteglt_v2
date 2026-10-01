@@ -1,0 +1,28 @@
+{
+  "name": "shared-ingestion-core",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/shared/ingestion-core/src",
+  "projectType": "library",
+  "tags": [
+    "scope:shared",
+    "type:domain"
+  ],
+  "// targets": "to see all targets run: nx show project shared-ingestion-core --web",
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "default",
+        "^default"
+      ],
+      "options": {
+        "commands": [
+          "tsc -p libs/shared/ingestion-core/tsconfig.lib.json --noEmit",
+          "tsc -p libs/shared/ingestion-core/tsconfig.spec.json --noEmit"
+        ],
+        "parallel": false
+      }
+    }
+  }
+}

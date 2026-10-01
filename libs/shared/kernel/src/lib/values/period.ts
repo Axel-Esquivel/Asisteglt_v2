@@ -36,7 +36,10 @@ export class Period extends ValueObject {
   public startOfFiscalYear(fiscalStartMonth: number): Result<Period> {
     if (!Number.isInteger(fiscalStartMonth) || fiscalStartMonth < 1 || fiscalStartMonth > 12) {
       return Result.fail(
-        new ValidationError('PERIOD_INVALID_FISCAL_START', `Mes de inicio fiscal inválido: ${String(fiscalStartMonth)}`),
+        new ValidationError(
+          'PERIOD_INVALID_FISCAL_START',
+          `Mes de inicio fiscal inválido: ${String(fiscalStartMonth)}`,
+        ),
       );
     }
     const year: number = this.month >= fiscalStartMonth ? this.year : this.year - 1;

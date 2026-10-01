@@ -13,6 +13,8 @@ vitest.config.*.timestamp*
 test-output
 playwright-report
 test-results
+# archivos cargados (datos confidenciales del cliente)
+var
 # env
 .env
 .env.*

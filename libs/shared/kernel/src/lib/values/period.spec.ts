@@ -1,7 +1,11 @@
 import { Period } from './period';
 import { Result } from '../core/result';
 
-const codeOf = <T>(result: Result<T>): string => result.match((): string => '', (error): string => error.code);
+const codeOf = <T>(result: Result<T>): string =>
+  result.match(
+    (): string => '',
+    (error): string => error.code,
+  );
 
 const p = (year: number, month: number): Period => Period.of(year, month).unwrap();
 
@@ -22,12 +26,11 @@ describe('Period', () => {
   });
 
   it('genera rangos inclusivos', () => {
-    expect(p(2025, 11).rangeTo(p(2026, 2)).map((x: Period): string => x.toString())).toEqual([
-      '2025-11',
-      '2025-12',
-      '2026-01',
-      '2026-02',
-    ]);
+    expect(
+      p(2025, 11)
+        .rangeTo(p(2026, 2))
+        .map((x: Period): string => x.toString()),
+    ).toEqual(['2025-11', '2025-12', '2026-01', '2026-02']);
     expect(p(2026, 2).rangeTo(p(2025, 1))).toEqual([]);
   });
 });

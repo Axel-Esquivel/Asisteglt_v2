@@ -16,6 +16,11 @@ export class Notifier {
   }
 
   public error(error: DomainError): void {
-    this.messages.add({ severity: 'error', summary: 'No se pudo completar', detail: error.message, life: 6000 });
+    this.messages.add({
+      severity: 'error',
+      summary: 'No se pudo completar',
+      detail: error.message,
+      life: 6000,
+    });
   }
 }

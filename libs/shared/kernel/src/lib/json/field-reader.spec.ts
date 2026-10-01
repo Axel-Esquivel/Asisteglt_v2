@@ -1,4 +1,4 @@
-import { Result } from '@asisteglt/shared-kernel';
+import { Result } from '../core/result';
 import { FieldDecoder, FieldReader } from './field-reader';
 
 class Sample {

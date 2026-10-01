@@ -29,7 +29,9 @@ export class ThemeService {
 
   private readPreference(): Nullable<string> {
     try {
-      return this.document.defaultView === null ? null : this.document.defaultView.localStorage.getItem(ThemeService.STORAGE_KEY);
+      return this.document.defaultView === null
+        ? null
+        : this.document.defaultView.localStorage.getItem(ThemeService.STORAGE_KEY);
     } catch {
       return null;
     }

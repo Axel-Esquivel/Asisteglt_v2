@@ -1,12 +1,11 @@
 import { DOCUMENT } from '@angular/common';
 import { Injectable, Signal, WritableSignal, effect, inject, signal } from '@angular/core';
-import { Nullable, Result } from '@asisteglt/shared-kernel';
+import { Decoder, Nullable, Result } from '@asisteglt/shared-kernel';
 import { Observable, Subscriber } from 'rxjs';
 import { Socket, io } from 'socket.io-client';
 import { AuthSession } from '../auth/auth-session';
 import { TokenStore } from '../auth/token-store';
 import { ApiConfig } from '../http/api-config';
-import { Decoder } from '../http/decoder';
 
 /**
  * Conexión Socket.IO única de la aplicación. Se abre al autenticarse, se cierra al salir y

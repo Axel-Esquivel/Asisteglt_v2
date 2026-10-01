@@ -4,7 +4,11 @@ import { ServiceHealth } from './service-health';
 import { ServiceHealthDecoder } from './service-health.decoder';
 
 const decoder: ServiceHealthDecoder = new ServiceHealthDecoder();
-const codeOf = <T>(result: Result<T>): string => result.match((): string => '', (error): string => error.code);
+const codeOf = <T>(result: Result<T>): string =>
+  result.match(
+    (): string => '',
+    (error): string => error.code,
+  );
 
 describe('ServiceHealthDecoder', () => {
   it('decodifica una respuesta válida', () => {

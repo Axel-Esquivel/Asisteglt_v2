@@ -1,7 +1,5 @@
 import { ServiceStatus } from '@asisteglt/shared-contracts';
-import { Result, ValidationError } from '@asisteglt/shared-kernel';
-import { Decoder } from '../http/decoder';
-import { JsonReader } from '../http/json-reader';
+import { Decoder, JsonReader, Result, ValidationError } from '@asisteglt/shared-kernel';
 import { ServiceHealth } from './service-health';
 
 /** Decodifica `HealthResponse` (contrato compartido) en `ServiceHealth`. */
@@ -19,7 +17,9 @@ export class ServiceHealthDecoder extends Decoder<ServiceHealth> {
       return fields.flatMap((): Result<ServiceHealth> => {
         const checkedAt: Date = new Date(json.string('timestamp').unwrap());
         if (Number.isNaN(checkedAt.getTime())) {
-          return Result.fail(new ValidationError('INVALID_JSON_FIELD', 'El campo «timestamp» no es una fecha válida'));
+          return Result.fail(
+            new ValidationError('INVALID_JSON_FIELD', 'El campo «timestamp» no es una fecha válida'),
+          );
         }
         return Result.ok(
           new ServiceHealth(

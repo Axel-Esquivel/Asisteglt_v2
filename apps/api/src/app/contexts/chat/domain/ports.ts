@@ -1,4 +1,4 @@
-import { ChatMessageResponse, PresenceChangedEvent } from '@asisteglt/shared-contracts';
+import { ChatMessageResponse, PresenceChangedEvent, RealtimeEvent } from '@asisteglt/shared-contracts';
 import { EntityId, Nullable, Optional } from '@asisteglt/shared-kernel';
 import { Conversation } from './conversation';
 import { Message } from './message';
@@ -67,4 +67,6 @@ export class EveryoneAudience extends RealtimeAudience {
 export abstract class RealtimeEventPublisher {
   public abstract chatMessage(audience: RealtimeAudience, message: ChatMessageResponse, updated: boolean): void;
   public abstract presenceChanged(event: PresenceChangedEvent): void;
+  /** Evento genérico de otros contextos (p. ej. progreso de importación). */
+  public abstract publish(audience: RealtimeAudience, event: RealtimeEvent, payload: object): void;
 }

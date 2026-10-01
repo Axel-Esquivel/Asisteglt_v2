@@ -30,6 +30,8 @@ export class ServiceHealth {
     const hours: number = Math.floor(this.uptimeSeconds / 3600);
     const minutes: number = Math.floor((this.uptimeSeconds % 3600) / 60);
     const seconds: number = this.uptimeSeconds % 60;
-    return hours > 0 ? `${String(hours)} h ${String(minutes)} min` : `${String(minutes)} min ${String(seconds)} s`;
+    return hours > 0
+      ? `${String(hours)} h ${String(minutes)} min`
+      : `${String(minutes)} min ${String(seconds)} s`;
   }
 }

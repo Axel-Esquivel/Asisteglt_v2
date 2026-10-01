@@ -30,7 +30,9 @@ describe('EntityId y AggregateRoot', () => {
 
   it('entrega los eventos pendientes una sola vez', () => {
     const sample: Sample = Sample.create();
-    expect(sample.pullDomainEvents().map((e: DomainEvent): string => e.eventName())).toEqual(['sample.created']);
+    expect(sample.pullDomainEvents().map((e: DomainEvent): string => e.eventName())).toEqual([
+      'sample.created',
+    ]);
     expect(sample.pullDomainEvents()).toEqual([]);
   });
 });

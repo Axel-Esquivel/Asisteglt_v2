@@ -70,6 +70,13 @@ export class RealtimeGateway
     }
   }
 
+  public override publish(audience: RealtimeAudience, event: RealtimeEvent, payload: object): void {
+    const rooms: string[] = audience.rooms();
+    if (this.server !== null && rooms.length > 0) {
+      this.server.to(rooms).emit(event, payload);
+    }
+  }
+
   private async authenticate(socket: Socket): Promise<Nullable<AuthenticatedPrincipal>> {
     const auth: unknown = socket.handshake.auth;
     const token: unknown = typeof auth === 'object' && auth !== null && 'token' in auth ? auth.token : null;

@@ -27,6 +27,8 @@ export abstract class Result<T> {
   public abstract isOk(): boolean;
   public abstract map<R>(mapper: (value: T) => R): Result<R>;
   public abstract flatMap<R>(mapper: (value: T) => Result<R>): Result<R>;
+  /** Como `flatMap`, pero con una función asíncrona; un fallo se propaga sin ejecutarla. */
+  public abstract flatMapAsync<R>(mapper: (value: T) => Promise<Result<R>>): Promise<Result<R>>;
   public abstract match<R>(onOk: (value: T) => R, onFail: (error: DomainError) => R): R;
   /** Devuelve el valor o lanza el `DomainError` (la capa HTTP lo traduce). */
   public abstract unwrap(): T;
@@ -47,6 +49,10 @@ class Ok<T> extends Result<T> {
   }
 
   public override flatMap<R>(mapper: (value: T) => Result<R>): Result<R> {
+    return mapper(this.value);
+  }
+
+  public override flatMapAsync<R>(mapper: (value: T) => Promise<Result<R>>): Promise<Result<R>> {
     return mapper(this.value);
   }
 
@@ -74,6 +80,10 @@ class Fail<T> extends Result<T> {
 
   public override map<R>(_mapper: (value: T) => R): Result<R> {
     return Result.fail<R>(this.error);
+  }
+
+  public override flatMapAsync<R>(_mapper: (value: T) => Promise<Result<R>>): Promise<Result<R>> {
+    return Promise.resolve(Result.fail<R>(this.error));
   }
 
   public override flatMap<R>(_mapper: (value: T) => Result<R>): Result<R> {

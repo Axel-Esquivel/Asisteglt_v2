@@ -1,8 +1,12 @@
 import { Injectable } from '@angular/core';
-import { ChangePasswordRequest, LoginRequest, RegisterRequest, UpdateProfileRequest } from '@asisteglt/shared-contracts';
-import { Result } from '@asisteglt/shared-kernel';
+import {
+  ChangePasswordRequest,
+  LoginRequest,
+  RegisterRequest,
+  UpdateProfileRequest,
+} from '@asisteglt/shared-contracts';
+import { ArrayDecoder, EmptyDecoder, Result } from '@asisteglt/shared-kernel';
 import { ApiClient } from '../http/api-client';
-import { ArrayDecoder, EmptyDecoder } from '../http/decoder';
 import {
   ActiveSession,
   ActiveSessionDecoder,
@@ -16,7 +20,9 @@ import {
 export class AuthApiClient extends ApiClient {
   private readonly grants: AuthGrantDecoder = new AuthGrantDecoder();
   private readonly users: CurrentUserDecoder = new CurrentUserDecoder();
-  private readonly sessions: ArrayDecoder<ActiveSession> = new ArrayDecoder<ActiveSession>(new ActiveSessionDecoder());
+  private readonly sessions: ArrayDecoder<ActiveSession> = new ArrayDecoder<ActiveSession>(
+    new ActiveSessionDecoder(),
+  );
   private readonly empty: EmptyDecoder = new EmptyDecoder();
 
   public login(request: LoginRequest): Promise<Result<AuthGrant>> {

@@ -1,6 +1,4 @@
-import { Result } from '@asisteglt/shared-kernel';
-import { Decoder } from '../http/decoder';
-import { JsonReader } from '../http/json-reader';
+import { Decoder, JsonReader, Result } from '@asisteglt/shared-kernel';
 
 /** Usuario autenticado (modelo de vista). */
 export class CurrentUser {
@@ -24,13 +22,23 @@ export class CurrentUser {
 export class CurrentUserDecoder extends Decoder<CurrentUser> {
   public override decode(value: unknown): Result<CurrentUser> {
     return JsonReader.from(value).flatMap((json: JsonReader): Result<CurrentUser> =>
-      json.string('id').flatMap((id: string): Result<CurrentUser> =>
-        json.string('email').flatMap((email: string): Result<CurrentUser> =>
-          json.string('displayName').flatMap((displayName: string): Result<CurrentUser> =>
-            json.date('createdAt').map((createdAt: Date): CurrentUser => new CurrentUser(id, email, displayName, createdAt)),
-          ),
+      json
+        .string('id')
+        .flatMap((id: string): Result<CurrentUser> =>
+          json
+            .string('email')
+            .flatMap((email: string): Result<CurrentUser> =>
+              json
+                .string('displayName')
+                .flatMap((displayName: string): Result<CurrentUser> =>
+                  json
+                    .date('createdAt')
+                    .map(
+                      (createdAt: Date): CurrentUser => new CurrentUser(id, email, displayName, createdAt),
+                    ),
+                ),
+            ),
         ),
-      ),
     );
   }
 }
@@ -49,11 +57,17 @@ export class AuthGrantDecoder extends Decoder<AuthGrant> {
 
   public override decode(value: unknown): Result<AuthGrant> {
     return JsonReader.from(value).flatMap((json: JsonReader): Result<AuthGrant> =>
-      json.string('accessToken').flatMap((token: string): Result<AuthGrant> =>
-        json.number('expiresInSeconds').flatMap((ttl: number): Result<AuthGrant> =>
-          this.users.decode(json.raw('user')).map((user: CurrentUser): AuthGrant => new AuthGrant(token, ttl, user)),
+      json
+        .string('accessToken')
+        .flatMap((token: string): Result<AuthGrant> =>
+          json
+            .number('expiresInSeconds')
+            .flatMap((ttl: number): Result<AuthGrant> =>
+              this.users
+                .decode(json.raw('user'))
+                .map((user: CurrentUser): AuthGrant => new AuthGrant(token, ttl, user)),
+            ),
         ),
-      ),
     );
   }
 }
@@ -98,19 +112,32 @@ export class ActiveSession {
 export class ActiveSessionDecoder extends Decoder<ActiveSession> {
   public override decode(value: unknown): Result<ActiveSession> {
     return JsonReader.from(value).flatMap((json: JsonReader): Result<ActiveSession> =>
-      json.string('id').flatMap((id: string): Result<ActiveSession> =>
-        json.string('userAgent').flatMap((agent: string): Result<ActiveSession> =>
-          json.string('ipAddress').flatMap((ip: string): Result<ActiveSession> =>
-            json.date('createdAt').flatMap((created: Date): Result<ActiveSession> =>
-              json.date('lastSeenAt').flatMap((seen: Date): Result<ActiveSession> =>
-                json.boolean('current').map(
-                  (current: boolean): ActiveSession => new ActiveSession(id, agent, ip, created, seen, current),
+      json
+        .string('id')
+        .flatMap((id: string): Result<ActiveSession> =>
+          json
+            .string('userAgent')
+            .flatMap((agent: string): Result<ActiveSession> =>
+              json
+                .string('ipAddress')
+                .flatMap((ip: string): Result<ActiveSession> =>
+                  json
+                    .date('createdAt')
+                    .flatMap((created: Date): Result<ActiveSession> =>
+                      json
+                        .date('lastSeenAt')
+                        .flatMap((seen: Date): Result<ActiveSession> =>
+                          json
+                            .boolean('current')
+                            .map(
+                              (current: boolean): ActiveSession =>
+                                new ActiveSession(id, agent, ip, created, seen, current),
+                            ),
+                        ),
+                    ),
                 ),
-              ),
             ),
-          ),
         ),
-      ),
     );
   }
 }

@@ -1,4 +1,6 @@
-import { Nullable, Result, ValidationError } from '@asisteglt/shared-kernel';
+import { Nullable } from '../core/nullable';
+import { Result } from '../core/result';
+import { ValidationError } from '../errors/domain-error';
 
 /** Lee campos de un JSON recibido como `unknown`, validando cada tipo. */
 export class JsonReader {
@@ -22,7 +24,9 @@ export class JsonReader {
 
   public number(key: string): Result<number> {
     const value: unknown = this.get(key);
-    return typeof value === 'number' && Number.isFinite(value) ? Result.ok(value) : this.invalid(key, 'número');
+    return typeof value === 'number' && Number.isFinite(value)
+      ? Result.ok(value)
+      : this.invalid(key, 'número');
   }
 
   public boolean(key: string): Result<boolean> {
@@ -39,7 +43,9 @@ export class JsonReader {
 
   public nullableString(key: string): Result<Nullable<string>> {
     const value: unknown = this.get(key);
-    return value === null || typeof value === 'string' ? Result.ok(value) : this.invalid(key, 'texto o vacío');
+    return value === null || typeof value === 'string'
+      ? Result.ok(value)
+      : this.invalid(key, 'texto o vacío');
   }
 
   public object(key: string): Result<JsonReader> {

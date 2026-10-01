@@ -2,11 +2,19 @@ import { Optional } from './optional';
 
 describe('Optional', () => {
   it('devuelve el valor presente', () => {
-    expect(Optional.of(5).map((v: number): number => v * 2).orElse(0)).toBe(10);
+    expect(
+      Optional.of(5)
+        .map((v: number): number => v * 2)
+        .orElse(0),
+    ).toBe(10);
   });
 
   it('usa el valor por defecto cuando está vacío', () => {
-    expect(Optional.empty<number>().map((v: number): number => v * 2).orElse(7)).toBe(7);
+    expect(
+      Optional.empty<number>()
+        .map((v: number): number => v * 2)
+        .orElse(7),
+    ).toBe(7);
   });
 
   it('convierte null en vacío', () => {
@@ -19,6 +27,10 @@ describe('Optional', () => {
   });
 
   it('filtra valores', () => {
-    expect(Optional.of(3).filter((v: number): boolean => v > 5).isPresent()).toBe(false);
+    expect(
+      Optional.of(3)
+        .filter((v: number): boolean => v > 5)
+        .isPresent(),
+    ).toBe(false);
   });
 });

@@ -1,11 +1,9 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { Result } from '@asisteglt/shared-kernel';
+import { Decoder, JsonReader, Result } from '@asisteglt/shared-kernel';
 import { firstValueFrom } from 'rxjs';
 import { ApiConfig } from './api-config';
 import { ApiRequestError } from './api-request-error';
-import { Decoder } from './decoder';
-import { JsonReader } from './json-reader';
 
 /** Base de los clientes de la API: toda respuesta se decodifica desde `unknown`. */
 export abstract class ApiClient {
@@ -41,7 +39,12 @@ export abstract class ApiClient {
     }
   }
 
-  private async request<T>(method: string, path: string, body: object | null, decoder: Decoder<T>): Promise<Result<T>> {
+  private async request<T>(
+    method: string,
+    path: string,
+    body: object | null,
+    decoder: Decoder<T>,
+  ): Promise<Result<T>> {
     try {
       const response: unknown = await firstValueFrom(
         this.http.request<unknown>(method, this.config.url(path), { body, withCredentials: true }),
@@ -59,7 +62,9 @@ export abstract class ApiClient {
           reader
             .string('code')
             .flatMap((code: string): Result<ApiRequestError> =>
-              reader.string('message').map((message: string): ApiRequestError => new ApiRequestError(code, message, error.status)),
+              reader
+                .string('message')
+                .map((message: string): ApiRequestError => new ApiRequestError(code, message, error.status)),
             ),
       );
       return fromBody.match(

@@ -13,3 +13,6 @@ export * from './lib/time/clock';
 export * from './lib/collections/readonly-dictionary';
 export * from './lib/collections/collections';
 export * from './lib/values/email';
+export * from './lib/json/json-reader';
+export * from './lib/json/decoder';
+export * from './lib/json/field-reader';

@@ -1,4 +1,6 @@
-import { DomainError, Nullable, Result, ValidationError } from '@asisteglt/shared-kernel';
+import { Nullable } from '../core/nullable';
+import { Result } from '../core/result';
+import { DomainError, ValidationError } from '../errors/domain-error';
 import { Decoder } from './decoder';
 import { JsonReader } from './json-reader';
 
@@ -97,7 +99,9 @@ export class EnumDecoder<T extends string> extends Decoder<T> {
   public override decode(value: unknown): Result<T> {
     const match: Nullable<T> = this.allowed.find((candidate: T): boolean => candidate === value) ?? null;
     return match === null
-      ? Result.fail(new ValidationError('INVALID_JSON_FIELD', `Se esperaba uno de ${this.allowed.join(', ')}`))
+      ? Result.fail(
+          new ValidationError('INVALID_JSON_FIELD', `Se esperaba uno de ${this.allowed.join(', ')}`),
+        )
       : Result.ok(match);
   }
 }

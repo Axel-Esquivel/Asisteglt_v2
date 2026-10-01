@@ -16,6 +16,8 @@ export class AppConfig {
     public readonly accessTokenTtlSeconds: number,
     public readonly refreshTokenTtlDays: number,
     public readonly secureCookies: boolean,
+    public readonly storageDir: string,
+    public readonly importRejectThreshold: number,
   ) {}
 
   public isProduction(): boolean {
@@ -45,6 +47,8 @@ export class AppConfigLoader {
       env.positiveInteger('REFRESH_TOKEN_TTL_DAYS', 14),
       env.enumValue('SECURE_COOKIES', ['true', 'false'], environment === RuntimeEnvironment.PRODUCTION ? 'true' : 'false') ===
         'true',
+      env.text('STORAGE_DIR', 'var/storage'),
+      env.positiveInteger('IMPORT_REJECT_THRESHOLD_PERCENT', 20) / 100,
     );
     env.assertValid();
     return config;

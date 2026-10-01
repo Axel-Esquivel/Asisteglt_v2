@@ -13,7 +13,9 @@ export class ReadonlyDictionary<K, V> {
   }
 
   public get(key: K): Optional<V> {
-    return this.entries.has(key) ? Optional.fromNullable<V>(this.entries.get(key) ?? null) : Optional.empty<V>();
+    return this.entries.has(key)
+      ? Optional.fromNullable<V>(this.entries.get(key) ?? null)
+      : Optional.empty<V>();
   }
 
   public has(key: K): boolean {

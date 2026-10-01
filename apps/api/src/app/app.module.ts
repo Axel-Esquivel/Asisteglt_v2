@@ -8,6 +8,7 @@ import { AppConfig } from './config/app-config';
 import { ChatModule } from './contexts/chat/chat.module';
 import { IamModule } from './contexts/iam/iam.module';
 import { ProjectsModule } from './contexts/projects/projects.module';
+import { ReportsModule } from './contexts/reports/reports.module';
 import { HealthController } from './health/health.controller';
 import { HealthService } from './health/health.service';
 
@@ -23,6 +24,7 @@ export class AppModule implements NestModule {
         IamModule.register(config.dataStore),
         ProjectsModule.register(config.dataStore),
         ChatModule.register(config.dataStore),
+        ReportsModule.register(config.dataStore),
       ],
       controllers: [HealthController],
       providers: [

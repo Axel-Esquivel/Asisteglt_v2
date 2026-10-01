@@ -1,7 +1,11 @@
 import { Decimal, RoundingMode } from './decimal';
 import { Result } from '../core/result';
 
-const codeOf = <T>(result: Result<T>): string => result.match((): string => '', (error): string => error.code);
+const codeOf = <T>(result: Result<T>): string =>
+  result.match(
+    (): string => '',
+    (error): string => error.code,
+  );
 
 const d = (raw: string): Decimal => Decimal.of(raw).unwrap();
 

@@ -1,7 +1,11 @@
 import { ValidationError } from '../errors/domain-error';
 import { Result } from './result';
 
-const codeOf = <T>(result: Result<T>): string => result.match((): string => '', (error): string => error.code);
+const codeOf = <T>(result: Result<T>): string =>
+  result.match(
+    (): string => '',
+    (error): string => error.code,
+  );
 
 describe('Result', () => {
   it('encadena éxitos', () => {
@@ -22,7 +26,15 @@ describe('Result', () => {
 
   it('all reúne valores o devuelve el primer fallo', () => {
     expect(Result.all([Result.ok(1), Result.ok(2)]).unwrap()).toEqual([1, 2]);
-    const failed: Result<number[]> = Result.all([Result.ok(1), Result.fail<number>(new ValidationError('E', 'e'))]);
-    expect(failed.match((): string => 'ok', (e): string => e.code)).toBe('E');
+    const failed: Result<number[]> = Result.all([
+      Result.ok(1),
+      Result.fail<number>(new ValidationError('E', 'e')),
+    ]);
+    expect(
+      failed.match(
+        (): string => 'ok',
+        (e): string => e.code,
+      ),
+    ).toBe('E');
   });
 });

@@ -43,6 +43,7 @@ export enum RealtimeEvent {
   CHAT_MESSAGE = 'chat:message',
   CHAT_MESSAGE_UPDATED = 'chat:message-updated',
   PRESENCE_CHANGED = 'presence:changed',
+  IMPORT_ITEM = 'import:item',
 }
 
 export interface PresenceChangedEvent {

@@ -13,7 +13,10 @@ import { AsisteGltPreset, DARK_MODE_CLASS } from './theme/asisteglt-preset';
  * Proveedores base del frontend: HTTP, configuración de API y PrimeNG (tema, español y licencia).
  * `primeUiLicenseKey` es la clave de licencia PrimeUI; con `null` PrimeNG muestra su aviso de licencia.
  */
-export function provideAsisteGltCore(apiBaseUrl: string, primeUiLicenseKey: Nullable<string>): EnvironmentProviders {
+export function provideAsisteGltCore(
+  apiBaseUrl: string,
+  primeUiLicenseKey: Nullable<string>,
+): EnvironmentProviders {
   return makeEnvironmentProviders([
     provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
     provideAppInitializer((): Promise<void> => inject(AuthSession).restore()),

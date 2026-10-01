@@ -3,3 +3,6 @@ export * from './lib/errors/api-error-response';
 export * from './lib/iam/auth.contracts';
 export * from './lib/projects/projects.contracts';
 export * from './lib/chat/chat.contracts';
+export * from './lib/reports/catalog.contracts';
+export * from './lib/reports/org-structure.contracts';
+export * from './lib/reports/ingestion.contracts';

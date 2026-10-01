@@ -35,14 +35,24 @@ export class SystemStatusStore extends BaseStore<SystemStatusState> {
   }
 
   public async refresh(): Promise<void> {
-    this.update((current: SystemStatusState): SystemStatusState => ({ ...current, status: LoadStatus.LOADING }));
+    this.update((current: SystemStatusState): SystemStatusState => ({
+      ...current,
+      status: LoadStatus.LOADING,
+    }));
     const result: Result<ServiceHealth> = await this.api.check();
-    this.update(
-      (current: SystemStatusState): SystemStatusState =>
-        result.match(
-          (health: ServiceHealth): SystemStatusState => ({ status: LoadStatus.LOADED, health, errorMessage: null }),
-          (error): SystemStatusState => ({ ...current, status: LoadStatus.FAILED, errorMessage: error.message }),
-        ),
+    this.update((current: SystemStatusState): SystemStatusState =>
+      result.match(
+        (health: ServiceHealth): SystemStatusState => ({
+          status: LoadStatus.LOADED,
+          health,
+          errorMessage: null,
+        }),
+        (error): SystemStatusState => ({
+          ...current,
+          status: LoadStatus.FAILED,
+          errorMessage: error.message,
+        }),
+      ),
     );
   }
 }

@@ -2,8 +2,6 @@ export * from './lib/state/base-store';
 export * from './lib/http/api-config';
 export * from './lib/http/api-client';
 export * from './lib/http/api-request-error';
-export * from './lib/http/decoder';
-export * from './lib/http/json-reader';
 export * from './lib/system/service-health';
 export * from './lib/system/service-health.decoder';
 export * from './lib/system/system-health.api-client';
@@ -18,6 +16,15 @@ export * from './lib/auth/auth.api-client';
 export * from './lib/auth/auth-session';
 export * from './lib/auth/auth-http.interceptor';
 export * from './lib/auth/auth.guards';
-export * from './lib/http/field-reader';
 export * from './lib/ui/notifier';
 export * from './lib/realtime/realtime-client';
+export {
+  ArrayDecoder,
+  Decoder,
+  EmptyDecoder,
+  EnumDecoder,
+  FieldDecoder,
+  FieldReader,
+  JsonReader,
+  StringDecoder,
+} from '@asisteglt/shared-kernel';
