@@ -12,6 +12,7 @@ export class ProjectSections {
   public static for(project: ProjectSummary): ProjectSection[] {
     const sections: ProjectSection[] = [{ path: '', label: 'Resumen', icon: 'pi pi-info-circle' }];
     sections.push({ path: 'members', label: 'Miembros', icon: 'pi pi-users' });
+    sections.push({ path: 'chat', label: 'Chat', icon: 'pi pi-comments' });
     if (project.can(ProjectPermission.MEMBERS_MANAGE)) {
       sections.push({ path: 'sharing', label: 'Compartir', icon: 'pi pi-share-alt' });
     }

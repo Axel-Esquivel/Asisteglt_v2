@@ -18,6 +18,10 @@ export const APP_CONTEXT_ROUTES: Route[] = [
     loadChildren: () => import('./features/projects/projects.routes').then((m) => m.PROJECTS_ROUTES),
   },
   {
+    path: 'chat',
+    loadChildren: () => import('./features/chat/chat.routes').then((m) => m.CHAT_ROUTES),
+  },
+  {
     path: 'join/:token',
     title: 'Unirse a un proyecto · AsisteGLT',
     loadComponent: () => import('./features/projects/join/join-project.page').then((m) => m.JoinProjectPage),

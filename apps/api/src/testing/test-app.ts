@@ -32,6 +32,17 @@ export class TestApp {
     return new TestApp(app);
   }
 
+  /** Escucha en un puerto libre (necesario para clientes Socket.IO) y devuelve la URL base. */
+  public async listen(): Promise<string> {
+    await this.app.listen(0, '127.0.0.1');
+    const address: unknown = this.server().address();
+    const port: unknown = typeof address === 'object' && address !== null && 'port' in address ? address.port : null;
+    if (typeof port !== 'number') {
+      throw new Error('No se pudo obtener el puerto de escucha');
+    }
+    return `http://127.0.0.1:${String(port)}`;
+  }
+
   public server(): Server {
     return this.app.getHttpServer();
   }

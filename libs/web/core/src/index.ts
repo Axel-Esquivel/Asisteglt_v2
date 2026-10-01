@@ -20,3 +20,4 @@ export * from './lib/auth/auth-http.interceptor';
 export * from './lib/auth/auth.guards';
 export * from './lib/http/field-reader';
 export * from './lib/ui/notifier';
+export * from './lib/realtime/realtime-client';

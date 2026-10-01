@@ -17,6 +17,7 @@ export class ProjectsModule {
   public static register(store: DataStore): DynamicModule {
     return {
       module: ProjectsModule,
+      global: true,
       controllers: [ProjectsController],
       providers: [
         RepositoryBinding.bind(ProjectRepository, store, InMemoryProjectRepository, MongoProjectRepository),

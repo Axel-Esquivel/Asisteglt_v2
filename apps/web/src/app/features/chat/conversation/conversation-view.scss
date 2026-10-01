@@ -1,0 +1,110 @@
+:host {
+  display: block;
+  height: 100%;
+  min-height: 0;
+}
+
+.conversation {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--p-content-background);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-content-border-radius);
+}
+
+.conversation__header {
+  padding: 0.75rem 1rem;
+  border-block-end: 1px solid var(--p-content-border-color);
+}
+
+.conversation__title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.conversation__messages {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.conversation__message {
+  position: relative;
+  align-self: flex-start;
+  max-width: min(36rem, 85%);
+  padding: 0.5rem 0.75rem;
+  background: var(--p-surface-100);
+  border-radius: var(--p-content-border-radius);
+
+  &--mine {
+    align-self: flex-end;
+    background: var(--p-highlight-background);
+    color: var(--p-highlight-color);
+  }
+}
+
+:host-context(.app-dark) .conversation__message:not(.conversation__message--mine) {
+  background: var(--p-surface-800);
+}
+
+.conversation__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+.conversation__text {
+  margin: 0.25rem 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+
+  &--deleted {
+    font-style: italic;
+    opacity: 0.7;
+  }
+}
+
+.conversation__edited {
+  font-style: italic;
+}
+
+.conversation__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.conversation__empty {
+  margin: auto;
+  color: var(--p-text-muted-color);
+}
+
+.conversation__composer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border-block-start: 1px solid var(--p-content-border-color);
+}
+
+.conversation__editing {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--p-text-muted-color);
+}
+
+.conversation__input {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+}

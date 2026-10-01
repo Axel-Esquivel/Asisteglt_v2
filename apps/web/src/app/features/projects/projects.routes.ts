@@ -24,6 +24,11 @@ export const PROJECTS_ROUTES: Route[] = [
         loadComponent: () => import('./members/project-members.page').then((m) => m.ProjectMembersPage),
       },
       {
+        path: 'chat',
+        title: 'Chat del proyecto · AsisteGLT',
+        loadComponent: () => import('./chat/project-chat.page').then((m) => m.ProjectChatPage),
+      },
+      {
         path: 'sharing',
         title: 'Compartir · AsisteGLT',
         loadComponent: () => import('./sharing/project-sharing.page').then((m) => m.ProjectSharingPage),

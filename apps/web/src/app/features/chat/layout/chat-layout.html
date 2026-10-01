@@ -1,0 +1,67 @@
+<div class="chat" [class.chat--conversation-open]="conversationOpen()">
+  <aside class="chat__sidebar" aria-label="Conversaciones">
+    <div class="chat__sidebar-header">
+      <h1 class="chat__heading">Chat</h1>
+      <p-button icon="pi pi-pen-to-square" [text]="true" [rounded]="true" ariaLabel="Nueva conversación" (onClick)="openDialog()" />
+    </div>
+    <nav class="chat__list" data-testid="conversation-list">
+      @for (conversation of store.conversations(); track conversation.id) {
+        <a
+          class="chat__item"
+          [routerLink]="link(conversation)"
+          routerLinkActive="chat__item--active"
+          [attr.aria-label]="conversation.title + (conversation.unread > 0 ? ', ' + conversation.unread + ' sin leer' : '')"
+        >
+          <span class="chat__icon">
+            <i [class]="conversation.icon()" aria-hidden="true"></i>
+            @if (store.isOnline(conversation.counterpartId)) {
+              <span class="chat__online" title="En línea"></span>
+            }
+          </span>
+          <span class="chat__item-text">
+            <span class="chat__item-title">{{ conversation.title }}</span>
+            <span class="chat__item-subtitle">{{ conversation.subtitle() }}</span>
+          </span>
+          @if (conversation.unread > 0) {
+            <p-badge [value]="conversation.unread" severity="danger" />
+          }
+        </a>
+      }
+    </nav>
+  </aside>
+
+  <section class="chat__main">
+    @if (conversationOpen()) {
+      <p-button label="Conversaciones" icon="pi pi-arrow-left" [text]="true" size="small" styleClass="chat__back" routerLink="/app/chat" />
+    }
+    <router-outlet />
+  </section>
+</div>
+
+<p-dialog
+  header="Nueva conversación"
+  [modal]="true"
+  [visible]="dialogOpen()"
+  (visibleChange)="dialogOpen.set($event)"
+  [style]="{ width: 'min(28rem, 95vw)' }"
+>
+  <label for="chatUser" class="chat__label">Busca a una persona por nombre o correo</label>
+  <p-autocomplete
+    inputId="chatUser"
+    [suggestions]="suggestions()"
+    optionLabel="displayName"
+    [minQueryLength]="2"
+    [delay]="250"
+    [ngModel]="selectedUser()"
+    (ngModelChange)="selectedUser.set($event)"
+    (completeMethod)="search($event)"
+    (onSelect)="startDirect($event)"
+    styleClass="full-width"
+    inputStyleClass="full-width"
+    appendTo="body"
+  >
+    <ng-template #item let-user>
+      <span>{{ user.label() }}</span>
+    </ng-template>
+  </p-autocomplete>
+</p-dialog>
