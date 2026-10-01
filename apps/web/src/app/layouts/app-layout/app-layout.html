@@ -1,0 +1,44 @@
+<p-toolbar styleClass="shell__toolbar">
+  <ng-template #start>
+    <p-button icon="pi pi-bars" [text]="true" ariaLabel="Abrir menú" (onClick)="openNavigation()" />
+    <span class="shell__brand">AsisteGLT</span>
+  </ng-template>
+  <ng-template #end>
+    <p-button
+      [icon]="isDark() ? 'pi pi-sun' : 'pi pi-moon'"
+      [text]="true"
+      [rounded]="true"
+      [ariaLabel]="isDark() ? 'Usar modo claro' : 'Usar modo oscuro'"
+      [pTooltip]="isDark() ? 'Modo claro' : 'Modo oscuro'"
+      tooltipPosition="bottom"
+      (onClick)="toggleTheme()"
+    />
+    @if (user(); as current) {
+      <p-button
+        [text]="true"
+        [rounded]="true"
+        ariaLabel="Menú de usuario"
+        (onClick)="userMenuRef.toggle($event)"
+      >
+        <p-avatar [label]="current.initials()" shape="circle" />
+        <span class="shell__user">{{ current.displayName }}</span>
+      </p-button>
+      <p-menu #userMenuRef [model]="userMenu" [popup]="true" appendTo="body" />
+    }
+  </ng-template>
+</p-toolbar>
+
+<p-drawer
+  header="Navegación"
+  ariaCloseLabel="Cerrar"
+  [visible]="navigationOpen()"
+  (visibleChange)="onNavigationVisibleChange($event)"
+>
+  <p-panelmenu [model]="menu" styleClass="shell__menu" (click)="closeNavigation()" />
+</p-drawer>
+
+<main class="shell__content">
+  <router-outlet />
+</main>
+
+<p-confirmdialog />

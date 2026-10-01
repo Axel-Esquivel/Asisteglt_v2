@@ -146,6 +146,7 @@ export default [
     plugins: { asisteglt },
     rules: {
       'asisteglt/primeng-controls-only': 'error',
+      'asisteglt/no-template-safe-navigation': 'error',
     },
   },
 ];

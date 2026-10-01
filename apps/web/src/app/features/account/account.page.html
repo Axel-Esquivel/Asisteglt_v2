@@ -1,0 +1,58 @@
+<h1 class="page-title">Mi cuenta</h1>
+<div class="account">
+  <p-card header="Perfil">
+    <form class="account__form" [formGroup]="profileForm" (ngSubmit)="saveProfile()">
+      <p-floatlabel variant="on">
+        <input pInputText id="displayName" formControlName="displayName" class="full-width" />
+        <label for="displayName">Nombre</label>
+      </p-floatlabel>
+      <p-button type="submit" label="Guardar" icon="pi pi-check" [loading]="savingProfile()" />
+    </form>
+  </p-card>
+
+  <p-card header="Contraseña">
+    <form class="account__form" [formGroup]="passwordForm" (ngSubmit)="savePassword()">
+      <p-floatlabel variant="on">
+        <p-password inputId="currentPassword" formControlName="currentPassword" [feedback]="false" [toggleMask]="true" styleClass="full-width" inputStyleClass="full-width" />
+        <label for="currentPassword">Contraseña actual</label>
+      </p-floatlabel>
+      <p-floatlabel variant="on">
+        <p-password inputId="newPassword" formControlName="newPassword" [toggleMask]="true" styleClass="full-width" inputStyleClass="full-width" />
+        <label for="newPassword">Nueva contraseña</label>
+      </p-floatlabel>
+      <p-button type="submit" label="Cambiar contraseña" icon="pi pi-lock" [loading]="savingPassword()" />
+    </form>
+  </p-card>
+</div>
+
+<p-card header="Sesiones activas" styleClass="account__sessions">
+  <p-table [value]="sessions()" dataKey="id" [tableStyle]="{ 'min-width': '40rem' }">
+    <ng-template #header>
+      <tr>
+        <th>Dispositivo</th>
+        <th>IP</th>
+        <th>Inicio</th>
+        <th>Última actividad</th>
+        <th></th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-item>
+      <tr>
+        <td>
+          {{ item.deviceLabel() }}
+          @if (item.current) {
+            <p-tag value="Esta sesión" severity="info" />
+          }
+        </td>
+        <td>{{ item.ipAddress }}</td>
+        <td>{{ item.createdAt | date: 'short' }}</td>
+        <td>{{ item.lastSeenAt | date: 'short' }}</td>
+        <td>
+          @if (!item.current) {
+            <p-button icon="pi pi-sign-out" [text]="true" severity="danger" ariaLabel="Cerrar sesión" (onClick)="confirmRevoke(item)" />
+          }
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</p-card>

@@ -12,10 +12,41 @@ export abstract class ApiClient {
   private readonly http: HttpClient = inject(HttpClient);
   private readonly config: ApiConfig = inject(ApiConfig);
 
-  protected async get<T>(path: string, decoder: Decoder<T>): Promise<Result<T>> {
+  protected get<T>(path: string, decoder: Decoder<T>): Promise<Result<T>> {
+    return this.request('GET', path, null, decoder);
+  }
+
+  protected post<T>(path: string, body: object | null, decoder: Decoder<T>): Promise<Result<T>> {
+    return this.request('POST', path, body, decoder);
+  }
+
+  protected put<T>(path: string, body: object | null, decoder: Decoder<T>): Promise<Result<T>> {
+    return this.request('PUT', path, body, decoder);
+  }
+
+  protected patch<T>(path: string, body: object | null, decoder: Decoder<T>): Promise<Result<T>> {
+    return this.request('PATCH', path, body, decoder);
+  }
+
+  protected delete<T>(path: string, decoder: Decoder<T>): Promise<Result<T>> {
+    return this.request('DELETE', path, null, decoder);
+  }
+
+  protected async upload<T>(path: string, form: FormData, decoder: Decoder<T>): Promise<Result<T>> {
     try {
-      const body: unknown = await firstValueFrom(this.http.get<unknown>(this.config.url(path)));
-      return decoder.decode(body);
+      const response: unknown = await firstValueFrom(this.http.post<unknown>(this.config.url(path), form));
+      return decoder.decode(response);
+    } catch (error: unknown) {
+      return Result.fail<T>(ApiClient.toError(error));
+    }
+  }
+
+  private async request<T>(method: string, path: string, body: object | null, decoder: Decoder<T>): Promise<Result<T>> {
+    try {
+      const response: unknown = await firstValueFrom(
+        this.http.request<unknown>(method, this.config.url(path), { body, withCredentials: true }),
+      );
+      return decoder.decode(response);
     } catch (error: unknown) {
       return Result.fail<T>(ApiClient.toError(error));
     }

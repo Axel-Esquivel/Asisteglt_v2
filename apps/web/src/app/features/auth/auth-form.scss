@@ -1,0 +1,26 @@
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.auth-form__alternative {
+  margin: 0;
+  text-align: center;
+  color: var(--p-text-muted-color);
+
+  a {
+    color: var(--p-primary-color);
+  }
+}
+
+.auth-form__hint {
+  margin: -0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--p-text-muted-color);
+}
+
+.auth-form__title {
+  margin: 0;
+  font-size: 1.375rem;
+}

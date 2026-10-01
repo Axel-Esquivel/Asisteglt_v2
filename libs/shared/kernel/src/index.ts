@@ -12,3 +12,4 @@ export * from './lib/values/period';
 export * from './lib/time/clock';
 export * from './lib/collections/readonly-dictionary';
 export * from './lib/collections/collections';
+export * from './lib/values/email';

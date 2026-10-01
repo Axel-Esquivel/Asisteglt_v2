@@ -1,12 +1,14 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
 import { ThemeService } from '@asisteglt/web-core';
-import { Shell } from './layout/shell';
+import { Toast } from 'primeng/toast';
 
+/** Raíz: solo el `router-outlet` de nivel superior; cada contexto aporta su layout. */
 @Component({
   selector: 'app-root',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Shell],
-  template: '<app-shell />',
+  imports: [RouterOutlet, Toast],
+  template: '<router-outlet /><p-toast position="top-right" />',
 })
 export class App implements OnInit {
   private readonly theme: ThemeService = inject(ThemeService);

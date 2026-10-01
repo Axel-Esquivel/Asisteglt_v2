@@ -4,6 +4,7 @@ import { AppConfig, AppConfigLoader } from './app-config';
 const VALID: NodeJS.ProcessEnv = {
   MONGODB_URI: 'mongodb://localhost:27017/asisteglt?replicaSet=rs0',
   REDIS_URL: 'redis://localhost:6379',
+  JWT_SECRET: 'secreto-de-pruebas-con-mas-de-32-caracteres',
 };
 
 describe('AppConfigLoader', () => {
@@ -34,7 +35,7 @@ describe('AppConfigLoader', () => {
         problems = error.problems;
       }
     }
-    expect(problems).toHaveLength(4);
+    expect(problems).toHaveLength(5);
     expect(problems.join(' ')).toContain('MONGODB_URI es obligatoria');
   });
 });

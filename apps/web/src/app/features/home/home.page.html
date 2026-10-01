@@ -1,0 +1,67 @@
+<section class="home">
+  <header class="home__header">
+    @if (user(); as current) {
+      <h1 class="home__title">Hola, {{ current.displayName }}</h1>
+    } @else {
+      <h1 class="home__title">Bienvenido</h1>
+    }
+    <p class="home__subtitle">Reportes e inventarios colaborativos en tiempo real.</p>
+  </header>
+
+  <div class="home__grid">
+    <p-card header="Proyectos" subheader="Reportes e inventarios">
+      <p class="home__text">Crea proyectos, invita a tu equipo y configura tus fuentes de datos.</p>
+      <ng-template #footer>
+        <p-button label="Ir a proyectos" icon="pi pi-folder-open" routerLink="/app/projects" />
+      </ng-template>
+    </p-card>
+
+    <p-card header="Chat" subheader="Global y entre usuarios">
+      <p class="home__text">Conversa con tu equipo en tiempo real.</p>
+      <ng-template #footer>
+        <p-button label="Abrir chat" icon="pi pi-comments" [outlined]="true" routerLink="/app/chat" />
+      </ng-template>
+    </p-card>
+
+    <p-card header="Estado del sistema" subheader="Servicio API">
+      @switch (status()) {
+        @case (LoadStatus.LOADING) {
+          <div class="home__skeleton" data-testid="health-loading">
+            <p-skeleton width="40%" />
+            <p-skeleton width="70%" />
+          </div>
+        }
+        @case (LoadStatus.FAILED) {
+          <p-message severity="error" data-testid="health-error">{{ errorMessage() }}</p-message>
+        }
+        @default {
+          @if (health(); as current) {
+            <dl class="home__facts" data-testid="health-facts">
+              <dt>Estado</dt>
+              <dd>
+                <p-tag
+                  [value]="current.statusLabel()"
+                  [severity]="current.isUp() ? 'success' : 'danger'"
+                  data-testid="health-status"
+                />
+              </dd>
+              <dt>Versión</dt>
+              <dd>{{ current.version }}</dd>
+              <dt>Tiempo activo</dt>
+              <dd>{{ current.uptimeLabel() }}</dd>
+            </dl>
+          }
+        }
+      }
+      <ng-template #footer>
+        <p-button
+          label="Actualizar"
+          icon="pi pi-refresh"
+          [text]="true"
+          [loading]="status() === LoadStatus.LOADING"
+          (onClick)="refresh()"
+        />
+      </ng-template>
+    </p-card>
+  </div>
+</section>

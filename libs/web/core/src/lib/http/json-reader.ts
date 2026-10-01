@@ -25,6 +25,31 @@ export class JsonReader {
     return typeof value === 'number' && Number.isFinite(value) ? Result.ok(value) : this.invalid(key, 'número');
   }
 
+  public boolean(key: string): Result<boolean> {
+    const value: unknown = this.get(key);
+    return typeof value === 'boolean' ? Result.ok(value) : this.invalid(key, 'verdadero/falso');
+  }
+
+  public date(key: string): Result<Date> {
+    return this.string(key).flatMap((raw: string): Result<Date> => {
+      const date: Date = new Date(raw);
+      return Number.isNaN(date.getTime()) ? this.invalid(key, 'una fecha') : Result.ok(date);
+    });
+  }
+
+  public nullableString(key: string): Result<Nullable<string>> {
+    const value: unknown = this.get(key);
+    return value === null || typeof value === 'string' ? Result.ok(value) : this.invalid(key, 'texto o vacío');
+  }
+
+  public object(key: string): Result<JsonReader> {
+    return JsonReader.from(this.get(key));
+  }
+
+  public raw(key: string): unknown {
+    return this.get(key);
+  }
+
   public oneOf<T extends string>(key: string, allowed: ReadonlyArray<T>): Result<T> {
     const value: unknown = this.get(key);
     const match: Nullable<T> = allowed.find((candidate: T): boolean => candidate === value) ?? null;

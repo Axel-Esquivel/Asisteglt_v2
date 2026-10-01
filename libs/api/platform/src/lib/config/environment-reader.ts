@@ -84,6 +84,15 @@ export class EnvironmentReader {
     return value;
   }
 
+  public secret(name: string, minLength: number): string {
+    const value: Nullable<string> = this.raw(name);
+    if (value === null || value.length < minLength) {
+      this.problems.push(`${name} es obligatoria y debe tener al menos ${String(minLength)} caracteres`);
+      return '';
+    }
+    return value;
+  }
+
   public assertValid(): void {
     if (this.problems.length > 0) {
       throw new ConfigurationError(this.problems);

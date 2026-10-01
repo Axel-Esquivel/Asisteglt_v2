@@ -34,3 +34,11 @@ describe('EntityId y AggregateRoot', () => {
     expect(sample.pullDomainEvents()).toEqual([]);
   });
 });
+
+describe('Email', () => {
+  it('normaliza y valida', async (): Promise<void> => {
+    const { Email } = await import('../values/email');
+    expect(Email.create('  Ana@Demo.COM ').unwrap().toString()).toBe('ana@demo.com');
+    expect(Email.create('sin-arroba').isOk()).toBe(false);
+  });
+});

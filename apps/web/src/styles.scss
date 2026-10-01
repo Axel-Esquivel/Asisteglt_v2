@@ -21,3 +21,16 @@ body {
   border-inline: none;
   border-block-start: none;
 }
+
+// Utilidad global: componentes PrimeNG a todo el ancho (styleClass / inputStyleClass).
+.full-width,
+.p-password.full-width,
+.p-password .full-width {
+  width: 100%;
+}
+
+.page-title {
+  margin: 0 0 1rem;
+  font-size: 1.5rem;
+  color: var(--p-text-color);
+}

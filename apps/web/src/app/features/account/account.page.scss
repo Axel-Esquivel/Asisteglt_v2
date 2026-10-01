@@ -1,0 +1,14 @@
+@use '../../../styles/layout' as layout;
+
+.account {
+  @include layout.responsive-grid(320px);
+
+  margin-block-end: 1rem;
+}
+
+.account__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  align-items: flex-start;
+}

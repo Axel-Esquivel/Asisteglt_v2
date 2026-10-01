@@ -19,6 +19,7 @@ const expectations = [
   { file: 'violations.html', rule: 'asisteglt/primeng-controls-only', text: '<input>', what: '<input> sin directiva PrimeNG' },
   { file: 'violations.html', rule: 'asisteglt/primeng-controls-only', text: '<select>', what: '<select> nativo' },
   { file: 'violations.html', rule: 'asisteglt/primeng-controls-only', text: '<table>', what: '<table> nativo' },
+  { file: 'violations.html', rule: 'asisteglt/no-template-safe-navigation', what: '?. en plantilla' },
 ];
 
 const eslint = new ESLint({ cwd: root, overrideConfigFile: join(root, 'tools', 'lint-guard', 'eslint.config.mjs') });

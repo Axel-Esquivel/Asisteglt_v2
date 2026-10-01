@@ -1,0 +1,29 @@
+@use '../../../styles/layout' as layout;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.shell__brand {
+  margin-inline-start: 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--p-primary-color);
+}
+
+.shell__user {
+  margin-inline-start: 0.5rem;
+  color: var(--p-text-color);
+
+  @media (max-width: layout.$breakpoint-md) {
+    display: none;
+  }
+}
+
+.shell__content {
+  @include layout.page-container;
+
+  flex: 1;
+}

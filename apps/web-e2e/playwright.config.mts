@@ -19,12 +19,32 @@ export default defineConfig({
     baseURL,
     trace: 'on-first-retry',
   },
-  webServer: {
-    command: 'npx nx run web:serve',
-    url: 'http://localhost:4200',
-    reuseExistingServer: true,
-    cwd: workspaceRoot,
-  },
+  // API en memoria (sin MongoDB) + web con proxy /api → :3000.
+  webServer: [
+    {
+      command: 'npx nx run api:serve',
+      url: 'http://localhost:3000/api/v1/health',
+      reuseExistingServer: true,
+      cwd: workspaceRoot,
+      timeout: 180_000,
+      env: {
+        NODE_ENV: 'test',
+        DATA_STORE: 'memory',
+        API_PORT: '3000',
+        MONGODB_URI: 'mongodb://localhost:27017/e2e',
+        REDIS_URL: 'redis://localhost:6379',
+        JWT_SECRET: 'secreto-e2e-con-al-menos-32-caracteres',
+        LOG_LEVEL: 'warn',
+      },
+    },
+    {
+      command: 'npx nx run web:serve',
+      url: 'http://localhost:4200',
+      reuseExistingServer: true,
+      cwd: workspaceRoot,
+      timeout: 180_000,
+    },
+  ],
   projects: [
     {
       name: 'chromium',

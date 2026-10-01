@@ -11,14 +11,14 @@ describe('App', () => {
     }).compileComponents();
   });
 
-  it('muestra la marca y el botón de menú', async (): Promise<void> => {
+  it('monta el router-outlet raíz y el toast global', async (): Promise<void> => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const element: unknown = fixture.nativeElement;
     expect(element).toBeInstanceOf(HTMLElement);
     if (element instanceof HTMLElement) {
-      expect(element.textContent).toContain('AsisteGLT');
-      expect(element.querySelector('[aria-label="Abrir menú"]')).not.toBeNull();
+      expect(element.querySelector('router-outlet')).not.toBeNull();
+      expect(element.querySelector('p-toast')).not.toBeNull();
     }
   });
 });
