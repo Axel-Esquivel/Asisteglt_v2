@@ -1,0 +1,78 @@
+<div class="projects__header">
+  <h1 class="page-title">Proyectos</h1>
+  <p-button label="Nuevo proyecto" icon="pi pi-plus" (onClick)="openDialog()" />
+</div>
+
+@switch (status()) {
+  @case (LoadStatus.LOADING) {
+    <div class="projects__grid">
+      <p-skeleton height="9rem" />
+      <p-skeleton height="9rem" />
+      <p-skeleton height="9rem" />
+    </div>
+  }
+  @case (LoadStatus.FAILED) {
+    <p-message severity="error">No se pudieron cargar los proyectos.</p-message>
+  }
+  @default {
+    @if (projects().length === 0) {
+      <p-message severity="info" data-testid="projects-empty">
+        Aún no participas en ningún proyecto. Crea uno o usa un vínculo de invitación.
+      </p-message>
+    } @else {
+      <div class="projects__grid" data-testid="projects-grid">
+        @for (project of projects(); track project.id) {
+          <p-card styleClass="projects__card">
+            <ng-template #title>
+              <span class="projects__title">
+                <i [class]="project.moduleIcon()" aria-hidden="true"></i>
+                {{ project.name }}
+              </span>
+            </ng-template>
+            <ng-template #subtitle>{{ project.moduleLabel() }}</ng-template>
+            <p class="projects__description">{{ project.description === '' ? 'Sin descripción' : project.description }}</p>
+            <div class="projects__meta">
+              <p-tag [value]="project.roleLabel()" severity="secondary" />
+              <span>{{ project.memberCount }} {{ project.memberCount === 1 ? 'miembro' : 'miembros' }}</span>
+            </div>
+            <ng-template #footer>
+              <p-button label="Abrir" icon="pi pi-arrow-right" iconPos="right" [text]="true" (onClick)="open(project)" />
+            </ng-template>
+          </p-card>
+        }
+      </div>
+    }
+  }
+}
+
+<p-dialog
+  header="Nuevo proyecto"
+  [modal]="true"
+  [visible]="dialogOpen()"
+  (visibleChange)="dialogOpen.set($event)"
+  [style]="{ width: 'min(32rem, 95vw)' }"
+>
+  <form class="projects__form" [formGroup]="form" (ngSubmit)="create()">
+    <p-selectbutton
+      [options]="moduleOptions"
+      optionLabel="label"
+      optionValue="value"
+      formControlName="moduleType"
+      [allowEmpty]="false"
+      ariaLabelledBy="module-label"
+    />
+    <span id="module-label" class="projects__hint">Módulo del proyecto (no se puede cambiar después)</span>
+    <p-floatlabel variant="on">
+      <input pInputText id="projectName" formControlName="name" class="full-width" />
+      <label for="projectName">Nombre</label>
+    </p-floatlabel>
+    <p-floatlabel variant="on">
+      <textarea pTextarea id="projectDescription" formControlName="description" rows="3" class="full-width"></textarea>
+      <label for="projectDescription">Descripción</label>
+    </p-floatlabel>
+    <div class="projects__actions">
+      <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="closeDialog()" />
+      <p-button type="submit" label="Crear proyecto" icon="pi pi-check" [loading]="saving()" />
+    </div>
+  </form>
+</p-dialog>

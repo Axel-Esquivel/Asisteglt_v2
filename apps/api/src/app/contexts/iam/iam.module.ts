@@ -28,6 +28,7 @@ export class IamModule {
   public static register(store: DataStore): DynamicModule {
     return {
       module: IamModule,
+      global: true,
       imports: [JwtModule.register({})],
       controllers: [AuthController, UsersController],
       providers: [
@@ -57,7 +58,7 @@ export class IamModule {
         UserDirectory,
         { provide: APP_GUARD, useClass: AccessTokenGuard },
       ],
-      exports: [AccessTokenIssuer, AccountService, UserDirectory],
+      exports: [AccessTokenIssuer, AccountService, UserDirectory, OpaqueTokenService],
     };
   }
 }

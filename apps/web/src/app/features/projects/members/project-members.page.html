@@ -1,0 +1,90 @@
+<p-card>
+  <ng-template #title>
+    <div class="members__title">
+      <span>Miembros</span>
+      @if (canManage()) {
+        <p-button label="Agregar miembro" icon="pi pi-user-plus" size="small" (onClick)="openDialog()" />
+      }
+    </div>
+  </ng-template>
+  <p-table [value]="members()" dataKey="userId" [tableStyle]="{ 'min-width': '40rem' }" data-testid="members-table">
+    <ng-template #header>
+      <tr>
+        <th>Nombre</th>
+        <th>Correo</th>
+        <th>Rol</th>
+        <th>Desde</th>
+        <th></th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-member>
+      <tr>
+        <td>
+          {{ member.displayName }}
+          @if (isMe(member)) {
+            <p-tag value="Tú" severity="info" />
+          }
+        </td>
+        <td>{{ member.email }}</td>
+        <td>
+          @if (canManage() && !member.isOwner()) {
+            <p-select
+              [options]="roleOptions()"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="member.role"
+              (ngModelChange)="changeRole(member, $event)"
+              [ariaLabel]="'Rol de ' + member.displayName"
+              appendTo="body"
+            />
+          } @else {
+            <p-tag [value]="member.roleLabel()" [severity]="member.isOwner() ? 'contrast' : 'secondary'" />
+          }
+        </td>
+        <td>{{ member.joinedAt | date: 'mediumDate' }}</td>
+        <td>
+          @if (!member.isOwner() && (canManage() || isMe(member))) {
+            <p-button
+              [icon]="isMe(member) ? 'pi pi-sign-out' : 'pi pi-user-minus'"
+              [text]="true"
+              severity="danger"
+              [ariaLabel]="isMe(member) ? 'Salir del proyecto' : 'Quitar a ' + member.displayName"
+              (onClick)="confirmRemove(member)"
+            />
+          }
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</p-card>
+
+<p-dialog
+  header="Agregar miembro"
+  [modal]="true"
+  [visible]="dialogOpen()"
+  (visibleChange)="dialogOpen.set($event)"
+  [style]="{ width: 'min(28rem, 95vw)' }"
+>
+  <form class="members__form" [formGroup]="form" (ngSubmit)="add()">
+    <p-floatlabel variant="on">
+      <input pInputText id="memberEmail" type="email" formControlName="email" class="full-width" />
+      <label for="memberEmail">Correo de la cuenta</label>
+    </p-floatlabel>
+    <p-floatlabel variant="on">
+      <p-select
+        inputId="memberRole"
+        [options]="roleOptions()"
+        optionLabel="label"
+        optionValue="value"
+        formControlName="role"
+        styleClass="full-width"
+        appendTo="body"
+      />
+      <label for="memberRole">Rol</label>
+    </p-floatlabel>
+    <div class="members__actions">
+      <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="dialogOpen.set(false)" />
+      <p-button type="submit" label="Agregar" icon="pi pi-check" [loading]="saving()" />
+    </div>
+  </form>
+</p-dialog>

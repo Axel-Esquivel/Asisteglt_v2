@@ -1,0 +1,32 @@
+@use '../../../../styles/layout' as layout;
+
+.overview {
+  @include layout.responsive-grid(320px);
+}
+
+.overview__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  align-items: flex-start;
+}
+
+.overview__text {
+  margin: 0;
+  color: var(--p-text-muted-color);
+}
+
+.overview__facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.5rem 1rem;
+  margin: 0;
+
+  dt {
+    color: var(--p-text-muted-color);
+  }
+
+  dd {
+    margin: 0;
+  }
+}

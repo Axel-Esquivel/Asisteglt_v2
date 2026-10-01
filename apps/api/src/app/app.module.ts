@@ -6,6 +6,7 @@ import { CorrelationIdMiddleware } from './common/correlation/correlation-id.mid
 import { PersistenceModule } from './common/persistence/persistence.module';
 import { AppConfig } from './config/app-config';
 import { IamModule } from './contexts/iam/iam.module';
+import { ProjectsModule } from './contexts/projects/projects.module';
 import { HealthController } from './health/health.controller';
 import { HealthService } from './health/health.service';
 
@@ -16,7 +17,11 @@ export class AppModule implements NestModule {
     return {
       module: AppModule,
       global: true,
-      imports: [PersistenceModule.forRoot(config.dataStore), IamModule.register(config.dataStore)],
+      imports: [
+        PersistenceModule.forRoot(config.dataStore),
+        IamModule.register(config.dataStore),
+        ProjectsModule.register(config.dataStore),
+      ],
       controllers: [HealthController],
       providers: [
         { provide: AppConfig, useValue: config },

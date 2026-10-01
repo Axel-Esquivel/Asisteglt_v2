@@ -1,0 +1,55 @@
+@use '../../../../styles/layout' as layout;
+
+.projects__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-block-end: 1rem;
+
+  .page-title {
+    margin: 0;
+  }
+}
+
+.projects__grid {
+  @include layout.responsive-grid(280px);
+}
+
+.projects__title {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.projects__description {
+  margin: 0 0 0.75rem;
+  color: var(--p-text-muted-color);
+}
+
+.projects__meta {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  color: var(--p-text-muted-color);
+}
+
+.projects__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding-block-start: 0.5rem;
+}
+
+.projects__hint {
+  margin-block-start: -0.75rem;
+  font-size: 0.85rem;
+  color: var(--p-text-muted-color);
+}
+
+.projects__actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}

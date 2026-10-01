@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { EntityId } from '@asisteglt/shared-kernel';
+import { Email, EntityId, Optional } from '@asisteglt/shared-kernel';
 import { UserRepository } from '../domain/ports';
 import { User } from '../domain/user';
 
@@ -12,6 +12,14 @@ export class UserDirectory {
 
   public async search(text: string): Promise<User[]> {
     return text.trim().length < 2 ? [] : this.users.search(text, UserDirectory.MAX_RESULTS);
+  }
+
+  public findById(id: EntityId): Promise<Optional<User>> {
+    return this.users.findById(id);
+  }
+
+  public findByEmail(email: Email): Promise<Optional<User>> {
+    return this.users.findByEmail(email);
   }
 
   public findMany(ids: ReadonlyArray<EntityId>): Promise<User[]> {

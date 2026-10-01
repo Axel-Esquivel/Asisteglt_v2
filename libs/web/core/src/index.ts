@@ -18,3 +18,5 @@ export * from './lib/auth/auth.api-client';
 export * from './lib/auth/auth-session';
 export * from './lib/auth/auth-http.interceptor';
 export * from './lib/auth/auth.guards';
+export * from './lib/http/field-reader';
+export * from './lib/ui/notifier';

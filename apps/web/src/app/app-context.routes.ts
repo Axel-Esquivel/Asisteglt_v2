@@ -13,4 +13,13 @@ export const APP_CONTEXT_ROUTES: Route[] = [
     title: 'Mi cuenta · AsisteGLT',
     loadComponent: () => import('./features/account/account.page').then((m) => m.AccountPage),
   },
+  {
+    path: 'projects',
+    loadChildren: () => import('./features/projects/projects.routes').then((m) => m.PROJECTS_ROUTES),
+  },
+  {
+    path: 'join/:token',
+    title: 'Unirse a un proyecto · AsisteGLT',
+    loadComponent: () => import('./features/projects/join/join-project.page').then((m) => m.JoinProjectPage),
+  },
 ];
