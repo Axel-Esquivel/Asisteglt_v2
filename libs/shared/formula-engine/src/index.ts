@@ -9,3 +9,4 @@ export * from './lib/type-checker';
 export * from './lib/evaluator';
 export * from './lib/printer';
 export * from './lib/compiler';
+export * from './lib/aggregate-requests';

@@ -34,6 +34,7 @@ const REPORT_DEFINITION_SCHEMA: Schema<ReportDefinitionRecord> = new Schema<Repo
     companyId: { type: String, default: null },
     onlyWhenFieldKey: { type: String, default: null },
     includeUnclassified: { type: Boolean, required: true },
+    formulaColumns: { type: Schema.Types.Mixed, default: [] },
     updatedAt: { type: Date, required: true },
   },
   { collection: 'report_definitions', versionKey: false },

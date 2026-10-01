@@ -1,4 +1,4 @@
-import { OperationKind, OperationStepDto } from '@asisteglt/shared-contracts';
+import { OperationKind, OperationStepDto, RateQuote } from '@asisteglt/shared-contracts';
 import {
   CompiledFormula,
   FieldInfo,
@@ -19,6 +19,8 @@ const STEP: FieldDecoder<OperationStepDto> = new FieldDecoder<OperationStepDto>(
     sourceKey: f.nullableString('sourceKey'),
     collectionId: f.nullableString('collectionId'),
     rateFieldKey: f.nullableString('rateFieldKey'),
+    currencyFieldKey: f.nullableString('currencyFieldKey'),
+    quote: f.nullableString('quote') === null ? null : f.oneOf('quote', Object.values(RateQuote)),
     targetCurrency: f.nullableString('targetCurrency'),
   }),
 );
@@ -50,6 +52,18 @@ export class OperationsView {
   public static readonly KINDS: Option<OperationKind>[] = [
     { label: 'Campo calculado', value: OperationKind.CALCULATED },
     { label: 'Acumulado del año', value: OperationKind.YEAR_TO_DATE },
+    { label: 'Conversión de moneda', value: OperationKind.CURRENCY_CONVERSION },
+  ];
+
+  public static readonly QUOTES: Option<RateQuote>[] = [
+    {
+      label: 'Moneda del registro por 1 de destino (p. ej. 7.75 GTQ por USD)',
+      value: RateQuote.UNITS_PER_TARGET,
+    },
+    {
+      label: 'Moneda destino por 1 del registro (p. ej. 0.13 USD por GTQ)',
+      value: RateQuote.TARGET_PER_UNIT,
+    },
   ];
 }
 
@@ -60,14 +74,14 @@ export class FormulaCheck {
     public readonly message: string,
   ) {}
 
-  public static of(source: string, catalog: CatalogView): FormulaCheck {
+  public static of(source: string, catalog: CatalogView, context: FormulaContext): FormulaCheck {
     if (source.trim() === '') {
       return new FormulaCheck(false, 'Escribe una fórmula, p. ej. =[Debe] - [Haber]');
     }
     const result: Result<CompiledFormula> = new FormulaCompiler().compile(
       source,
       FormulaCheck.resolver(catalog),
-      FormulaContext.RECORD,
+      context,
     );
     const error = result.errorOrNull();
     return error === null

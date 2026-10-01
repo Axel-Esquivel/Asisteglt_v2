@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
+  CollectionFieldDto,
   DataType,
   FieldOrigin,
   FieldRole,
@@ -17,8 +18,10 @@ import {
   OperationKind,
   OperationStepDto,
   ProjectPermission,
+  RateQuote,
 } from '@asisteglt/shared-contracts';
 import { DomainError, Nullable, Result } from '@asisteglt/shared-kernel';
+import { FormulaContext } from '@asisteglt/shared-formula-engine';
 import { Notifier } from '@asisteglt/web-core';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
@@ -31,6 +34,7 @@ import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
 import { ProjectContext } from '../../projects/data/project-context';
 import { CatalogFieldView, CatalogView } from '../data/catalog.model';
+import { CollectionView } from '../data/collections.model';
 import { FormulaCheck, OperationsView } from '../data/operations.model';
 import { ReportsApiClient } from '../data/reports.api-client';
 import { Option, ReportsLabels } from '../data/reports-labels';
@@ -44,27 +48,59 @@ class StepDraft {
     public targetKey: Nullable<string>,
     public formula: string,
     public sourceKey: Nullable<string>,
+    public collectionId: Nullable<string>,
+    public rateFieldKey: Nullable<string>,
+    public currencyFieldKey: Nullable<string>,
+    public quote: Nullable<RateQuote>,
+    public targetCurrency: string,
   ) {}
 
   public static blank(): StepDraft {
-    return new StepDraft(null, `s${String(Date.now())}`, OperationKind.CALCULATED, null, '=', null);
+    return new StepDraft(
+      null,
+      `s${String(Date.now())}`,
+      OperationKind.CALCULATED,
+      null,
+      '=',
+      null,
+      null,
+      null,
+      null,
+      RateQuote.UNITS_PER_TARGET,
+      '',
+    );
   }
 
   public static of(step: OperationStepDto, index: number): StepDraft {
-    return new StepDraft(index, step.id, step.kind, step.targetKey, step.formula ?? '=', step.sourceKey);
+    return new StepDraft(
+      index,
+      step.id,
+      step.kind,
+      step.targetKey,
+      step.formula ?? '=',
+      step.sourceKey,
+      step.collectionId,
+      step.rateFieldKey,
+      step.currencyFieldKey,
+      step.quote ?? RateQuote.UNITS_PER_TARGET,
+      step.targetCurrency ?? '',
+    );
   }
 
   public toStep(targetKey: string): OperationStepDto {
     const calculated: boolean = this.kind === OperationKind.CALCULATED;
+    const conversion: boolean = this.kind === OperationKind.CURRENCY_CONVERSION;
     return {
       id: this.id,
       kind: this.kind,
       targetKey,
       formula: calculated ? this.formula : null,
       sourceKey: calculated ? null : this.sourceKey,
-      collectionId: null,
-      rateFieldKey: null,
-      targetCurrency: null,
+      collectionId: conversion ? this.collectionId : null,
+      rateFieldKey: conversion ? this.rateFieldKey : null,
+      currencyFieldKey: conversion ? this.currencyFieldKey : null,
+      quote: conversion ? this.quote : null,
+      targetCurrency: conversion ? this.targetCurrency.trim().toUpperCase() : null,
     };
   }
 }
@@ -96,6 +132,12 @@ export class OperationsPage implements OnInit {
   protected readonly types: Option<DataType>[] = ReportsLabels.TYPES;
   protected readonly natures: Option<NumericNature>[] = ReportsLabels.NATURES;
   protected readonly calculated: OperationKind = OperationKind.CALCULATED;
+  protected readonly conversion: OperationKind = OperationKind.CURRENCY_CONVERSION;
+  protected readonly quotes: Option<RateQuote>[] = OperationsView.QUOTES;
+  protected readonly collections: WritableSignal<CollectionView[]> = signal<CollectionView[]>([]);
+  protected readonly collectionOptions: Signal<Option<string>[]> = computed((): Option<string>[] =>
+    this.collections().map((c: CollectionView): Option<string> => ({ label: c.name, value: c.id })),
+  );
 
   protected readonly steps: WritableSignal<OperationStepDto[]> = signal<OperationStepDto[]>([]);
   protected readonly draft: WritableSignal<Nullable<StepDraft>> = signal<Nullable<StepDraft>>(null);
@@ -119,14 +161,11 @@ export class OperationsPage implements OnInit {
       .filter((f: CatalogFieldView): boolean => f.active)
       .map((f: CatalogFieldView): Option<string> => ({ label: f.label, value: f.key })),
   );
-  protected readonly sourceOptions: Signal<Option<string>[]> = computed((): Option<string>[] =>
-    this.catalog()
-      .active()
-      .filter(
-        (f: CatalogFieldView): boolean =>
-          f.nature === NumericNature.AMOUNT || f.nature === NumericNature.QUANTITY,
-      )
-      .map((f: CatalogFieldView): Option<string> => ({ label: f.label, value: f.key })),
+  protected readonly additiveOptions: Signal<Option<string>[]> = computed((): Option<string>[] =>
+    this.fieldsOf([NumericNature.AMOUNT, NumericNature.QUANTITY]),
+  );
+  protected readonly convertibleOptions: Signal<Option<string>[]> = computed((): Option<string>[] =>
+    this.fieldsOf([NumericNature.AMOUNT, NumericNature.UNIT_PRICE]),
   );
   protected readonly insertOptions: Signal<Option<string>[]> = computed((): Option<string>[] =>
     this.catalog()
@@ -138,6 +177,24 @@ export class OperationsPage implements OnInit {
     this.load().catch((): void => {
       // Informado en load.
     });
+  }
+
+  protected rateOptions(collectionId: Nullable<string>): Option<string>[] {
+    const collection: Nullable<CollectionView> = this.collection(collectionId);
+    return collection === null
+      ? []
+      : collection
+          .rateFields()
+          .map((f: CollectionFieldDto): Option<string> => ({ label: f.label, value: f.key }));
+  }
+
+  protected currencyOptions(collectionId: Nullable<string>): Option<string>[] {
+    const collection: Nullable<CollectionView> = this.collection(collectionId);
+    return collection === null
+      ? []
+      : collection
+          .textFields()
+          .map((f: CollectionFieldDto): Option<string> => ({ label: f.label, value: f.key }));
   }
 
   protected labelOf(key: string): string {
@@ -161,7 +218,7 @@ export class OperationsPage implements OnInit {
   protected recheck(draft: StepDraft): void {
     this.check.set(
       draft.kind === OperationKind.CALCULATED
-        ? FormulaCheck.of(draft.formula, this.catalog())
+        ? FormulaCheck.of(draft.formula, this.catalog(), FormulaContext.RECORD)
         : FormulaCheck.empty(),
     );
   }
@@ -188,8 +245,8 @@ export class OperationsPage implements OnInit {
       this.notifier.info('Corrige la fórmula antes de aceptar');
       return;
     }
-    if (draft.kind === OperationKind.YEAR_TO_DATE && draft.sourceKey === null) {
-      this.notifier.info('Elige el encabezado que se acumula');
+    if (draft.kind !== OperationKind.CALCULATED && draft.sourceKey === null) {
+      this.notifier.info('Elige el encabezado de origen');
       return;
     }
     const step: OperationStepDto = draft.toStep(draft.targetKey);
@@ -275,8 +332,27 @@ export class OperationsPage implements OnInit {
     this.notifier.success('Operaciones guardadas');
   }
 
+  private collection(id: Nullable<string>): Nullable<CollectionView> {
+    return this.collections().find((c: CollectionView): boolean => c.id === id) ?? null;
+  }
+
+  private fieldsOf(natures: ReadonlyArray<NumericNature>): Option<string>[] {
+    return this.catalog()
+      .active()
+      .filter((f: CatalogFieldView): boolean => f.nature !== null && natures.includes(f.nature))
+      .map((f: CatalogFieldView): Option<string> => ({ label: f.label, value: f.key }));
+  }
+
   private async load(): Promise<void> {
-    const [operations] = await Promise.all([this.api.operations(this.context.id()), this.loadCatalog()]);
+    const [operations, collections] = await Promise.all([
+      this.api.operations(this.context.id()),
+      this.api.collections(this.context.id()),
+      this.loadCatalog(),
+    ]);
+    collections.match(
+      (items: CollectionView[]): void => this.collections.set(items),
+      (e): void => this.notifier.error(e),
+    );
     operations.match(
       (view: OperationsView): void => this.steps.set(view.steps),
       (e): void => this.notifier.error(e),

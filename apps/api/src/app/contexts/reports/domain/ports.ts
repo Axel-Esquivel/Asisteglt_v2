@@ -7,6 +7,7 @@ import { Classification } from './classification';
 import { OperationPipeline } from './operation-pipeline';
 import { OrgStructure } from './org-structure';
 import { ReportDefinition } from './report-definition';
+import { SupplementaryCollection } from './supplementary-collection';
 
 export abstract class OrgStructureRepository {
   public abstract findByProject(projectId: EntityId): Promise<Optional<OrgStructure>>;
@@ -114,4 +115,11 @@ export abstract class ReportDefinitionRepository {
 export abstract class OperationPipelineRepository {
   public abstract findByProject(projectId: EntityId): Promise<Optional<OperationPipeline>>;
   public abstract save(pipeline: OperationPipeline): Promise<void>;
+}
+
+export abstract class CollectionRepository {
+  public abstract findById(id: EntityId): Promise<Optional<SupplementaryCollection>>;
+  public abstract findByProject(projectId: EntityId): Promise<SupplementaryCollection[]>;
+  public abstract save(collection: SupplementaryCollection): Promise<void>;
+  public abstract delete(id: EntityId): Promise<void>;
 }

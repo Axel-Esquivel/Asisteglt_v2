@@ -1,5 +1,5 @@
 import { FieldInfo, ListFieldResolver } from '@asisteglt/shared-formula-engine';
-import { CatalogField, FieldCatalog } from '../domain/field-catalog';
+import { CatalogField, FieldCatalog } from './field-catalog';
 
 /** Adapta el catálogo de encabezados al `FieldResolver` del motor de fórmulas. */
 export class CatalogResolver {

@@ -16,30 +16,13 @@ import { DataRecordSnapshot } from './ports';
 
 /** Tasas de cambio por período (las provee la colección elegida en el paso de conversión). */
 export abstract class RateTable {
-  /** Cuántas unidades de `to` vale una unidad de `from` en el período, o vacío si no hay tasa. */
-  public abstract rate(
-    collectionId: string,
-    rateFieldKey: string,
+  /** `amount` (en la moneda `from`) convertido a la moneda destino del paso, o vacío si no hay tasa. */
+  public abstract convert(
+    step: OperationStepDto,
     period: string,
     from: string,
-    to: string,
+    amount: Decimal,
   ): Nullable<Decimal>;
-
-  public static none(): RateTable {
-    return new NoRates();
-  }
-}
-
-class NoRates extends RateTable {
-  public override rate(
-    _collectionId: string,
-    _rateFieldKey: string,
-    _period: string,
-    from: string,
-    to: string,
-  ): Nullable<Decimal> {
-    return from === to ? Decimal.fromInteger(1).unwrap() : null;
-  }
 }
 
 /** Fuente de registros históricos para los acumulados (rango de períodos del mismo año). */
@@ -158,17 +141,9 @@ export class OperationRunner {
         const amount: Nullable<Decimal> = OperationRunner.decimal(
           step.sourceKey === null ? null : (values[step.sourceKey] ?? null),
         );
-        const rate: Nullable<Decimal> =
-          step.collectionId === null || step.rateFieldKey === null || step.targetCurrency === null
-            ? null
-            : this.rates.rate(
-                step.collectionId,
-                step.rateFieldKey,
-                record.period,
-                record.currency,
-                step.targetCurrency,
-              );
-        return amount === null || rate === null ? null : amount.multiply(rate).toString();
+        const converted: Nullable<Decimal> =
+          amount === null ? null : this.rates.convert(step, record.period, record.currency, amount);
+        return converted === null ? null : converted.toString();
       }
     }
   }

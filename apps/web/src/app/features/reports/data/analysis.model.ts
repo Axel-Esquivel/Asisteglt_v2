@@ -1,4 +1,9 @@
-import { ClassificationNodeDto, ReportDefinitionRequest, RowSource } from '@asisteglt/shared-contracts';
+import {
+  ClassificationNodeDto,
+  FormulaColumnDto,
+  ReportDefinitionRequest,
+  RowSource,
+} from '@asisteglt/shared-contracts';
 import { FieldDecoder, FieldReader, Nullable } from '@asisteglt/shared-kernel';
 
 const NODE: FieldDecoder<ClassificationNodeDto> = new FieldDecoder<ClassificationNodeDto>(
@@ -9,6 +14,10 @@ const NODE: FieldDecoder<ClassificationNodeDto> = new FieldDecoder<Classificatio
     name: f.string('name'),
     patterns: f.stringList('patterns'),
   }),
+);
+
+const FORMULA_COLUMN: FieldDecoder<FormulaColumnDto> = new FieldDecoder<FormulaColumnDto>(
+  (f: FieldReader): FormulaColumnDto => ({ label: f.string('label'), formula: f.string('formula') }),
 );
 
 export class ClassificationView {
@@ -46,6 +55,7 @@ export class ReportDefinitionView {
           companyId: f.nullableString('companyId'),
           onlyWhenFieldKey: f.nullableString('onlyWhenFieldKey'),
           includeUnclassified: f.boolean('includeUnclassified'),
+          formulaColumns: f.list('formulaColumns', FORMULA_COLUMN),
         }),
     );
   }
@@ -72,6 +82,7 @@ export class ComputedReport {
     public readonly records: number,
     public readonly columns: { readonly fieldKey: string; readonly label: string }[],
     public readonly rows: ReportRow[],
+    public readonly warnings: string[],
   ) {}
 
   public static decoder(): FieldDecoder<ComputedReport> {
@@ -94,6 +105,7 @@ export class ComputedReport {
           f.number('records'),
           f.list('columns', column),
           f.list('rows', row),
+          f.stringList('warnings'),
         ),
     );
   }

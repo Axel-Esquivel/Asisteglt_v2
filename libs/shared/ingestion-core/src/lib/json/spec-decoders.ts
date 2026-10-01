@@ -12,12 +12,21 @@ import {
   RowRuleSpec,
   TextOperator,
 } from '@asisteglt/shared-contracts';
-import { Decoder, FieldDecoder, FieldReader, Nullable, Result, ValidationError } from '@asisteglt/shared-kernel';
+import {
+  Decoder,
+  FieldDecoder,
+  FieldReader,
+  Nullable,
+  Result,
+  ValidationError,
+} from '@asisteglt/shared-kernel';
 
 export class IntegerDecoder extends Decoder<number> {
   public override decode(value: unknown): Result<number> {
     const number: Nullable<number> = typeof value === 'number' && Number.isInteger(value) ? value : null;
-    return number === null ? Result.fail(new ValidationError('INVALID_JSON_FIELD', 'Se esperaba un entero')) : Result.ok(number);
+    return number === null
+      ? Result.fail(new ValidationError('INVALID_JSON_FIELD', 'Se esperaba un entero'))
+      : Result.ok(number);
   }
 }
 
@@ -50,7 +59,10 @@ export class SpecDecoders {
   );
 
   public static readonly MASK: Decoder<IdentifierMaskSpec> = new FieldDecoder<IdentifierMaskSpec>(
-    (f: FieldReader): IdentifierMaskSpec => ({ fieldKey: f.string('fieldKey'), pattern: f.string('pattern') }),
+    (f: FieldReader): IdentifierMaskSpec => ({
+      fieldKey: f.string('fieldKey'),
+      pattern: f.string('pattern'),
+    }),
   );
 
   public static readonly DERIVED: Decoder<DerivedAttributeSpec> = new FieldDecoder<DerivedAttributeSpec>(

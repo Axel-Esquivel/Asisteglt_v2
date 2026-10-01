@@ -463,6 +463,197 @@ describe('Reportes: importación (e2e)', () => {
     expect(Body.text(inUse.body, 'message')).toContain('Operación 1');
   });
 
+  it('convierte moneda con una colección, calcula columnas con fórmula y no suma monedas distintas', async (): Promise<void> => {
+    const catalog: Response = await request(app.server())
+      .get(api('/catalog'))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    const fields: CatalogFieldResponse[] = Body.list(Reflect.get(catalog.body, 'fields')).filter(
+      (f: unknown): f is CatalogFieldResponse => typeof f === 'object' && f !== null && 'key' in f,
+    );
+    const keyOf = (label: string): string =>
+      fields
+        .filter((f: CatalogFieldResponse): boolean => f.label === label)
+        .map((f: CatalogFieldResponse): string => f.key)[0] ?? '';
+
+    const rates = {
+      name: 'Tipo de cambio',
+      fields: [
+        { key: '', label: 'Moneda', dataType: 'TEXT', nature: null },
+        { key: '', label: 'Tasa de cierre', dataType: 'DECIMAL', nature: 'RATE' },
+      ],
+      rows: [],
+    };
+    await request(app.server())
+      .post(api('/collections'))
+      .set('authorization', owner.bearer())
+      .send({ ...rates, fields: [rates.fields[0], { ...rates.fields[1], nature: null }] })
+      .expect(400);
+    const created: Response = await request(app.server())
+      .post(api('/collections'))
+      .set('authorization', owner.bearer())
+      .send(rates)
+      .expect(201);
+    const collectionId: string = Body.text(created.body, 'id');
+    const collectionFields: unknown[] = Body.list(Reflect.get(created.body, 'fields'));
+    const currencyKey: string = Body.text(collectionFields[0], 'key');
+    const rateKey: string = Body.text(collectionFields[1], 'key');
+    await request(app.server())
+      .put(api(`/collections/${collectionId}`))
+      .set('authorization', owner.bearer())
+      .send({
+        ...rates,
+        fields: [
+          { ...rates.fields[0], key: currencyKey },
+          { ...rates.fields[1], key: rateKey },
+        ],
+        rows: [
+          { id: '', period: null, values: { [currencyKey]: 'GTQ', [rateKey]: '7.5' } },
+          { id: '', period: '2026-08', values: { [currencyKey]: 'GTQ', [rateKey]: '8' } },
+        ],
+      })
+      .expect(200);
+
+    const usd: Response = await request(app.server())
+      .post(api('/catalog/fields'))
+      .set('authorization', owner.bearer())
+      .send({
+        label: 'Saldo final USD',
+        origin: 'DERIVED',
+        role: 'DATA',
+        dataType: 'DECIMAL',
+        nature: 'AMOUNT',
+        aggregation: null,
+        describes: null,
+        weightField: null,
+      })
+      .expect(201);
+    const usdKey: string = Body.text(usd.body, 'key');
+    const current: Response = await request(app.server())
+      .get(api('/operations'))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    const steps: unknown[] = Body.list(Reflect.get(current.body, 'steps'));
+    const conversion = {
+      id: 's3',
+      kind: 'CURRENCY_CONVERSION',
+      targetKey: usdKey,
+      formula: null,
+      sourceKey: keyOf('Saldo final'),
+      collectionId,
+      rateFieldKey: rateKey,
+      currencyFieldKey: currencyKey,
+      quote: 'UNITS_PER_TARGET',
+      targetCurrency: 'usd',
+    };
+    await request(app.server())
+      .put(api('/operations'))
+      .set('authorization', owner.bearer())
+      .send({ steps: [...steps, { ...conversion, rateFieldKey: currencyKey }] })
+      .expect(400);
+    await request(app.server())
+      .put(api('/operations'))
+      .set('authorization', owner.bearer())
+      .send({ steps: [...steps, conversion] })
+      .expect(200);
+
+    const records: Response = await request(app.server())
+      .get(api('/records?period=2026-08'))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    expect(Body.list(Reflect.get(records.body, 'rows'))[0]).toMatchObject({ values: { [usdKey]: '981.25' } });
+
+    // Segunda compañía en dólares: sus montos no se suman con los quetzales.
+    const company: Response = await request(app.server())
+      .post(api('/org-structure/units'))
+      .set('authorization', owner.bearer())
+      .send({
+        level: 'COMPANY',
+        parentId: scope['countryId'],
+        code: 'DEMO-B',
+        name: 'Unidad DEMO-B',
+        currencies: [],
+      })
+      .expect(201);
+    await request(app.server())
+      .post(api('/imports'))
+      .set('authorization', owner.bearer())
+      .field(
+        'manifest',
+        JSON.stringify({
+          items: [
+            {
+              fileName: 'balance_usd.txt',
+              profileId,
+              period: '2026-08',
+              ...scope,
+              currency: 'USD',
+              companyId: Body.text(company.body, 'id'),
+            },
+          ],
+        }),
+      )
+      .attach('files', Buffer.from(balance('1,000.00'), 'latin1'), 'balance_usd.txt')
+      .expect(201);
+    await app.app.get(ImportQueue).idle();
+
+    const consolidated = {
+      name: 'Consolidado',
+      rowSource: 'FIELD',
+      classificationId: null,
+      rowFieldKey: keyOf('Código de cuenta'),
+      measures: [keyOf('Saldo final')],
+      profileId: null,
+      companyId: null,
+      onlyWhenFieldKey: null,
+      includeUnclassified: true,
+      formulaColumns: [
+        { label: 'Saldo en USD', formula: '=SUMA([Saldo final USD])' },
+        { label: 'Movimiento neto', formula: '=SUMA([debe]) - SUMA([Haber])' },
+      ],
+    };
+    const report: Response = await request(app.server())
+      .post(api('/report-definitions'))
+      .set('authorization', owner.bearer())
+      .send(consolidated)
+      .expect(201);
+    const reportBody: unknown = report.body;
+    expect(reportBody).toMatchObject({
+      formulaColumns: [{ formula: '=SUMA([Saldo final USD])' }, { formula: '=SUMA([Debe]) - SUMA([Haber])' }],
+    });
+    await request(app.server())
+      .post(api('/report-definitions'))
+      .set('authorization', owner.bearer())
+      .send({
+        ...consolidated,
+        name: 'Mala',
+        formulaColumns: [{ label: 'X', formula: '=SUMA([Nombre de cuenta])' }],
+      })
+      .expect(400);
+    const run: Response = await request(app.server())
+      .get(api(`/report-definitions/${Body.text(report.body, 'id')}/run?period=2026-08`))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    const runBody: unknown = run.body;
+    expect(runBody).toMatchObject({
+      columns: [{ label: 'Saldo final' }, { label: 'Saldo en USD' }, { label: 'Movimiento neto' }],
+    });
+    const warnings: unknown[] = Body.list(Reflect.get(run.body, 'warnings'));
+    expect(
+      warnings.some(
+        (w: unknown): boolean =>
+          typeof w === 'string' && w.includes('«Saldo final» tiene montos en varias monedas (GTQ, USD)'),
+      ),
+    ).toBe(true);
+    const total: unknown = Body.list(Reflect.get(run.body, 'rows')).at(-1);
+    expect(total).toMatchObject({ label: 'Total', values: [null, '3000', null] });
+
+    await request(app.server())
+      .delete(api(`/collections/${collectionId}`))
+      .set('authorization', owner.bearer())
+      .expect(409);
+  });
+
   it('rechaza alcances incoherentes y marca como fallido un archivo con demasiados rechazos', async (): Promise<void> => {
     await request(app.server())
       .post(api('/imports'))

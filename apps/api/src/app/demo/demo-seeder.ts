@@ -244,6 +244,7 @@ export class DemoSeeder implements OnApplicationBootstrap {
         companyId: null,
         onlyWhenFieldKey: key('Es cuenta de detalle'),
         includeUnclassified: true,
+        formulaColumns: [],
       })
     ).unwrap();
   }

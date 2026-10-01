@@ -2,13 +2,30 @@ import {
   Aggregation,
   ClassificationNodeDto,
   ComputedReportResponse,
+  FormulaColumnDto,
+  NumericNature,
   ReportColumnResponse,
   ReportRowResponse,
   RowSource,
 } from '@asisteglt/shared-contracts';
 import { CellValue } from '@asisteglt/shared-ingestion-core';
-import { Decimal, Nullable } from '@asisteglt/shared-kernel';
+import {
+  AggregateRequest,
+  AggregateRequestCollector,
+  EvaluationContext,
+  Evaluator,
+  Expression,
+  FormulaContext,
+  FormulaValue,
+  Lexer,
+  ListFieldResolver,
+  Parser,
+  RawValue,
+  Token,
+} from '@asisteglt/shared-formula-engine';
+import { Decimal, Nullable, Result } from '@asisteglt/shared-kernel';
 import { Accumulator } from './accumulator';
+import { CatalogResolver } from './catalog-resolver';
 import { Classification } from './classification';
 import { CatalogField, FieldCatalog } from './field-catalog';
 import { DataRecordSnapshot } from './ports';
@@ -20,15 +37,19 @@ class Measure {
     public readonly label: string,
     public readonly aggregation: Aggregation,
     public readonly weightKey: Nullable<string>,
+    /** Montos y precios llevan moneda: no se combinan si vienen en monedas distintas. */
+    public readonly currencySensitive: boolean,
   ) {}
 }
 
-/** Grupo de filas con un acumulador por medida. */
+/** Grupo de filas con un acumulador (y las monedas vistas) por medida. */
 class Bucket {
   public readonly accumulators: Accumulator[];
+  public readonly currencies: Array<Set<string>>;
 
   public constructor(measures: ReadonlyArray<Measure>) {
     this.accumulators = measures.map((m: Measure): Accumulator => new Accumulator(m.aggregation));
+    this.currencies = measures.map((): Set<string> => new Set<string>());
   }
 
   public merge(other: Bucket): void {
@@ -38,39 +59,115 @@ class Bucket {
         a.merge(source);
       }
     });
+    this.currencies.forEach((set: Set<string>, i: number): void => {
+      for (const currency of other.currencies[i] ?? []) {
+        set.add(currency);
+      }
+    });
   }
 
-  public values(): Array<string | null> {
-    return this.accumulators.map((a: Accumulator): string | null => a.result());
+  public mixed(index: number): boolean {
+    return (this.currencies[index] ?? new Set<string>()).size > 1;
   }
+
+  /** Resultado de una medida, o vacío si mezcla monedas. */
+  public result(index: number): Nullable<string> {
+    const accumulator: Nullable<Accumulator> = this.accumulators[index] ?? null;
+    return accumulator === null || this.mixed(index) ? null : accumulator.result();
+  }
+}
+
+/** Contexto agregado de una fila del informe para las columnas calculadas. */
+class BucketContext extends EvaluationContext {
+  public constructor(
+    private readonly bucket: Bucket,
+    private readonly index: ReadonlyMap<string, number>,
+  ) {
+    super();
+  }
+
+  public override kind(): FormulaContext {
+    return FormulaContext.AGGREGATE;
+  }
+
+  public override raw(_key: string): RawValue {
+    return null;
+  }
+
+  public override aggregate(
+    key: string,
+    aggregation: Aggregation,
+    weightKey: Nullable<string>,
+  ): Nullable<Decimal> {
+    const position: Nullable<number> =
+      this.index.get(AggregateRequest.idOf(key, aggregation, weightKey)) ?? null;
+    const text: Nullable<string> = position === null ? null : this.bucket.result(position);
+    return text === null
+      ? null
+      : Decimal.of(text).match(
+          (d: Decimal): Nullable<Decimal> => d,
+          (): Nullable<Decimal> => null,
+        );
+  }
+}
+
+class FormulaColumn {
+  public constructor(
+    public readonly label: string,
+    public readonly root: Nullable<Expression>,
+  ) {}
 }
 
 /**
  * Calcula un informe matricial sobre los registros publicados: filas por clasificación (con
- * subtotales jerárquicos) o por un encabezado agrupable, y columnas con las medidas elegidas.
+ * subtotales jerárquicos) o por un encabezado agrupable, columnas con las medidas elegidas y
+ * columnas calculadas con fórmulas agregadas. Nunca suma montos de monedas distintas.
  */
 export class ReportEngine {
   public static readonly UNCLASSIFIED: string = '__unclassified__';
 
-  private readonly measures: Measure[];
+  /** Medidas visibles primero; después las que solo piden las columnas calculadas. */
+  private readonly measures: Measure[] = [];
+  private readonly visible: number;
+  private readonly index: Map<string, number> = new Map<string, number>();
+  private readonly formulas: FormulaColumn[];
+  private readonly resolver: ListFieldResolver;
   private readonly buckets: Map<string, Bucket> = new Map<string, Bucket>();
   private readonly total: Bucket;
   private records: number = 0;
 
   public constructor(
     private readonly definition: ReportDefinition,
-    catalog: FieldCatalog,
+    private readonly catalog: FieldCatalog,
     private readonly classification: Nullable<Classification>,
+    private readonly convertedCurrencies: ReadonlyMap<string, string>,
   ) {
-    this.measures = definition.getSpec().measures.map((key: string): Measure => {
+    this.resolver = CatalogResolver.of(catalog);
+    for (const key of definition.getSpec().measures) {
       const field: Nullable<CatalogField> = catalog.find(key).toNullable();
       const s = field === null ? null : field.snapshot();
-      return new Measure(
+      this.measure(
         key,
-        s === null ? key : s.label,
         s === null ? Aggregation.SUM : s.aggregation,
         s === null ? null : s.weightField,
+        true,
       );
+    }
+    this.visible = this.measures.length;
+    this.formulas = definition.getSpec().formulaColumns.map((c: FormulaColumnDto): FormulaColumn => {
+      const root: Nullable<Expression> = new Lexer()
+        .tokenize(c.formula)
+        .flatMap((tokens: Token[]): Result<Expression> => new Parser(this.resolver).parse(tokens))
+        .match(
+          (e: Expression): Nullable<Expression> => e,
+          (): Nullable<Expression> => null,
+        );
+      if (root !== null) {
+        for (const request of new AggregateRequestCollector(this.resolver).collect(root)) {
+          this.measure(request.key, request.aggregation, request.weightKey, false);
+        }
+      }
+      return new FormulaColumn(c.label, root);
     });
     this.total = new Bucket(this.measures);
   }
@@ -91,11 +188,16 @@ export class ReportEngine {
       const value: Nullable<Decimal> = ReportEngine.decimal(record.values[m.key] ?? null);
       const weight: Nullable<Decimal> =
         m.weightKey === null ? null : ReportEngine.decimal(record.values[m.weightKey] ?? null);
-      const accumulator: Nullable<Accumulator> = bucket.accumulators[i] ?? null;
-      const totalAccumulator: Nullable<Accumulator> = this.total.accumulators[i] ?? null;
-      if (accumulator !== null && totalAccumulator !== null) {
-        accumulator.add(value, weight);
-        totalAccumulator.add(value, weight);
+      for (const target of [bucket, this.total]) {
+        const accumulator: Nullable<Accumulator> = target.accumulators[i] ?? null;
+        if (accumulator !== null) {
+          accumulator.add(value, weight);
+        }
+        if (value !== null && m.currencySensitive) {
+          (target.currencies[i] ?? new Set<string>()).add(
+            this.convertedCurrencies.get(m.key) ?? record.currency,
+          );
+        }
       }
     });
   }
@@ -106,27 +208,90 @@ export class ReportEngine {
       spec.rowSource === RowSource.CLASSIFICATION && this.classification !== null
         ? this.classificationRows(this.classification)
         : this.fieldRows();
-    if (spec.includeUnclassified || spec.rowSource === RowSource.FIELD) {
-      const unclassified: Nullable<Bucket> = this.buckets.get(ReportEngine.UNCLASSIFIED) ?? null;
-      if (unclassified !== null && spec.rowSource === RowSource.CLASSIFICATION) {
-        rows.push({
-          key: ReportEngine.UNCLASSIFIED,
-          label: 'Sin clasificar',
-          level: 0,
-          total: false,
-          values: unclassified.values(),
-        });
-      }
+    const unclassified: Nullable<Bucket> = this.buckets.get(ReportEngine.UNCLASSIFIED) ?? null;
+    if (spec.includeUnclassified && unclassified !== null && spec.rowSource === RowSource.CLASSIFICATION) {
+      rows.push({
+        key: ReportEngine.UNCLASSIFIED,
+        label: 'Sin clasificar',
+        level: 0,
+        total: false,
+        values: this.values(unclassified),
+      });
     }
-    rows.push({ key: '__total__', label: 'Total', level: 0, total: true, values: this.total.values() });
+    rows.push({ key: '__total__', label: 'Total', level: 0, total: true, values: this.values(this.total) });
     return {
       definitionId,
       name: spec.name,
       period,
       records: this.records,
-      columns: this.measures.map((m: Measure): ReportColumnResponse => ({ fieldKey: m.key, label: m.label })),
+      columns: [
+        ...this.measures
+          .slice(0, this.visible)
+          .map((m: Measure): ReportColumnResponse => ({ fieldKey: m.key, label: m.label })),
+        ...this.formulas.map((f: FormulaColumn, i: number): ReportColumnResponse => ({
+          fieldKey: `formula:${String(i + 1)}`,
+          label: f.label,
+        })),
+      ],
       rows,
+      warnings: this.warnings(),
     };
+  }
+
+  private measure(
+    key: string,
+    aggregation: Aggregation,
+    weightKey: Nullable<string>,
+    visible: boolean,
+  ): void {
+    const id: string = AggregateRequest.idOf(key, aggregation, weightKey);
+    if (!visible && this.index.has(id)) {
+      return;
+    }
+    const field: Nullable<CatalogField> = this.catalog.find(key).toNullable();
+    const nature: Nullable<NumericNature> = field === null ? null : field.snapshot().nature;
+    const sensitive: boolean = nature === NumericNature.AMOUNT || nature === NumericNature.UNIT_PRICE;
+    this.index.set(id, this.measures.length);
+    this.measures.push(
+      new Measure(key, field === null ? key : field.label, aggregation, weightKey, sensitive),
+    );
+  }
+
+  private values(bucket: Bucket): Array<string | null> {
+    const context: BucketContext = new BucketContext(bucket, this.index);
+    return [
+      ...this.measures
+        .slice(0, this.visible)
+        .map((_m: Measure, i: number): Nullable<string> => bucket.result(i)),
+      ...this.formulas.map((f: FormulaColumn): Nullable<string> =>
+        f.root === null ? null : ReportEngine.cell(new Evaluator(this.resolver, context).evaluate(f.root)),
+      ),
+    ];
+  }
+
+  private warnings(): string[] {
+    const reported: Set<string> = new Set<string>();
+    const warnings: string[] = [];
+    this.measures.forEach((m: Measure, i: number): void => {
+      if (this.total.mixed(i) && !reported.has(m.key)) {
+        reported.add(m.key);
+        const currencies: string = [...(this.total.currencies[i] ?? [])].sort().join(', ');
+        warnings.push(
+          `«${m.label}» tiene montos en varias monedas (${currencies}); no se suman entre sí. Conviértelos con una operación de conversión de moneda o filtra por compañía.`,
+        );
+      }
+    });
+    return warnings;
+  }
+
+  private static cell(value: FormulaValue): Nullable<string> {
+    if (value instanceof Decimal) {
+      return value.toString();
+    }
+    if (typeof value === 'boolean') {
+      return value ? 'Sí' : 'No';
+    }
+    return value;
   }
 
   private rowKey(record: DataRecordSnapshot): Nullable<string> {
@@ -156,7 +321,7 @@ export class ReportEngine {
         label: key,
         level: 0,
         total: false,
-        values: bucket.values(),
+        values: this.values(bucket),
       }));
   }
 
@@ -176,7 +341,7 @@ export class ReportEngine {
         bucket.merge(visit(child, level + 1));
       }
       const label: string = node.code === '' ? node.name : `${node.code} ${node.name}`;
-      rows[index] = { key: node.id, label, level, total: children.length > 0, values: bucket.values() };
+      rows[index] = { key: node.id, label, level, total: children.length > 0, values: this.values(bucket) };
       return bucket;
     };
     for (const root of classification.children(null)) {

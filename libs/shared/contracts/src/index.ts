@@ -9,3 +9,4 @@ export * from './lib/reports/ingestion.contracts';
 export * from './lib/reports/analysis.contracts';
 export * from './lib/inventory/inventory.contracts';
 export * from './lib/reports/operations.contracts';
+export * from './lib/reports/collections.contracts';

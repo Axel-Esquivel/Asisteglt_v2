@@ -3,13 +3,17 @@ import {
   AnalysisErrorCode,
   ClassificationRequest,
   ComputedReportResponse,
+  FormulaColumnDto,
   ProjectPermission,
   ReportDefinitionRequest,
+  ReportDefinitionResponse,
   RowSource,
 } from '@asisteglt/shared-contracts';
 import { Clock, EntityId, NotFoundError, Nullable, Result, ValidationError } from '@asisteglt/shared-kernel';
 import { ProjectAccess } from '../../projects/application/project-access';
 import { Project } from '../../projects/domain/project';
+import { FormulaFormatter, ListFieldResolver } from '@asisteglt/shared-formula-engine';
+import { CatalogResolver } from '../domain/catalog-resolver';
 import { Classification } from '../domain/classification';
 import { FieldCatalog } from '../domain/field-catalog';
 import {
@@ -168,6 +172,7 @@ export class AnalysisService {
               definition,
               await this.catalogs.of(p.getId()),
               classification,
+              await this.operations.convertedCurrencies(p.getId()),
             );
             const query: RecordQuery = new RecordQuery(
               p.getId().toString(),
@@ -185,6 +190,24 @@ export class AnalysisService {
           },
         ),
     );
+  }
+
+  /** Respuesta con las fórmulas de las columnas calculadas escritas con los nombres vigentes. */
+  public async present(definition: ReportDefinition): Promise<ReportDefinitionResponse> {
+    const snapshot = definition.toSnapshot();
+    const catalog: FieldCatalog = await this.catalogs.of(EntityId.fromString(snapshot.projectId).unwrap());
+    const resolver: ListFieldResolver = CatalogResolver.of(catalog);
+    const formatter: FormulaFormatter = new FormulaFormatter();
+    const spec: ReportDefinitionRequest = definition.getSpec();
+    return {
+      ...spec,
+      id: snapshot.id,
+      formulaColumns: spec.formulaColumns.map((c: FormulaColumnDto): FormulaColumnDto => ({
+        label: c.label,
+        formula: formatter.format(c.formula, resolver),
+      })),
+      updatedAt: snapshot.updatedAt.toISOString(),
+    };
   }
 
   private async classification(project: Project, id: string): Promise<Result<Classification>> {

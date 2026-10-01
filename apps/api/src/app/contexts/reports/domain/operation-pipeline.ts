@@ -16,6 +16,7 @@ import {
 } from '@asisteglt/shared-formula-engine';
 import { AggregateRoot, Clock, EntityId, Nullable, Result, ValidationError } from '@asisteglt/shared-kernel';
 import { CatalogField, FieldCatalog } from './field-catalog';
+import { SupplementaryCollection } from './supplementary-collection';
 
 export interface OperationPipelineSnapshot {
   readonly id: string;
@@ -68,7 +69,7 @@ export class OperationPipeline extends AggregateRoot {
     steps: ReadonlyArray<OperationStepDto>,
     catalog: FieldCatalog,
     resolver: FieldResolver,
-    collectionExists: (id: string) => boolean,
+    collectionOf: (id: string) => Nullable<SupplementaryCollection>,
     clock: Clock,
   ): Result<OperationPipeline> {
     const targets: Set<string> = new Set<string>();
@@ -79,7 +80,7 @@ export class OperationPipeline extends AggregateRoot {
         index + 1,
         catalog,
         resolver,
-        collectionExists,
+        collectionOf,
       );
       if (!result.isOk()) {
         return Result.fail(result.errorOrNull() ?? OperationPipeline.invalid('Paso inválido'));
@@ -101,12 +102,22 @@ export class OperationPipeline extends AggregateRoot {
   /** Pasos que usan un encabezado (como destino, origen, tasa o dentro de la fórmula). */
   public usages(key: string): string[] {
     return this.steps.flatMap((s: OperationStepDto, index: number): string[] =>
-      s.targetKey === key ||
-      s.sourceKey === key ||
-      s.rateFieldKey === key ||
-      (s.formula ?? '').includes(`[#${key}]`)
+      s.targetKey === key || s.sourceKey === key || (s.formula ?? '').includes(`[#${key}]`)
         ? [`Operación ${String(index + 1)}`]
         : [],
+    );
+  }
+
+  public usesCollection(collectionId: string): boolean {
+    return this.steps.some((s: OperationStepDto): boolean => s.collectionId === collectionId);
+  }
+
+  /** Moneda fija de los encabezados escritos por una conversión (destino → moneda). */
+  public convertedCurrencies(): ReadonlyMap<string, string> {
+    return new Map<string, string>(
+      this.steps
+        .filter((s: OperationStepDto): boolean => s.kind === OperationKind.CURRENCY_CONVERSION)
+        .map((s: OperationStepDto): [string, string] => [s.targetKey, s.targetCurrency ?? '']),
     );
   }
 
@@ -125,7 +136,7 @@ export class OperationPipeline extends AggregateRoot {
     number: number,
     catalog: FieldCatalog,
     resolver: FieldResolver,
-    collectionExists: (id: string) => boolean,
+    collectionOf: (id: string) => Nullable<SupplementaryCollection>,
   ): Result<OperationStepDto> {
     const target: Nullable<CatalogField> = catalog.find(step.targetKey).toNullable();
     if (target === null || !target.isActive() || target.snapshot().origin !== FieldOrigin.DERIVED) {
@@ -142,6 +153,8 @@ export class OperationPipeline extends AggregateRoot {
       sourceKey: null,
       collectionId: null,
       rateFieldKey: null,
+      currencyFieldKey: null,
+      quote: null,
       targetCurrency: null,
     };
     switch (step.kind) {
@@ -205,15 +218,26 @@ export class OperationPipeline extends AggregateRoot {
             ),
           );
         }
+        const collection: Nullable<SupplementaryCollection> =
+          step.collectionId === null ? null : collectionOf(step.collectionId);
+        const rate =
+          collection === null || step.rateFieldKey === null ? null : collection.field(step.rateFieldKey);
+        const code =
+          collection === null || step.currencyFieldKey === null
+            ? null
+            : collection.field(step.currencyFieldKey);
         if (
-          step.collectionId === null ||
-          !collectionExists(step.collectionId) ||
-          step.rateFieldKey === null ||
+          collection === null ||
+          rate === null ||
+          rate.nature !== NumericNature.RATE ||
+          code === null ||
+          code.dataType !== DataType.TEXT ||
+          step.quote === null ||
           !/^[A-Z]{3}$/.test(currency)
         ) {
           return Result.fail(
             OperationPipeline.invalid(
-              `Paso ${String(number)}: elige la colección de tasas, su campo de tasa y la moneda destino`,
+              `Paso ${String(number)}: elige la colección, su campo de tasa (naturaleza Tasa), su campo de moneda (texto), cómo está cotizada y la moneda destino`,
             ),
           );
         }
@@ -221,7 +245,9 @@ export class OperationPipeline extends AggregateRoot {
           ...blank,
           sourceKey: ss.key,
           collectionId: step.collectionId,
-          rateFieldKey: step.rateFieldKey,
+          rateFieldKey: rate.key,
+          currencyFieldKey: code.key,
+          quote: step.quote,
           targetCurrency: currency,
         });
       }

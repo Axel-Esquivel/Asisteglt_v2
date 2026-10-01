@@ -63,6 +63,9 @@
     </ng-template>
     @if (report(); as current) {
     <p class="reports__hint">{{ current.records }} registros del período {{ current.period }}</p>
+    @for (warning of current.warnings; track warning) {
+    <p-message severity="warn" data-testid="report-warning">{{ warning }}</p-message>
+    }
     <div class="reports__scroll">
       <p-table
         [value]="current.rows"
@@ -173,6 +176,63 @@
       />
       <label for="reportMeasures">Columnas (medidas)</label>
     </p-floatlabel>
+    <div class="reports__title">
+      <strong>Columnas calculadas</strong>
+      <p-button
+        label="Agregar columna calculada"
+        icon="pi pi-plus"
+        size="small"
+        [text]="true"
+        (onClick)="addFormulaColumn(d)"
+      />
+    </div>
+    @for (column of d.formulaColumns; track $index) {
+    <div class="reports__grid">
+      <p-floatlabel variant="on">
+        <input
+          pInputText
+          [id]="'colLabel' + $index"
+          [name]="'colLabel' + $index"
+          class="full-width"
+          [(ngModel)]="column.label"
+        />
+        <label [for]="'colLabel' + $index">Título de la columna {{ $index + 1 }}</label>
+      </p-floatlabel>
+      <div class="reports__toolbar">
+        <p-floatlabel variant="on" class="reports__grow">
+          <input
+            pInputText
+            [id]="'colFormula' + $index"
+            [name]="'colFormula' + $index"
+            class="full-width reports__mono"
+            autocomplete="off"
+            [(ngModel)]="column.formula"
+          />
+          <label [for]="'colFormula' + $index">Fórmula de la columna {{ $index + 1 }}</label>
+        </p-floatlabel>
+        <p-button
+          icon="pi pi-trash"
+          [text]="true"
+          size="small"
+          severity="danger"
+          [ariaLabel]="'Quitar columna calculada ' + ($index + 1)"
+          (onClick)="removeFormulaColumn(d, $index)"
+        />
+      </div>
+    </div>
+    @if (columnCheck(column); as check) {
+    <p-message
+      [severity]="check.ok ? 'success' : 'error'"
+      size="small"
+      [attr.data-testid]="'column-check-' + $index"
+      >{{ check.message }}</p-message
+    >
+    } }
+    <p class="reports__hint">
+      En las columnas calculadas cada encabezado se agrega con los filtros de la fila:
+      <code>=SUMA([Debe]) - SUMA([Haber])</code>,
+      <code>=DIVIDIR(SUMA([Monto de venta]); SUMA([Unidades vendidas]))</code>.
+    </p>
     <div class="reports__grid">
       <p-floatlabel variant="on">
         <p-select

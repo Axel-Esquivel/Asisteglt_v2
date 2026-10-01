@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import {
   CatalogFieldRequest,
+  CollectionRequest,
   ClassificationRequest,
   CatalogTemplate,
   CreateOrgUnitRequest,
@@ -14,6 +15,7 @@ import { ArrayDecoder, EmptyDecoder, FieldDecoder, Nullable, Result } from '@asi
 import { ApiClient } from '@asisteglt/web-core';
 import { ClassificationView, ComputedReport, ReportDefinitionView } from './analysis.model';
 import { CatalogFieldView, CatalogView } from './catalog.model';
+import { CollectionView } from './collections.model';
 import { RecordPage, ImportBatchView } from './import.model';
 import { OperationsView } from './operations.model';
 import { OrgTree, OrgUnitView } from './org.model';
@@ -45,6 +47,10 @@ export class ReportsApiClient extends ApiClient {
   private readonly reportDecoder: FieldDecoder<ReportDefinitionView> = ReportDefinitionView.decoder();
   private readonly reportsDecoder: ArrayDecoder<ReportDefinitionView> =
     new ArrayDecoder<ReportDefinitionView>(ReportDefinitionView.decoder());
+  private readonly collectionDecoder: FieldDecoder<CollectionView> = CollectionView.decoder();
+  private readonly collectionsDecoder: ArrayDecoder<CollectionView> = new ArrayDecoder<CollectionView>(
+    CollectionView.decoder(),
+  );
   private readonly operationsDecoder: FieldDecoder<OperationsView> = OperationsView.decoder();
   private readonly computedDecoder: FieldDecoder<ComputedReport> = ComputedReport.decoder();
 
@@ -253,6 +259,28 @@ export class ReportsApiClient extends ApiClient {
 
   public saveOperations(projectId: string, request: OperationsRequest): Promise<Result<OperationsView>> {
     return this.put(`${ReportsApiClient.base(projectId)}/operations`, request, this.operationsDecoder);
+  }
+
+  public collections(projectId: string): Promise<Result<CollectionView[]>> {
+    return this.get(`${ReportsApiClient.base(projectId)}/collections`, this.collectionsDecoder);
+  }
+
+  public saveCollection(
+    projectId: string,
+    id: Nullable<string>,
+    request: CollectionRequest,
+  ): Promise<Result<CollectionView>> {
+    const path: string = `${ReportsApiClient.base(projectId)}/collections`;
+    return id === null
+      ? this.post(path, request, this.collectionDecoder)
+      : this.put(`${path}/${encodeURIComponent(id)}`, request, this.collectionDecoder);
+  }
+
+  public deleteCollection(projectId: string, id: string): Promise<Result<true>> {
+    return this.delete(
+      `${ReportsApiClient.base(projectId)}/collections/${encodeURIComponent(id)}`,
+      this.empty,
+    );
   }
 
   private static base(projectId: string): string {

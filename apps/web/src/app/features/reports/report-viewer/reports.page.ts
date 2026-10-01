@@ -13,10 +13,12 @@ import {
   ImportItemStatus,
   OrgLevel,
   ProjectPermission,
+  FormulaColumnDto,
   ReportDefinitionRequest,
   RowSource,
 } from '@asisteglt/shared-contracts';
 import { DomainError, Nullable, Result } from '@asisteglt/shared-kernel';
+import { FormulaContext } from '@asisteglt/shared-formula-engine';
 import { Notifier } from '@asisteglt/web-core';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
@@ -37,7 +39,16 @@ import { ImportBatchView, ImportItemView } from '../data/import.model';
 import { OrgTree, OrgUnitView } from '../data/org.model';
 import { ProfileView } from '../data/profile.model';
 import { ReportsApiClient } from '../data/reports.api-client';
+import { FormulaCheck } from '../data/operations.model';
 import { Option } from '../data/reports-labels';
+
+/** Columna calculada editable del diseñador. */
+export class FormulaColumnDraft {
+  public constructor(
+    public label: string,
+    public formula: string,
+  ) {}
+}
 
 /** Borrador editable del diseñador (propiedades explícitas, sin opcionales). */
 class ReportDraft {
@@ -52,10 +63,11 @@ class ReportDraft {
     public companyId: Nullable<string>,
     public onlyWhenFieldKey: Nullable<string>,
     public includeUnclassified: boolean,
+    public formulaColumns: FormulaColumnDraft[],
   ) {}
 
   public static blank(): ReportDraft {
-    return new ReportDraft(null, '', RowSource.CLASSIFICATION, null, null, [], null, null, null, true);
+    return new ReportDraft(null, '', RowSource.CLASSIFICATION, null, null, [], null, null, null, true, []);
   }
 
   public static of(view: ReportDefinitionView): ReportDraft {
@@ -71,6 +83,9 @@ class ReportDraft {
       s.companyId,
       s.onlyWhenFieldKey,
       s.includeUnclassified,
+      s.formulaColumns.map(
+        (c: FormulaColumnDto): FormulaColumnDraft => new FormulaColumnDraft(c.label, c.formula),
+      ),
     );
   }
 
@@ -85,6 +100,10 @@ class ReportDraft {
       companyId: this.companyId,
       onlyWhenFieldKey: this.onlyWhenFieldKey,
       includeUnclassified: this.includeUnclassified,
+      formulaColumns: this.formulaColumns.map((c: FormulaColumnDraft): FormulaColumnDto => ({
+        label: c.label,
+        formula: c.formula,
+      })),
     };
   }
 }
@@ -181,6 +200,22 @@ export class ReportsPage implements OnInit {
     this.load().catch((): void => {
       // Informado en load.
     });
+  }
+
+  protected addFormulaColumn(draft: ReportDraft): void {
+    draft.formulaColumns = [...draft.formulaColumns, new FormulaColumnDraft('', '=SUMA()')];
+    this.touch();
+  }
+
+  protected removeFormulaColumn(draft: ReportDraft, index: number): void {
+    draft.formulaColumns = draft.formulaColumns.filter(
+      (_c: FormulaColumnDraft, i: number): boolean => i !== index,
+    );
+    this.touch();
+  }
+
+  protected columnCheck(column: FormulaColumnDraft): FormulaCheck {
+    return FormulaCheck.of(column.formula, this.catalog(), FormulaContext.AGGREGATE);
   }
 
   protected touch(): void {

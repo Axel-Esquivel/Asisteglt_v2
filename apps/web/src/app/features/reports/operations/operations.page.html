@@ -183,13 +183,104 @@
       <code>REDONDEAR</code>, <code>ABS</code>, <code>DIVIDIR</code>, <code>ESVACIO</code>, <code>Y</code>,
       <code>O</code>, <code>NO</code>. Un vacío se propaga y dividir entre cero da vacío.
     </p>
+    } @else if (d.kind === conversion) {
+    <p-floatlabel variant="on">
+      <p-select
+        inputId="convSource"
+        ariaLabel="Encabezado que se convierte"
+        name="convSource"
+        [options]="convertibleOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [(ngModel)]="d.sourceKey"
+        [filter]="true"
+        styleClass="full-width"
+        appendTo="body"
+      />
+      <label for="convSource">Encabezado que se convierte</label>
+    </p-floatlabel>
+    <p-floatlabel variant="on">
+      <p-select
+        inputId="convCollection"
+        ariaLabel="Colección de tasas"
+        name="convCollection"
+        [options]="collectionOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [(ngModel)]="d.collectionId"
+        styleClass="full-width"
+        appendTo="body"
+      />
+      <label for="convCollection">Colección de tasas</label>
+    </p-floatlabel>
+    <div class="reports__grid">
+      <p-floatlabel variant="on">
+        <p-select
+          inputId="convRate"
+          ariaLabel="Campo de tasa"
+          name="convRate"
+          [options]="rateOptions(d.collectionId)"
+          optionLabel="label"
+          optionValue="value"
+          [(ngModel)]="d.rateFieldKey"
+          styleClass="full-width"
+          appendTo="body"
+        />
+        <label for="convRate">Campo de tasa</label>
+      </p-floatlabel>
+      <p-floatlabel variant="on">
+        <p-select
+          inputId="convCurrency"
+          ariaLabel="Campo de moneda"
+          name="convCurrency"
+          [options]="currencyOptions(d.collectionId)"
+          optionLabel="label"
+          optionValue="value"
+          [(ngModel)]="d.currencyFieldKey"
+          styleClass="full-width"
+          appendTo="body"
+        />
+        <label for="convCurrency">Campo de moneda</label>
+      </p-floatlabel>
+    </div>
+    <div class="reports__grid">
+      <p-floatlabel variant="on">
+        <p-select
+          inputId="convQuote"
+          ariaLabel="Cotización"
+          name="convQuote"
+          [options]="quotes"
+          optionLabel="label"
+          optionValue="value"
+          [(ngModel)]="d.quote"
+          styleClass="full-width"
+          appendTo="body"
+        />
+        <label for="convQuote">Cotización</label>
+      </p-floatlabel>
+      <p-floatlabel variant="on">
+        <input
+          pInputText
+          id="convTarget"
+          name="convTarget"
+          maxlength="3"
+          class="full-width"
+          [(ngModel)]="d.targetCurrency"
+        />
+        <label for="convTarget">Moneda destino (p. ej. USD)</label>
+      </p-floatlabel>
+    </div>
+    <p class="reports__hint">
+      Usa la tasa del período del registro; si no hay, la del período anterior más reciente y, por último, la
+      fila sin período. Los registros que ya están en la moneda destino no cambian.
+    </p>
     } @else {
     <p-floatlabel variant="on">
       <p-select
         inputId="stepSource"
         ariaLabel="Encabezado que se acumula"
         name="source"
-        [options]="sourceOptions()"
+        [options]="additiveOptions()"
         optionLabel="label"
         optionValue="value"
         [(ngModel)]="d.sourceKey"

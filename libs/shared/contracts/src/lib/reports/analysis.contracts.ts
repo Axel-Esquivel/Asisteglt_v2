@@ -23,6 +23,13 @@ export enum RowSource {
   FIELD = 'FIELD',
 }
 
+/** Columna calculada con una fórmula en contexto agregado, p. ej. `=SUMA([Debe]) - SUMA([Haber])`. */
+export interface FormulaColumnDto {
+  readonly label: string;
+  /** Se envía con nombres y se devuelve con los nombres vigentes. */
+  readonly formula: string;
+}
+
 export interface ReportDefinitionRequest {
   readonly name: string;
   readonly rowSource: RowSource;
@@ -34,6 +41,7 @@ export interface ReportDefinitionRequest {
   /** Encabezado sí/no que debe ser verdadero (p. ej. «Es cuenta de detalle»). */
   readonly onlyWhenFieldKey: string | null;
   readonly includeUnclassified: boolean;
+  readonly formulaColumns: ReadonlyArray<FormulaColumnDto>;
 }
 
 export interface ReportDefinitionResponse extends ReportDefinitionRequest {
@@ -61,6 +69,8 @@ export interface ComputedReportResponse {
   readonly records: number;
   readonly columns: ReadonlyArray<ReportColumnResponse>;
   readonly rows: ReadonlyArray<ReportRowResponse>;
+  /** Avisos del cálculo (p. ej. montos en monedas distintas que no se sumaron). */
+  readonly warnings: ReadonlyArray<string>;
 }
 
 export enum AnalysisErrorCode {

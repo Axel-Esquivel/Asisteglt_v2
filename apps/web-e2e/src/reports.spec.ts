@@ -138,6 +138,46 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
   await expect(page.getByTestId('data-table')).toContainText('Saldo final');
   await expect(page.getByTestId('data-table')).toContainText('6,050');
 
+  // Colección de tipos de cambio y conversión a dólares
+  await page.getByRole('tab', { name: 'Colecciones' }).click();
+  await page.getByRole('button', { name: 'Nueva colección' }).click();
+  await page.getByLabel('Nombre (p. ej. Tipo de cambio)').fill('Tipo de cambio');
+  await page.getByRole('button', { name: 'Agregar campo' }).click();
+  await page.getByLabel('Nombre del campo 1').fill('Moneda');
+  await page.getByRole('combobox', { name: 'Tipo del campo 1' }).click();
+  await page.getByRole('option', { name: 'Texto' }).click();
+  await page.getByRole('button', { name: 'Agregar campo' }).click();
+  await page.getByLabel('Nombre del campo 2').fill('Tasa de cierre');
+  await page.getByRole('button', { name: 'Agregar fila' }).click();
+  await page.getByLabel('Moneda de la fila 1').fill('GTQ');
+  await page.getByLabel('Tasa de cierre de la fila 1').fill('8');
+  await page.getByRole('button', { name: 'Guardar' }).click();
+  await expect(page.getByTestId('collection-list')).toContainText('Tipo de cambio');
+
+  await page.getByRole('tab', { name: 'Operaciones' }).click();
+  await page.getByRole('button', { name: 'Agregar paso' }).click();
+  await step.getByRole('combobox', { name: 'Tipo de paso' }).click();
+  await page.getByRole('option', { name: 'Conversión de moneda' }).click();
+  await step.getByRole('button', { name: 'Nuevo encabezado…' }).click();
+  await newField.getByLabel('Nombre').fill('Saldo final USD');
+  await newField.getByRole('button', { name: 'Crear' }).click();
+  await expect(newField).toBeHidden();
+  const choose = async (combobox: string, option: string): Promise<void> => {
+    await step.getByRole('combobox', { name: combobox }).click();
+    await page.getByRole('option', { name: option, exact: true }).click();
+  };
+  await choose('Encabezado que se convierte', 'Saldo final');
+  await choose('Colección de tasas', 'Tipo de cambio');
+  await choose('Campo de tasa', 'Tasa de cierre');
+  await choose('Campo de moneda', 'Moneda');
+  await step.getByLabel('Moneda destino (p. ej. USD)').fill('usd');
+  await step.getByRole('button', { name: 'Aceptar' }).click();
+  await page.getByRole('button', { name: 'Guardar' }).click();
+  await expect(page.getByTestId('operations-table')).toContainText('a USD');
+  await page.getByRole('tab', { name: 'Datos', exact: true }).click();
+  await expect(page.getByTestId('data-table')).toContainText('Saldo final USD');
+  await expect(page.getByTestId('data-table')).toContainText('756.25');
+
   // Clasificación e informe
   await page.getByRole('tab', { name: 'Clasificaciones' }).click();
   await page.getByRole('button', { name: 'Nueva clasificación' }).click();
@@ -166,8 +206,14 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
     await page.getByRole('option', { name: measure, exact: true }).click();
   }
   await page.keyboard.press('Escape');
+  await design.getByRole('button', { name: 'Agregar columna calculada' }).click();
+  await design.getByLabel('Título de la columna 1').fill('Movimiento neto');
+  await design.getByLabel('Fórmula de la columna 1').fill('=SUMA([Debe]) - SUMA([Haber])');
+  await expect(design.getByTestId('column-check-0')).toContainText('Resultado: Monto');
   await design.getByRole('button', { name: 'Guardar' }).click();
   await expect(page.getByTestId('report-table')).toContainText('Activo');
   await expect(page.getByTestId('report-table')).toContainText('15,600.00');
+  await expect(page.getByTestId('report-table')).toContainText('Movimiento neto');
+  await expect(page.getByTestId('report-table')).toContainText('2,670.00');
   await expect(page.getByTestId('report-table')).toContainText('Sin clasificar');
 });

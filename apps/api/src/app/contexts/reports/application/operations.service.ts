@@ -6,18 +6,21 @@ import {
   OperationsResponse,
 } from '@asisteglt/shared-contracts';
 import { FormulaFormatter, ListFieldResolver } from '@asisteglt/shared-formula-engine';
-import { Clock, EntityId, Result } from '@asisteglt/shared-kernel';
+import { Clock, EntityId, Nullable, Result } from '@asisteglt/shared-kernel';
 import { Project } from '../../projects/domain/project';
 import { FieldCatalog } from '../domain/field-catalog';
 import { OperationPipeline } from '../domain/operation-pipeline';
-import { HistorySource, OperationRunner, RateTable } from '../domain/operation-runner';
+import { CollectionRates } from '../domain/collection-rates';
+import { HistorySource, OperationRunner } from '../domain/operation-runner';
+import { SupplementaryCollection } from '../domain/supplementary-collection';
 import {
+  CollectionRepository,
   DataRecordRepository,
   DataRecordSnapshot,
   OperationPipelineRepository,
   RecordQuery,
 } from '../domain/ports';
-import { CatalogResolver } from './catalog-resolver';
+import { CatalogResolver } from '../domain/catalog-resolver';
 import { CatalogService } from './catalog.service';
 import { ReportsAccess } from './reports-access';
 
@@ -50,6 +53,7 @@ export class OperationsService {
   public constructor(
     private readonly pipelines: OperationPipelineRepository,
     private readonly records: DataRecordRepository,
+    private readonly collections: CollectionRepository,
     private readonly catalogs: CatalogService,
     private readonly access: ReportsAccess,
     private readonly clock: Clock,
@@ -71,11 +75,13 @@ export class OperationsService {
       async (p: Project): Promise<Result<OperationsResponse>> => {
         const catalog: FieldCatalog = await this.catalogs.of(p.getId());
         const pipeline: OperationPipeline = await this.of(p.getId());
+        const collections: SupplementaryCollection[] = await this.collections.findByProject(p.getId());
         const result: Result<OperationPipeline> = pipeline.replace(
           request.steps,
           catalog,
           CatalogResolver.of(catalog),
-          (): boolean => false,
+          (id: string): Nullable<SupplementaryCollection> =>
+            collections.find((c: SupplementaryCollection): boolean => c.getId().toString() === id) ?? null,
           this.clock,
         );
         if (result.isOk()) {
@@ -97,10 +103,15 @@ export class OperationsService {
       (await this.of(projectId)).getSteps(),
       catalog,
       CatalogResolver.of(catalog),
-      RateTable.none(),
+      new CollectionRates(await this.collections.findByProject(projectId)),
     );
     await runner.prepare(periods, new RepositoryHistory(this.records, query));
     return runner;
+  }
+
+  /** Moneda fija de los encabezados que escribe una conversión (para no mezclar monedas). */
+  public async convertedCurrencies(projectId: EntityId): Promise<ReadonlyMap<string, string>> {
+    return (await this.of(projectId)).convertedCurrencies();
   }
 
   private async of(projectId: EntityId): Promise<OperationPipeline> {

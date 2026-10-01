@@ -1,5 +1,18 @@
-import { AnalysisErrorCode, DataType, ReportDefinitionRequest, RowSource } from '@asisteglt/shared-contracts';
+import {
+  AnalysisErrorCode,
+  DataType,
+  FormulaColumnDto,
+  ReportDefinitionRequest,
+  RowSource,
+} from '@asisteglt/shared-contracts';
+import {
+  CompiledFormula,
+  FormulaCompiler,
+  FormulaContext,
+  ListFieldResolver,
+} from '@asisteglt/shared-formula-engine';
 import { AggregateRoot, Clock, EntityId, Nullable, Result, ValidationError } from '@asisteglt/shared-kernel';
+import { CatalogResolver } from './catalog-resolver';
 import { CatalogField, FieldCatalog } from './field-catalog';
 
 export interface ReportDefinitionSnapshot extends ReportDefinitionRequest {
@@ -83,8 +96,35 @@ export class ReportDefinition extends AggregateRoot {
     if (name.length < 2 || name.length > 80) {
       return fail(AnalysisErrorCode.INVALID_REPORT, 'El nombre debe tener entre 2 y 80 caracteres');
     }
-    if (r.measures.length === 0 || r.measures.length > 20) {
-      return fail(AnalysisErrorCode.INVALID_REPORT, 'Elige entre 1 y 20 medidas');
+    if (r.measures.length + r.formulaColumns.length === 0 || r.measures.length > 20) {
+      return fail(
+        AnalysisErrorCode.INVALID_REPORT,
+        'Elige entre 1 y 20 medidas o agrega una columna calculada',
+      );
+    }
+    if (r.formulaColumns.length > 10) {
+      return fail(AnalysisErrorCode.INVALID_REPORT, 'Un informe admite hasta 10 columnas calculadas');
+    }
+    const resolver: ListFieldResolver = CatalogResolver.of(catalog);
+    const formulaColumns: FormulaColumnDto[] = [];
+    for (const column of r.formulaColumns) {
+      const label: string = column.label.trim();
+      if (label.length < 1 || label.length > 80) {
+        return fail(
+          AnalysisErrorCode.INVALID_REPORT,
+          'Cada columna calculada necesita un título de hasta 80 caracteres',
+        );
+      }
+      const compiled: Result<CompiledFormula> = new FormulaCompiler().compile(
+        column.formula,
+        resolver,
+        FormulaContext.AGGREGATE,
+      );
+      const error = compiled.errorOrNull();
+      if (error !== null) {
+        return fail(AnalysisErrorCode.INVALID_REPORT, `Columna «${label}»: ${error.message}`);
+      }
+      formulaColumns.push({ label, formula: compiled.unwrap().canonicalSource });
     }
     for (const key of r.measures) {
       const field: Nullable<CatalogField> = catalog.find(key).toNullable();
@@ -120,6 +160,7 @@ export class ReportDefinition extends AggregateRoot {
       classificationId: r.rowSource === RowSource.CLASSIFICATION ? r.classificationId : null,
       rowFieldKey: r.rowSource === RowSource.FIELD ? r.rowFieldKey : null,
       measures: [...new Set(r.measures)],
+      formulaColumns,
     });
   }
 }

@@ -1,6 +1,7 @@
 import {
   ClassificationNodeDto,
   ClassificationRequest,
+  FormulaColumnDto,
   ReportDefinitionRequest,
   RowSource,
 } from '@asisteglt/shared-contracts';
@@ -16,6 +17,10 @@ export class AnalysisParsers {
       name: f.string('name'),
       patterns: f.stringList('patterns'),
     }),
+  );
+
+  public static readonly FORMULA_COLUMN: Decoder<FormulaColumnDto> = new FieldDecoder<FormulaColumnDto>(
+    (f: FieldReader): FormulaColumnDto => ({ label: f.string('label'), formula: f.string('formula') }),
   );
 
   private static readonly CLASSIFICATION: Decoder<ClassificationRequest> =
@@ -36,6 +41,8 @@ export class AnalysisParsers {
       companyId: f.nullableString('companyId'),
       onlyWhenFieldKey: f.nullableString('onlyWhenFieldKey'),
       includeUnclassified: f.boolean('includeUnclassified'),
+      formulaColumns:
+        f.raw('formulaColumns') === null ? [] : f.list('formulaColumns', AnalysisParsers.FORMULA_COLUMN),
     }));
 
   public static classification(body: unknown): Result<ClassificationRequest> {

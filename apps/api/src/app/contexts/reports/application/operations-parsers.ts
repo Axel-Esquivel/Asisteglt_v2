@@ -1,4 +1,4 @@
-import { OperationKind, OperationStepDto, OperationsRequest } from '@asisteglt/shared-contracts';
+import { OperationKind, RateQuote, OperationStepDto, OperationsRequest } from '@asisteglt/shared-contracts';
 import { Decoder, FieldDecoder, FieldReader, Result } from '@asisteglt/shared-kernel';
 
 /** Validación del cuerpo JSON de las operaciones (compartible con el navegador). */
@@ -12,6 +12,8 @@ export class OperationsParsers {
       sourceKey: f.nullableString('sourceKey'),
       collectionId: f.nullableString('collectionId'),
       rateFieldKey: f.nullableString('rateFieldKey'),
+      currencyFieldKey: f.nullableString('currencyFieldKey'),
+      quote: f.nullableString('quote') === null ? null : f.oneOf('quote', Object.values(RateQuote)),
       targetCurrency: f.nullableString('targetCurrency'),
     }),
   );

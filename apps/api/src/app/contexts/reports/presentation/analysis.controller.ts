@@ -66,7 +66,11 @@ export class AnalysisController {
     @CurrentPrincipal() p: AuthenticatedPrincipal,
     @Param('projectId') projectId: string,
   ): Promise<ReportDefinitionResponse[]> {
-    return (await this.analysis.listReports(projectId, p.userId)).unwrap().map(AnalysisController.report);
+    return Promise.all(
+      (await this.analysis.listReports(projectId, p.userId))
+        .unwrap()
+        .map((d: ReportDefinition): Promise<ReportDefinitionResponse> => this.analysis.present(d)),
+    );
   }
 
   @Post('report-definitions')
@@ -76,7 +80,7 @@ export class AnalysisController {
     @Body() body: unknown,
   ): Promise<ReportDefinitionResponse> {
     const request = AnalysisParsers.report(body).unwrap();
-    return AnalysisController.report(
+    return this.analysis.present(
       (await this.analysis.saveReport(projectId, p.userId, null, request)).unwrap(),
     );
   }
@@ -89,9 +93,7 @@ export class AnalysisController {
     @Body() body: unknown,
   ): Promise<ReportDefinitionResponse> {
     const request = AnalysisParsers.report(body).unwrap();
-    return AnalysisController.report(
-      (await this.analysis.saveReport(projectId, p.userId, id, request)).unwrap(),
-    );
+    return this.analysis.present((await this.analysis.saveReport(projectId, p.userId, id, request)).unwrap());
   }
 
   @Delete('report-definitions/:id')
@@ -125,9 +127,5 @@ export class AnalysisController {
       nodes: s.nodes,
       updatedAt: s.updatedAt.toISOString(),
     };
-  }
-
-  private static report(d: ReportDefinition): ReportDefinitionResponse {
-    return { ...d.getSpec(), id: d.getId().toString(), updatedAt: d.toSnapshot().updatedAt.toISOString() };
   }
 }

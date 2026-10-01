@@ -1,5 +1,6 @@
 import { Aggregation, DataType, NumericNature } from '@asisteglt/shared-contracts';
 import { Decimal, Nullable, Result } from '@asisteglt/shared-kernel';
+import { AggregateRequest, AggregateRequestCollector } from './aggregate-requests';
 import { CompiledFormula, FormulaCompiler, FormulaFormatter } from './compiler';
 import { EvaluationContext, Evaluator, FormulaValue, RecordContext } from './evaluator';
 import { FieldInfo, ListFieldResolver } from './field-resolver';
@@ -156,6 +157,16 @@ describe('Motor de fórmulas', () => {
     }
     const kpi: CompiledFormula = compile('=SUMA([Debe]) - [Haber]', FormulaContext.AGGREGATE).unwrap();
     expect(String(new Evaluator(resolver, new Sums()).evaluate(kpi.root))).toBe('60');
+  });
+
+  it('lista las agregaciones que pedirá una fórmula agregada, sin repetir', () => {
+    const kpi: CompiledFormula = compile(
+      '=SI(SUMA([Debe]) > 0; [Haber] / SUMA([Debe]); [% de descuento])',
+      FormulaContext.AGGREGATE,
+    ).unwrap();
+    expect(
+      new AggregateRequestCollector(resolver).collect(kpi.root).map((r: AggregateRequest): string => r.id()),
+    ).toEqual(['f_debe|SUM|', 'f_haber|SUM|', 'f_desc|WEIGHTED_AVERAGE|f_venta']);
   });
 
   it('imprime con los paréntesis necesarios', () => {
