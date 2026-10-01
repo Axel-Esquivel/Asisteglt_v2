@@ -87,3 +87,8 @@
   flex: 1 1 14rem;
   min-width: 0;
 }
+
+.reports__check {
+  padding-block-end: 1rem;
+  border-block-end: 1px solid var(--p-content-border-color);
+}

@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import {
+  BalanceChecksRequest,
   CatalogFieldRequest,
   CollectionRequest,
   ClassificationRequest,
@@ -259,6 +260,18 @@ export class ReportsApiClient extends ApiClient {
 
   public saveOperations(projectId: string, request: OperationsRequest): Promise<Result<OperationsView>> {
     return this.put(`${ReportsApiClient.base(projectId)}/operations`, request, this.operationsDecoder);
+  }
+
+  public saveChecks(
+    projectId: string,
+    profileId: string,
+    request: BalanceChecksRequest,
+  ): Promise<Result<ProfileView>> {
+    return this.put(
+      `${ReportsApiClient.base(projectId)}/profiles/${encodeURIComponent(profileId)}/checks`,
+      request,
+      this.profile,
+    );
   }
 
   public collections(projectId: string): Promise<Result<CollectionView[]>> {

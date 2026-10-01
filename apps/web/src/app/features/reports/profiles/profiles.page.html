@@ -72,6 +72,13 @@
           />
           }
           <p-button
+            icon="pi pi-check-square"
+            [text]="true"
+            size="small"
+            [ariaLabel]="'Validaciones de cuadre de ' + profile.name"
+            (onClick)="openChecks(profile)"
+          />
+          <p-button
             icon="pi pi-copy"
             [text]="true"
             size="small"
@@ -114,4 +121,95 @@
       <p-button type="submit" label="Duplicar" icon="pi pi-copy" />
     </div>
   </form>
+</p-dialog>
+
+<p-dialog
+  header="Validaciones de cuadre"
+  [modal]="true"
+  [visible]="checking() !== null"
+  (visibleChange)="$event ? null : checking.set(null)"
+  [style]="{ width: 'min(48rem, 95vw)' }"
+>
+  <div class="reports__form">
+    <p class="reports__hint">
+      Se evalúan sobre las líneas de cada archivo al cargarlo, p. ej. <code>=SUMA([Debe])</code> contra
+      <code>=SUMA([Haber])</code>. Si una validación bloqueante no cuadra, el archivo no se publica.
+    </p>
+    @for (check of checks(); track $index) {
+    <div class="reports__stack reports__check">
+      <div class="reports__toolbar">
+        <p-floatlabel variant="on" class="reports__grow">
+          <input pInputText [id]="'checkLabel' + $index" class="full-width" [(ngModel)]="check.label" />
+          <label [for]="'checkLabel' + $index">Nombre de la validación {{ $index + 1 }}</label>
+        </p-floatlabel>
+        <p-button
+          icon="pi pi-trash"
+          [text]="true"
+          size="small"
+          severity="danger"
+          [ariaLabel]="'Quitar validación ' + ($index + 1)"
+          (onClick)="removeCheck($index)"
+        />
+      </div>
+      <div class="reports__grid">
+        <div class="reports__stack">
+          <p-floatlabel variant="on">
+            <input
+              pInputText
+              [id]="'checkLeft' + $index"
+              class="full-width reports__mono"
+              autocomplete="off"
+              [(ngModel)]="check.left"
+            />
+            <label [for]="'checkLeft' + $index">Fórmula izquierda {{ $index + 1 }}</label>
+          </p-floatlabel>
+          @if (formulaCheck(check.left); as c) {
+          <p-message [severity]="c.ok ? 'success' : 'error'" size="small">{{ c.message }}</p-message>
+          }
+        </div>
+        <div class="reports__stack">
+          <p-floatlabel variant="on">
+            <input
+              pInputText
+              [id]="'checkRight' + $index"
+              class="full-width reports__mono"
+              autocomplete="off"
+              [(ngModel)]="check.right"
+            />
+            <label [for]="'checkRight' + $index">Fórmula derecha {{ $index + 1 }}</label>
+          </p-floatlabel>
+          @if (formulaCheck(check.right); as c) {
+          <p-message [severity]="c.ok ? 'success' : 'error'" size="small">{{ c.message }}</p-message>
+          }
+        </div>
+      </div>
+      <div class="reports__toolbar">
+        <p-floatlabel variant="on">
+          <input pInputText [id]="'checkTolerance' + $index" [(ngModel)]="check.tolerance" />
+          <label [for]="'checkTolerance' + $index">Tolerancia {{ $index + 1 }}</label>
+        </p-floatlabel>
+        <p-toggleswitch [inputId]="'checkBlocking' + $index" [(ngModel)]="check.blocking" />
+        <label [for]="'checkBlocking' + $index">Rechazar el archivo si no cuadra</label>
+      </div>
+    </div>
+    }
+    <div>
+      <p-button
+        label="Agregar validación"
+        icon="pi pi-plus"
+        size="small"
+        [outlined]="true"
+        (onClick)="addCheck()"
+      />
+    </div>
+    <div class="reports__dialog-actions">
+      <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="checking.set(null)" />
+      <p-button
+        label="Guardar validaciones"
+        icon="pi pi-check"
+        [loading]="savingChecks()"
+        (onClick)="saveChecks()"
+      />
+    </div>
+  </div>
 </p-dialog>

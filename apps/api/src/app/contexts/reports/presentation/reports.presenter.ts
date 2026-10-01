@@ -40,6 +40,7 @@ export class ReportsPresenter {
       status: s.status,
       version: s.version,
       spec: s.spec,
+      checks: s.checks,
       updatedAt: s.updatedAt.toISOString(),
     };
   }

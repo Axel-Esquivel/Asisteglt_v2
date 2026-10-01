@@ -49,7 +49,7 @@ export class ReportDefinition extends AggregateRoot {
     return new ReportDefinition(
       EntityId.fromString(id).unwrap(),
       EntityId.fromString(projectId).unwrap(),
-      spec,
+      { ...spec, formulaColumns: Array.isArray(spec.formulaColumns) ? spec.formulaColumns : [] },
       updatedAt,
     );
   }

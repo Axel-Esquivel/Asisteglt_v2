@@ -112,6 +112,17 @@ gantt
 | Pipelines: filtros de texto, asignación condicional, campos calculados, acumulados, conversión de moneda, filas sintéticas, cuadre. | Caso contable de referencia (saldo = saldo anterior + debe − haber; resultado del ejercicio) reproduce el resultado esperado; un caso de **ventas directas** (sin debe/haber) se importa, acumula y consolida con la misma configuración genérica. Los destinos de campos calculados y acumulados son encabezados derivados creados desde el paso con «Nuevo encabezado…» (p. ej. *Saldo*, *Precio promedio* o *Unidades del año*) y aparecen por su nombre en los pasos e informes posteriores; un destino de tipo o naturaleza distinta al resultado devuelve `TARGET_TYPE_MISMATCH`. |
 | `libs/shared/formula-engine` (lexer, parser, AST con referencias `[Encabezado]`, resolución nombre ↔ `FieldKey` con `FieldResolver`, forma canónica `CompiledFormula`, `FormulaFormatter`, `TypeChecker` con `OperationCompatibility`, evaluador, dependencias, funciones). | Pruebas basadas en propiedades; detección de referencias circulares. `=[Debe] - [Haber]` y `=SUMA([Monto de venta])` compilan y se guardan en forma canónica (`=[#f_6Pw4] - [#f_2Lm5]`). `=[Vendedor] + [Monto de venta]` da «No se puede sumar Texto con Número decimal» y `=SUMA([% de descuento])` da «Una tasa no se puede sumar; use PROMEDIO.PONDERADO». Una fórmula guardada evalúa igual tras renombrar *Debe* → *Cargos* y se muestra como `=[Cargos] - [Haber]`. Un nombre inexistente, desactivado o ausente en la fuente da un error claro (`UNKNOWN_FIELD`, `FIELD_INACTIVE`, `FIELD_NOT_IN_SOURCE`). |
 
+**Estado de F5 en el código** (ver [14 · Guía de pruebas](14-guia-de-pruebas.md) §5):
+
+- Hecho: estructura organizacional y alcances, cargas versionadas, carga múltiple, colecciones
+  complementarias con captura manual, clasificaciones por patrones, `formula-engine` (forma
+  canónica, nombres vigentes, tipos y naturaleza), operaciones (campos calculados, acumulado del
+  año, conversión de moneda con colecciones), columnas calculadas en informes, informes que no
+  suman monedas distintas y validaciones de cuadre por preconfiguración (bloqueantes o con aviso).
+- Pendiente: `COLECCION()` dentro de fórmulas, importación de colecciones desde archivo,
+  definiciones de consolidación con eliminaciones, filtros de texto, asignación condicional y
+  filas sintéticas en las operaciones, y pruebas basadas en propiedades del motor de fórmulas.
+
 ### F6 · Reportes: informes y PDF (4 sprints) — RF-REP-12…17, RF-REP-20
 
 | Entregables | Criterios de aceptación |

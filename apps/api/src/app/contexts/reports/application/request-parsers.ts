@@ -1,4 +1,10 @@
-import { ImportItemRequest, ImportManifest, ProfileRequest } from '@asisteglt/shared-contracts';
+import {
+  BalanceCheckDto,
+  BalanceChecksRequest,
+  ImportItemRequest,
+  ImportManifest,
+  ProfileRequest,
+} from '@asisteglt/shared-contracts';
 import { SpecDecoders } from '@asisteglt/shared-ingestion-core';
 import { Decoder, FieldDecoder, FieldReader, Result } from '@asisteglt/shared-kernel';
 
@@ -27,6 +33,24 @@ export class ReportsRequestParser {
       branchId: f.nullableString('branchId'),
     }),
   );
+
+  private static readonly CHECK: Decoder<BalanceCheckDto> = new FieldDecoder<BalanceCheckDto>(
+    (f: FieldReader): BalanceCheckDto => ({
+      label: f.string('label'),
+      left: f.string('left'),
+      right: f.string('right'),
+      tolerance: f.string('tolerance'),
+      blocking: f.boolean('blocking'),
+    }),
+  );
+
+  private static readonly CHECKS: Decoder<BalanceChecksRequest> = new FieldDecoder<BalanceChecksRequest>(
+    (f: FieldReader): BalanceChecksRequest => ({ checks: f.list('checks', ReportsRequestParser.CHECK) }),
+  );
+
+  public static checks(body: unknown): Result<BalanceChecksRequest> {
+    return ReportsRequestParser.CHECKS.decode(body);
+  }
 
   public static profile(body: unknown): Result<ProfileRequest> {
     return ReportsRequestParser.PROFILE.decode(body);

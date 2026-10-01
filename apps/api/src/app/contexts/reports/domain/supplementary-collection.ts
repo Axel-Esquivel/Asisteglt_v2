@@ -137,8 +137,13 @@ export class SupplementaryCollection extends AggregateRoot {
         return SupplementaryCollection.fail(`Elige la naturaleza de «${label.unwrap().value}»`);
       }
       const key: string = field.key === '' ? SupplementaryCollection.newKey(keys) : field.key;
-      if (!/^[A-Za-z0-9_]{1,40}$/.test(key) || fields.some((f: CollectionFieldDto): boolean => f.key === key)) {
-        return SupplementaryCollection.fail(`La clave del campo «${label.unwrap().value}» no es válida o está repetida`);
+      if (
+        !/^[A-Za-z0-9_]{1,40}$/.test(key) ||
+        fields.some((f: CollectionFieldDto): boolean => f.key === key)
+      ) {
+        return SupplementaryCollection.fail(
+          `La clave del campo «${label.unwrap().value}» no es válida o está repetida`,
+        );
       }
       keys.add(key);
       fields.push({

@@ -654,6 +654,73 @@ describe('Reportes: importación (e2e)', () => {
       .expect(409);
   });
 
+  it('valida el cuadre de cada archivo con fórmulas de la preconfiguración', async (): Promise<void> => {
+    const setChecks = (checks: Array<Record<string, string | boolean>>): Test =>
+      request(app.server())
+        .put(api(`/profiles/${profileId}/checks`))
+        .set('authorization', owner.bearer())
+        .send({ checks });
+    const check = (blocking: boolean): Record<string, string | boolean> => ({
+      label: 'Debe = Haber',
+      left: '=SUMA([debe])',
+      right: '=SUMA([Haber])',
+      tolerance: '0.01',
+      blocking,
+    });
+    await setChecks([{ ...check(true), right: '=[Nombre de cuenta]' }]).expect(400);
+    const notInSource: Response = await setChecks([{ ...check(true), right: '=SUMA([Saldo final])' }]).expect(
+      400,
+    );
+    expect(Body.text(notInSource.body, 'message')).toContain('no se lee con esta preconfiguración');
+    const saved: Response = await setChecks([
+      check(true),
+      {
+        label: 'Movimiento',
+        left: '=SUMA([Saldo anterior]) + SUMA([Debe]) - SUMA([Haber])',
+        right: '=SUMA([Saldo anterior]) + 800',
+        tolerance: '0',
+        blocking: false,
+      },
+    ]).expect(200);
+    const savedChecks: unknown[] = Body.list(Reflect.get(saved.body, 'checks'));
+    expect(savedChecks).toHaveLength(2);
+    expect(Body.text(savedChecks[0], 'left')).toMatch(/^=SUMA\(\[#/);
+
+    const upload = async (fileName: string): Promise<unknown> => {
+      const created: Response = await request(app.server())
+        .post(api('/imports'))
+        .set('authorization', owner.bearer())
+        .field('manifest', JSON.stringify({ items: [{ fileName, profileId, period: '2026-09', ...scope }] }))
+        .attach('files', Buffer.from(balance('2,000.00'), 'latin1'), fileName)
+        .expect(201);
+      await app.app.get(ImportQueue).idle();
+      const batch: Response = await request(app.server())
+        .get(api(`/imports/${Body.text(created.body, 'id')}`))
+        .set('authorization', owner.bearer())
+        .expect(200);
+      return Body.list(Reflect.get(batch.body, 'items'))[0];
+    };
+    const rejected: unknown = await upload('balance_septiembre.txt');
+    expect(rejected).toMatchObject({
+      status: 'FAILED',
+      error: 'No cuadra «Debe = Haber»: 1300 contra 500',
+      checks: [
+        { label: 'Debe = Haber', left: '1300', right: '500', passed: false, blocking: true },
+        { label: 'Movimiento', passed: true },
+      ],
+    });
+    const none: Response = await request(app.server())
+      .get(api('/records?period=2026-09'))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    const noneBody: unknown = none.body;
+    expect(noneBody).toMatchObject({ total: 0 });
+
+    await setChecks([check(false)]).expect(200);
+    const warned: unknown = await upload('balance_septiembre_b.txt');
+    expect(warned).toMatchObject({ status: 'PUBLISHED', checks: [{ passed: false, blocking: false }] });
+  });
+
   it('rechaza alcances incoherentes y marca como fallido un archivo con demasiados rechazos', async (): Promise<void> => {
     await request(app.server())
       .post(api('/imports'))

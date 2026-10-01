@@ -1,6 +1,7 @@
-import { ImportItemResponse, ImportItemStatus } from '@asisteglt/shared-contracts';
+import { CheckResultDto, ImportItemResponse, ImportItemStatus } from '@asisteglt/shared-contracts';
 import { FieldDecoder, FieldReader } from '@asisteglt/shared-kernel';
 import { CellValue } from '@asisteglt/shared-ingestion-core';
+import { CHECK_RESULT } from './profile.model';
 import { ReportsLabels } from './reports-labels';
 
 export class ImportItemView {
@@ -36,6 +37,7 @@ export class ImportItemView {
               messages: i.stringList('messages'),
             })),
           ),
+          checks: f.raw('checks') === null ? [] : f.list('checks', CHECK_RESULT),
           error: f.nullableString('error'),
           createdAt: f.string('createdAt'),
           finishedAt: f.nullableString('finishedAt'),
@@ -45,6 +47,11 @@ export class ImportItemView {
 
   public get id(): string {
     return this.s.id;
+  }
+
+  /** Validaciones de cuadre que no se cumplieron (las no bloqueantes publican con aviso). */
+  public unbalanced(): number {
+    return this.s.checks.filter((c: CheckResultDto): boolean => !c.passed).length;
   }
 
   public status(): {

@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { IngestionErrorCode, ProfileRequest, ProfileStatus } from '@asisteglt/shared-contracts';
+import {
+  BalanceChecksRequest,
+  IngestionErrorCode,
+  ProfileRequest,
+  ProfileStatus,
+} from '@asisteglt/shared-contracts';
 import { Clock, ConflictError, EntityId, NotFoundError, Nullable, Result } from '@asisteglt/shared-kernel';
 import { Project } from '../../projects/domain/project';
 import { DataSourceProfile, ProfileDraft } from '../domain/data-source-profile';
@@ -72,6 +77,21 @@ export class ProfileService {
           profile.update(ProfileService.draft(request), catalog, this.clock),
         );
       },
+    );
+  }
+
+  public setChecks(
+    projectId: string,
+    userId: EntityId,
+    profileId: string,
+    request: BalanceChecksRequest,
+  ): Promise<Result<DataSourceProfile>> {
+    return this.mutate(
+      projectId,
+      userId,
+      profileId,
+      async (profile: DataSourceProfile, project: Project): Promise<Result<DataSourceProfile>> =>
+        profile.setChecks(request.checks, await this.catalogs.of(project.getId()), this.clock),
     );
   }
 

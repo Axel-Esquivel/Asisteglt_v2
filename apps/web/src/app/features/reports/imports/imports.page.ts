@@ -278,5 +278,14 @@ export class ImportsPage implements OnInit {
         // Sin permiso de ver datos: el historial queda vacío.
       },
     );
+    // Archivos elegidos antes de terminar la carga: se completan ahora con las preconfiguraciones.
+    const pending: UploadRow[] = this.rows().filter((row: UploadRow): boolean => row.profileId === null);
+    for (const row of pending) {
+      row.autofill(this.profiles(), this.org());
+    }
+    await Promise.all(pending.map((row: UploadRow): Promise<void> => this.verify(row)));
+    if (pending.length > 0) {
+      this.refresh();
+    }
   }
 }

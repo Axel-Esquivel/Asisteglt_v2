@@ -65,6 +65,9 @@ Proyecto de demostración: **Demo · Balance ficticio** (o crea uno nuevo).
 | 5.10 | Operaciones → «Conversión de moneda» de *Saldo final* a *Saldo final USD* con la colección, cotización «moneda del registro por 1 de destino» y destino `USD` | En Datos, *Saldo final USD* = saldo ÷ tasa del período (o la vigente más reciente) |
 | 5.11 | Cargar el mismo período para una compañía en `USD` e informe con *Saldo final* | La celda queda vacía con el aviso «tiene montos en varias monedas»; *Saldo final USD* sí se suma |
 | 5.12 | Diseño del informe → «Agregar columna calculada» `=SUMA([Debe]) - SUMA([Haber])` | Se valida al escribir («Resultado: Monto») y se calcula por fila y en el total |
+| 5.13 | Preconfiguraciones → «Validaciones de cuadre» `=SUMA([Debe])` contra `=SUMA([Haber])`, tolerancia `0.01`, «Rechazar el archivo si no cuadra» | La versión de la preconfiguración sube; un encabezado que la preconfiguración no lee se rechaza |
+| 5.14 | Cargar un archivo que no cuadra | Estado «Con errores» con la etiqueta «No cuadra» y el detalle de ambos valores; los datos anteriores del período siguen vigentes |
+| 5.15 | Desmarcar «Rechazar…» y volver a cargar | Se publica con la etiqueta «No cuadra» como aviso |
 
 ## 6. Inventarios
 

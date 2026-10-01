@@ -241,7 +241,7 @@
       <ng-template #body let-item let-expanded="expanded">
         <tr>
           <td>
-            @if (item.s.issues.length > 0 || item.s.error !== null) {
+            @if (item.s.issues.length > 0 || item.s.error !== null || item.s.checks.length > 0) {
             <p-button
               type="button"
               [pRowToggler]="item"
@@ -262,6 +262,9 @@
               [severity]="item.status().severity"
               [attr.data-testid]="'status-' + item.s.fileName"
             />
+            @if (item.unbalanced() > 0) {
+            <p-tag value="No cuadra" severity="warn" [attr.data-testid]="'checks-' + item.s.fileName" />
+            }
           </td>
           <td>{{ item.s.data }}</td>
           <td>{{ item.s.ignored }}</td>
@@ -274,6 +277,14 @@
           <td colspan="10">
             @if (item.s.error !== null) {
             <p-message severity="error">{{ item.s.error }}</p-message>
+            } @for (check of item.s.checks; track check.label) {
+            <div class="reports__hint">
+              <p-tag
+                [value]="check.passed ? 'Cuadra' : 'No cuadra'"
+                [severity]="check.passed ? 'success' : check.blocking ? 'danger' : 'warn'"
+              />
+              {{ check.label }}: {{ check.left ?? 'vacío' }} contra {{ check.right ?? 'vacío' }}
+            </div>
             } @for (issue of item.s.issues; track issue.line) {
             <div class="reports__hint">Línea {{ issue.line }}: {{ issue.messages.join(' · ') }}</div>
             }

@@ -87,6 +87,33 @@ export interface ProfileRequest {
   readonly spec: FixedWidthSpec;
 }
 
+/**
+ * Validación de cuadre de una preconfiguración: dos fórmulas agregadas sobre las líneas de cada
+ * archivo, p. ej. `=SUMA([Debe])` y `=SUMA([Haber])`, que deben coincidir dentro de la tolerancia.
+ */
+export interface BalanceCheckDto {
+  readonly label: string;
+  /** Se envían con nombres y se guardan en forma canónica (`[#clave]`). */
+  readonly left: string;
+  readonly right: string;
+  /** Decimal en texto (`0.01`). */
+  readonly tolerance: string;
+  /** Si no cuadra: `true` rechaza el archivo; `false` lo publica con aviso. */
+  readonly blocking: boolean;
+}
+
+export interface BalanceChecksRequest {
+  readonly checks: ReadonlyArray<BalanceCheckDto>;
+}
+
+export interface CheckResultDto {
+  readonly label: string;
+  readonly left: string | null;
+  readonly right: string | null;
+  readonly passed: boolean;
+  readonly blocking: boolean;
+}
+
 export interface ProfileResponse {
   readonly id: string;
   readonly name: string;
@@ -97,6 +124,7 @@ export interface ProfileResponse {
   readonly status: ProfileStatus;
   readonly version: number;
   readonly spec: FixedWidthSpec;
+  readonly checks: ReadonlyArray<BalanceCheckDto>;
   readonly updatedAt: string;
 }
 
@@ -142,6 +170,7 @@ export interface ImportItemResponse extends ImportItemRequest {
   readonly ignored: number;
   readonly rejected: number;
   readonly issues: ReadonlyArray<ImportIssueResponse>;
+  readonly checks: ReadonlyArray<CheckResultDto>;
   readonly error: string | null;
   readonly createdAt: string;
   readonly finishedAt: string | null;

@@ -1,4 +1,4 @@
-import { ImportItemStatus } from '@asisteglt/shared-contracts';
+import { CheckResultDto, ImportItemStatus } from '@asisteglt/shared-contracts';
 import { AggregateRoot, Clock, EntityId, Nullable } from '@asisteglt/shared-kernel';
 import { EntityScope } from './org-structure';
 
@@ -29,6 +29,7 @@ export interface ImportItemSnapshot {
   readonly ignored: number;
   readonly rejected: number;
   readonly issues: ReadonlyArray<ImportIssue>;
+  readonly checks: ReadonlyArray<CheckResultDto>;
   readonly error: Nullable<string>;
   readonly createdAt: Date;
   readonly finishedAt: Nullable<Date>;
@@ -111,6 +112,7 @@ export class ImportBatch extends AggregateRoot {
         ignored: 0,
         rejected: 0,
         issues: [],
+        checks: [],
         error: null,
         createdAt: now,
         finishedAt: null,
@@ -124,7 +126,10 @@ export class ImportBatch extends AggregateRoot {
       EntityId.fromString(s.projectId).unwrap(),
       EntityId.fromString(s.createdBy).unwrap(),
       s.createdAt,
-      [...s.items],
+      s.items.map((i: ImportItemSnapshot): ImportItemSnapshot => ({
+        ...i,
+        checks: Array.isArray(i.checks) ? i.checks : [],
+      })),
     );
   }
 
@@ -160,8 +165,28 @@ export class ImportBatch extends AggregateRoot {
     }));
   }
 
-  public publish(itemId: string, counts: ReadCounts, issues: ReadonlyArray<ImportIssue>, clock: Clock): void {
+  public publish(
+    itemId: string,
+    counts: ReadCounts,
+    issues: ReadonlyArray<ImportIssue>,
+    checks: ReadonlyArray<CheckResultDto>,
+    clock: Clock,
+  ): void {
     this.finish(itemId, ImportItemStatus.PUBLISHED, counts, issues, null, clock);
+    this.change(itemId, (i: ImportItemSnapshot): ImportItemSnapshot => ({ ...i, checks }));
+  }
+
+  /** Rechaza el archivo porque una validación de cuadre bloqueante no se cumple. */
+  public reject(
+    itemId: string,
+    counts: ReadCounts,
+    issues: ReadonlyArray<ImportIssue>,
+    checks: ReadonlyArray<CheckResultDto>,
+    error: string,
+    clock: Clock,
+  ): void {
+    this.finish(itemId, ImportItemStatus.FAILED, counts, issues, error, clock);
+    this.change(itemId, (i: ImportItemSnapshot): ImportItemSnapshot => ({ ...i, checks }));
   }
 
   public fail(

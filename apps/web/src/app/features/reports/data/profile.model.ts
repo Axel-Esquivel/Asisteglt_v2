@@ -1,7 +1,34 @@
-import { FixedWidthSpec, ProfileResponse, ProfileStatus, SourceType } from '@asisteglt/shared-contracts';
+import {
+  BalanceCheckDto,
+  CheckResultDto,
+  FixedWidthSpec,
+  ProfileResponse,
+  ProfileStatus,
+  SourceType,
+} from '@asisteglt/shared-contracts';
 import { SpecDecoders } from '@asisteglt/shared-ingestion-core';
 import { FieldDecoder, FieldReader, Nullable } from '@asisteglt/shared-kernel';
 import { ReportsLabels } from './reports-labels';
+
+export const BALANCE_CHECK: FieldDecoder<BalanceCheckDto> = new FieldDecoder<BalanceCheckDto>(
+  (f: FieldReader): BalanceCheckDto => ({
+    label: f.string('label'),
+    left: f.string('left'),
+    right: f.string('right'),
+    tolerance: f.string('tolerance'),
+    blocking: f.boolean('blocking'),
+  }),
+);
+
+export const CHECK_RESULT: FieldDecoder<CheckResultDto> = new FieldDecoder<CheckResultDto>(
+  (f: FieldReader): CheckResultDto => ({
+    label: f.string('label'),
+    left: f.nullableString('left'),
+    right: f.nullableString('right'),
+    passed: f.boolean('passed'),
+    blocking: f.boolean('blocking'),
+  }),
+);
 
 export class ProfileView {
   public constructor(public readonly s: ProfileResponse) {}
@@ -19,6 +46,7 @@ export class ProfileView {
           status: f.oneOf('status', Object.values(ProfileStatus)),
           version: f.number('version'),
           spec: f.nested('spec', SpecDecoders.SPEC),
+          checks: f.raw('checks') === null ? [] : f.list('checks', BALANCE_CHECK),
           updatedAt: f.string('updatedAt'),
         }),
     );

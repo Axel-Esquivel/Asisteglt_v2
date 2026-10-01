@@ -34,6 +34,7 @@ export class ImportPresenter {
       ignored: item.ignored,
       rejected: item.rejected,
       issues: item.issues.map((i: ImportIssue) => ({ line: i.line, messages: i.messages })),
+      checks: item.checks,
       error: item.error,
       createdAt: item.createdAt.toISOString(),
       finishedAt: item.finishedAt === null ? null : item.finishedAt.toISOString(),

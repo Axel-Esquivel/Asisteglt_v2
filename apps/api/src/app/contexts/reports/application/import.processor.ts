@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { FixedWidthSpec, ImportItemEvent, RealtimeEvent } from '@asisteglt/shared-contracts';
+import { CheckResultDto, FixedWidthSpec, ImportItemEvent, RealtimeEvent } from '@asisteglt/shared-contracts';
 import {
   DataLine,
   FixedWidthReader,
@@ -14,6 +14,8 @@ import { RealtimeEventPublisher, UsersAudience } from '../../chat/domain/ports';
 import { Project, ProjectMember } from '../../projects/domain/project';
 import { ProjectRepository } from '../../projects/domain/ports';
 import { AppConfig } from '../../../config/app-config';
+import { BalanceChecks } from '../domain/balance-checks';
+import { CatalogResolver } from '../domain/catalog-resolver';
 import { DataSourceProfile } from '../domain/data-source-profile';
 import { ImportBatch, ImportIssue, ImportItemSnapshot, ReadCounts } from '../domain/import-batch';
 import {
@@ -126,8 +128,26 @@ export class ImportProcessor {
       );
       return;
     }
-    await this.replacePrevious(batch, item);
     const data: DataLine[] = lines.filter((l: LineClassification): l is DataLine => l instanceof DataLine);
+    const checks: BalanceChecks = new BalanceChecks(profile.getChecks(), CatalogResolver.of(catalog));
+    for (const line of data) {
+      checks.add(line.values);
+    }
+    const results: CheckResultDto[] = checks.results();
+    const blocking: Nullable<CheckResultDto> =
+      results.find((r: CheckResultDto): boolean => r.blocking && !r.passed) ?? null;
+    if (blocking !== null) {
+      batch.reject(
+        item.id,
+        counts,
+        issues,
+        results,
+        `No cuadra «${blocking.label}»: ${blocking.left ?? 'vacío'} contra ${blocking.right ?? 'vacío'}`,
+        this.clock,
+      );
+      return;
+    }
+    await this.replacePrevious(batch, item);
     for (let start = 0; start < data.length; start += ImportProcessor.CHUNK) {
       await this.records.insertMany(
         data
@@ -135,7 +155,7 @@ export class ImportProcessor {
           .map((line: DataLine): DataRecordSnapshot => ImportProcessor.record(batch, item, line)),
       );
     }
-    batch.publish(item.id, counts, issues, this.clock);
+    batch.publish(item.id, counts, issues, results, this.clock);
   }
 
   /** Una sola versión vigente por preconfiguración, período y alcance: la anterior queda reemplazada. */

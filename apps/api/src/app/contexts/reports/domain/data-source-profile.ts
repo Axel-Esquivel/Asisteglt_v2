@@ -1,4 +1,5 @@
 import {
+  BalanceCheckDto,
   DataType,
   DerivedAttributeKind,
   DerivedAttributeSpec,
@@ -14,6 +15,8 @@ import {
 } from '@asisteglt/shared-contracts';
 import { FixedWidthLayout } from '@asisteglt/shared-ingestion-core';
 import { AggregateRoot, Clock, EntityId, Nullable, Result, ValidationError } from '@asisteglt/shared-kernel';
+import { BalanceChecks } from './balance-checks';
+import { CatalogResolver } from './catalog-resolver';
 import { CatalogField, FieldCatalog } from './field-catalog';
 
 export interface ProfileSnapshot {
@@ -27,6 +30,7 @@ export interface ProfileSnapshot {
   readonly status: ProfileStatus;
   readonly version: number;
   readonly spec: FixedWidthSpec;
+  readonly checks: ReadonlyArray<BalanceCheckDto>;
   readonly updatedAt: Date;
 }
 
@@ -66,6 +70,7 @@ export class DataSourceProfile extends AggregateRoot {
     private status: ProfileStatus,
     private version: number,
     private spec: FixedWidthSpec,
+    private checks: ReadonlyArray<BalanceCheckDto>,
     private updatedAt: Date,
   ) {
     super(id);
@@ -89,6 +94,7 @@ export class DataSourceProfile extends AggregateRoot {
           ProfileStatus.DRAFT,
           1,
           valid.spec,
+          [],
           clock.now(),
         ),
     );
@@ -105,6 +111,7 @@ export class DataSourceProfile extends AggregateRoot {
       s.status,
       s.version,
       s.spec,
+      Array.isArray(s.checks) ? s.checks : [],
       s.updatedAt,
     );
   }
@@ -123,6 +130,26 @@ export class DataSourceProfile extends AggregateRoot {
 
   public getSpec(): FixedWidthSpec {
     return this.spec;
+  }
+
+  public getChecks(): ReadonlyArray<BalanceCheckDto> {
+    return this.checks;
+  }
+
+  /** Reemplaza las validaciones de cuadre (nueva versión: afecta cómo se publican los archivos). */
+  public setChecks(
+    checks: ReadonlyArray<BalanceCheckDto>,
+    catalog: FieldCatalog,
+    clock: Clock,
+  ): Result<DataSourceProfile> {
+    return BalanceChecks.validate(checks, CatalogResolver.of(catalog), this.fieldKeys()).map(
+      (valid: BalanceCheckDto[]): DataSourceProfile => {
+        this.checks = valid;
+        this.version += 1;
+        this.updatedAt = clock.now();
+        return this;
+      },
+    );
   }
 
   public isActive(): boolean {
@@ -146,6 +173,21 @@ export class DataSourceProfile extends AggregateRoot {
   }
 
   public update(draft: ProfileDraft, catalog: FieldCatalog, clock: Clock): Result<DataSourceProfile> {
+    const keys: string[] = [
+      ...draft.spec.columns.map((c: ColumnSpec): string => c.fieldKey),
+      ...draft.spec.derived.map((d: DerivedAttributeSpec): string => d.targetKey),
+    ];
+    const checks: Result<BalanceCheckDto[]> = BalanceChecks.validate(
+      this.checks,
+      CatalogResolver.of(catalog),
+      keys,
+    );
+    if (!checks.isOk()) {
+      return Result.fail(
+        checks.errorOrNull() ??
+          new ValidationError(IngestionErrorCode.INVALID_PROFILE, 'Validación de cuadre inválida'),
+      );
+    }
     return DataSourceProfile.validate(draft, catalog).map((valid: ProfileDraft): DataSourceProfile => {
       this.name = valid.name;
       this.description = valid.description;
@@ -183,6 +225,7 @@ export class DataSourceProfile extends AggregateRoot {
       status: this.status,
       version: this.version,
       spec: this.spec,
+      checks: this.checks,
       updatedAt: this.updatedAt,
     };
   }

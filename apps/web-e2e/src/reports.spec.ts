@@ -216,4 +216,26 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
   await expect(page.getByTestId('report-table')).toContainText('Movimiento neto');
   await expect(page.getByTestId('report-table')).toContainText('2,670.00');
   await expect(page.getByTestId('report-table')).toContainText('Sin clasificar');
+
+  // Validación de cuadre: el balance de muestra no cuadra (Debe ≠ Haber) y se rechaza
+  await page.getByRole('tab', { name: 'Preconfiguraciones' }).click();
+  await page.getByRole('button', { name: 'Validaciones de cuadre de balancetxt' }).click();
+  const checks = page.getByRole('dialog', { name: 'Validaciones de cuadre' });
+  await checks.getByRole('button', { name: 'Agregar validación' }).click();
+  await checks.getByLabel('Nombre de la validación 1').fill('Debe = Haber');
+  await checks.getByLabel('Fórmula izquierda 1').fill('=SUMA([Debe])');
+  await checks.getByLabel('Fórmula derecha 1').fill('=SUMA([Haber])');
+  await expect(checks.getByText('Resultado: Monto')).toHaveCount(2);
+  await checks.getByRole('button', { name: 'Guardar validaciones' }).click();
+  await expect(checks).toBeHidden();
+  await expect(page.getByTestId('profiles-table')).toContainText('v2');
+
+  await page.getByRole('tab', { name: 'Cargar datos' }).click();
+  await page.locator('input[type="file"]').setInputFiles(sampleFile('balance_demo_2026_09.txt'));
+  await expect(page.getByTestId('row-state-balance_demo_2026_09.txt')).toHaveText('Lista');
+  await page.getByRole('button', { name: 'Cargar 1 archivos' }).click();
+  await expect(page.getByTestId('status-balance_demo_2026_09.txt')).toHaveText('Con errores', {
+    timeout: 15_000,
+  });
+  await expect(page.getByTestId('checks-balance_demo_2026_09.txt')).toHaveText('No cuadra');
 });

@@ -59,6 +59,34 @@ describe.skipIf(uri === '')('Persistencia MongoDB (humo)', () => {
           .get(`/api/v1/projects/${String(id)}/report-definitions`)
           .set('authorization', admin.bearer())
           .expect(200);
+        await request(app.server())
+          .post(`/api/v1/projects/${String(id)}/collections`)
+          .set('authorization', admin.bearer())
+          .send({
+            name: 'Tipo de cambio de humo',
+            fields: [{ key: 'c_tasa', label: 'Tasa', dataType: 'DECIMAL', nature: 'RATE' }],
+            rows: [{ id: 'r1', period: null, values: { c_tasa: '7.5' } }],
+          })
+          .expect(201);
+        const collections: Response = await request(app.server())
+          .get(`/api/v1/projects/${String(id)}/collections`)
+          .set('authorization', admin.bearer())
+          .expect(200);
+        const collectionsBody: unknown = collections.body;
+        expect(collectionsBody).toEqual([
+          expect.objectContaining({ rows: [{ id: 'r1', period: null, values: { c_tasa: '7.5' } }] }),
+        ]);
+        await request(app.server())
+          .put(`/api/v1/projects/${String(id)}/operations`)
+          .set('authorization', admin.bearer())
+          .send({ steps: [] })
+          .expect(200);
+        const operations: Response = await request(app.server())
+          .get(`/api/v1/projects/${String(id)}/operations`)
+          .set('authorization', admin.bearer())
+          .expect(200);
+        const operationsBody: unknown = operations.body;
+        expect(operationsBody).toMatchObject({ version: 1, steps: [] });
       } else {
         const counts: Response = await request(app.server())
           .get(`/api/v1/projects/${String(id)}/inventory/counts`)

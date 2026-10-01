@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
-import { ProfileRequest, ProfileResponse } from '@asisteglt/shared-contracts';
+import { BalanceChecksRequest, ProfileRequest, ProfileResponse } from '@asisteglt/shared-contracts';
 import { Result } from '@asisteglt/shared-kernel';
 import { CurrentPrincipal } from '../../../common/auth/auth.decorators';
 import type { AuthenticatedPrincipal } from '../../iam/domain/ports';
@@ -52,6 +52,17 @@ export class ProfilesController {
     return ReportsPresenter.profile(
       (await this.profiles.update(projectId, p.userId, profileId, request)).unwrap(),
     );
+  }
+
+  @Put(':profileId/checks')
+  public async checks(
+    @CurrentPrincipal() p: AuthenticatedPrincipal,
+    @Param('projectId') projectId: string,
+    @Param('profileId') profileId: string,
+    @Body() body: unknown,
+  ): Promise<ProfileResponse> {
+    const request: BalanceChecksRequest = ReportsRequestParser.checks(body).unwrap();
+    return ProfilesController.present(await this.profiles.setChecks(projectId, p.userId, profileId, request));
   }
 
   @Post(':profileId/activate')

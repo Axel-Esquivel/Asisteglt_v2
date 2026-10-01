@@ -51,7 +51,11 @@ export class OperationPipeline extends AggregateRoot {
       EntityId.fromString(s.id).unwrap(),
       EntityId.fromString(s.projectId).unwrap(),
       s.version,
-      s.steps,
+      s.steps.map((step: OperationStepDto): OperationStepDto => ({
+        ...step,
+        currencyFieldKey: step.currencyFieldKey ?? null,
+        quote: step.quote ?? null,
+      })),
       s.updatedAt,
     );
   }

@@ -53,6 +53,7 @@ export const PROFILE_SCHEMA: Schema<ProfileRecord> = new Schema<ProfileRecord>(
     status: { type: String, enum: Object.values(ProfileStatus), required: true },
     version: { type: Number, required: true },
     spec: { type: Schema.Types.Mixed, required: true },
+    checks: { type: Schema.Types.Mixed, default: [] },
     updatedAt: { type: Date, required: true },
   },
   { collection: 'data_source_profiles', versionKey: false, minimize: false },
