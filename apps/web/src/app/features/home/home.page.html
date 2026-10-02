@@ -1,9 +1,9 @@
 <section class="home">
   <header class="home__header">
     @if (user(); as current) {
-      <h1 class="home__title">Hola, {{ current.displayName }}</h1>
+    <h1 class="home__title">Hola, {{ current.displayName }}</h1>
     } @else {
-      <h1 class="home__title">Bienvenido</h1>
+    <h1 class="home__title">Bienvenido</h1>
     }
     <p class="home__subtitle">Reportes e inventarios colaborativos en tiempo real.</p>
   </header>
@@ -24,35 +24,29 @@
     </p-card>
 
     <p-card header="Estado del sistema" subheader="Servicio API">
-      @switch (status()) {
-        @case (LoadStatus.LOADING) {
-          <div class="home__skeleton" data-testid="health-loading">
-            <p-skeleton width="40%" />
-            <p-skeleton width="70%" />
-          </div>
-        }
-        @case (LoadStatus.FAILED) {
-          <p-message severity="error" data-testid="health-error">{{ errorMessage() }}</p-message>
-        }
-        @default {
-          @if (health(); as current) {
-            <dl class="home__facts" data-testid="health-facts">
-              <dt>Estado</dt>
-              <dd>
-                <p-tag
-                  [value]="current.statusLabel()"
-                  [severity]="current.isUp() ? 'success' : 'danger'"
-                  data-testid="health-status"
-                />
-              </dd>
-              <dt>Versión</dt>
-              <dd>{{ current.version }}</dd>
-              <dt>Tiempo activo</dt>
-              <dd>{{ current.uptimeLabel() }}</dd>
-            </dl>
-          }
-        }
-      }
+      @switch (status()) { @case (LoadStatus.LOADING) {
+      <div class="home__skeleton" data-testid="health-loading">
+        <p-skeleton width="40%" />
+        <p-skeleton width="70%" />
+      </div>
+      } @case (LoadStatus.FAILED) {
+      <p-message severity="error" data-testid="health-error">{{ errorMessage() }}</p-message>
+      } @default { @if (health(); as current) {
+      <dl class="home__facts" data-testid="health-facts">
+        <dt>Estado</dt>
+        <dd>
+          <p-tag
+            [value]="current.statusLabel()"
+            [severity]="current.isUp() ? 'success' : 'danger'"
+            data-testid="health-status"
+          />
+        </dd>
+        <dt>Versión</dt>
+        <dd>{{ current.version }}</dd>
+        <dt>Tiempo activo</dt>
+        <dd>{{ current.uptimeLabel() }}</dd>
+      </dl>
+      } } }
       <ng-template #footer>
         <p-button
           label="Actualizar"

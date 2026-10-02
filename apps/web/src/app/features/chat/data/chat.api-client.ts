@@ -31,11 +31,18 @@ export class ChatApiClient extends ApiClient {
 
   public history(conversationId: string, before: Nullable<Date>): Promise<Result<ChatMessage[]>> {
     const query: string = before === null ? '' : `?before=${encodeURIComponent(before.toISOString())}`;
-    return this.get(`chat/conversations/${encodeURIComponent(conversationId)}/messages${query}`, this.messages);
+    return this.get(
+      `chat/conversations/${encodeURIComponent(conversationId)}/messages${query}`,
+      this.messages,
+    );
   }
 
   public send(conversationId: string, text: string): Promise<Result<ChatMessage>> {
-    return this.post(`chat/conversations/${encodeURIComponent(conversationId)}/messages`, { text }, this.message);
+    return this.post(
+      `chat/conversations/${encodeURIComponent(conversationId)}/messages`,
+      { text },
+      this.message,
+    );
   }
 
   public edit(messageId: string, text: string): Promise<Result<ChatMessage>> {

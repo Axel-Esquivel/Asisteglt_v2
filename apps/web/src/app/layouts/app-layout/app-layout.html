@@ -14,16 +14,16 @@
       (onClick)="toggleTheme()"
     />
     @if (user(); as current) {
-      <p-button
-        [text]="true"
-        [rounded]="true"
-        ariaLabel="Menú de usuario"
-        (onClick)="userMenuRef.toggle($event)"
-      >
-        <p-avatar [label]="current.initials()" shape="circle" />
-        <span class="shell__user">{{ current.displayName }}</span>
-      </p-button>
-      <p-menu #userMenuRef [model]="userMenu" [popup]="true" appendTo="body" />
+    <p-button
+      [text]="true"
+      [rounded]="true"
+      ariaLabel="Menú de usuario"
+      (onClick)="userMenuRef.toggle($event)"
+    >
+      <p-avatar [label]="current.initials()" shape="circle" />
+      <span class="shell__user">{{ current.displayName }}</span>
+    </p-button>
+    <p-menu #userMenuRef [model]="userMenu" [popup]="true" appendTo="body" />
     }
   </ng-template>
 </p-toolbar>

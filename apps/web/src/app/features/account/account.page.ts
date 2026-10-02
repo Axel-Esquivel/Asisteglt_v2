@@ -1,6 +1,12 @@
 import { ChangeDetectionStrategy, Component, OnInit, WritableSignal, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormControl,
+  FormGroup,
+  NonNullableFormBuilder,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { Nullable, Result } from '@asisteglt/shared-kernel';
 import { ActiveSession, AuthApiClient, AuthSession, CurrentUser } from '@asisteglt/web-core';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -41,7 +47,10 @@ export class AccountPage implements OnInit {
   });
   protected readonly passwordForm: FormGroup<PasswordControls> = this.fb.group({
     currentPassword: ['', [Validators.required]],
-    newPassword: ['', [Validators.required, Validators.minLength(12), Validators.pattern(/^(?=.*[A-Za-z])(?=.*\d).+$/)]],
+    newPassword: [
+      '',
+      [Validators.required, Validators.minLength(12), Validators.pattern(/^(?=.*[A-Za-z])(?=.*\d).+$/)],
+    ],
   });
   protected readonly sessions: WritableSignal<ActiveSession[]> = signal<ActiveSession[]>([]);
   protected readonly savingProfile: WritableSignal<boolean> = signal<boolean>(false);

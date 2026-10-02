@@ -53,7 +53,15 @@ export class ConversationSummary {
   }
 
   public withActivity(at: Date, unread: number): ConversationSummary {
-    return new ConversationSummary(this.id, this.type, this.title, this.projectId, this.counterpartId, at, unread);
+    return new ConversationSummary(
+      this.id,
+      this.type,
+      this.title,
+      this.projectId,
+      this.counterpartId,
+      at,
+      unread,
+    );
   }
 
   public withUnread(unread: number): ConversationSummary {
@@ -130,7 +138,8 @@ export class UserMatch {
 
   public static decoder(): FieldDecoder<UserMatch> {
     return new FieldDecoder<UserMatch>(
-      (f: FieldReader): UserMatch => new UserMatch(f.string('id'), f.string('displayName'), f.string('email')),
+      (f: FieldReader): UserMatch =>
+        new UserMatch(f.string('id'), f.string('displayName'), f.string('email')),
     );
   }
 

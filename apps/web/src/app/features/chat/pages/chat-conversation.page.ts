@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, InputSignal, Signal, computed, inject, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  InputSignal,
+  Signal,
+  computed,
+  inject,
+  input,
+} from '@angular/core';
 import { Nullable } from '@asisteglt/shared-kernel';
 import { ConversationView } from '../conversation/conversation-view';
 import { ConversationSummary } from '../data/chat.model';

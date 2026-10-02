@@ -3,7 +3,7 @@
     <div class="inventory__title">
       <span>Tomas físicas</span>
       @if (canConfigure()) {
-        <p-button label="Nueva toma" icon="pi pi-plus" size="small" (onClick)="creating.set(true)" />
+      <p-button label="Nueva toma" icon="pi pi-plus" size="small" (onClick)="creating.set(true)" />
       }
     </div>
   </ng-template>
@@ -26,7 +26,14 @@
         <td>{{ count.s.rounds.length }} / {{ count.s.maxRounds }}</td>
         <td><p-tag [value]="count.statusLabel().label" [severity]="count.statusLabel().severity" /></td>
         <td class="inventory__actions">
-          <p-button label="Abrir" icon="pi pi-arrow-right" iconPos="right" [text]="true" size="small" (onClick)="open(count)" />
+          <p-button
+            label="Abrir"
+            icon="pi pi-arrow-right"
+            iconPos="right"
+            [text]="true"
+            size="small"
+            (onClick)="open(count)"
+          />
         </td>
       </tr>
     </ng-template>
@@ -38,25 +45,71 @@
   </p-table>
 </p-card>
 
-<p-dialog header="Nueva toma" [modal]="true" [visible]="creating()" (visibleChange)="creating.set($event)" [style]="{ width: 'min(30rem, 95vw)' }">
+<p-dialog
+  header="Nueva toma"
+  [modal]="true"
+  [visible]="creating()"
+  (visibleChange)="creating.set($event)"
+  [style]="{ width: 'min(30rem, 95vw)' }"
+>
   <form class="inventory__form" (ngSubmit)="create()">
     <p-floatlabel variant="on">
-      <input pInputText id="countName" name="name" [ngModel]="name()" (ngModelChange)="name.set($event)" class="full-width" />
+      <input
+        pInputText
+        id="countName"
+        name="name"
+        [ngModel]="name()"
+        (ngModelChange)="name.set($event)"
+        class="full-width"
+      />
       <label for="countName">Nombre de la toma</label>
     </p-floatlabel>
     <p-floatlabel variant="on">
-      <input pInputText id="countWarehouse" name="warehouse" [ngModel]="warehouse()" (ngModelChange)="warehouse.set($event)" class="full-width" />
+      <input
+        pInputText
+        id="countWarehouse"
+        name="warehouse"
+        [ngModel]="warehouse()"
+        (ngModelChange)="warehouse.set($event)"
+        class="full-width"
+      />
       <label for="countWarehouse">Bodega</label>
     </p-floatlabel>
-    <p-selectbutton name="kind" [options]="kindOptions" optionLabel="label" optionValue="value" [ngModel]="toleranceKind()" (ngModelChange)="toleranceKind.set($event)" [allowEmpty]="false" ariaLabelledBy="toleranceLabel" />
+    <p-selectbutton
+      name="kind"
+      [options]="kindOptions"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="toleranceKind()"
+      (ngModelChange)="toleranceKind.set($event)"
+      [allowEmpty]="false"
+      ariaLabelledBy="toleranceLabel"
+    />
     <span id="toleranceLabel" class="inventory__hint">Tolerancia: diferencias mayores se recuentan</span>
     <div class="inventory__grid">
       <p-floatlabel variant="on">
-        <p-inputnumber inputId="toleranceValue" name="tolerance" [ngModel]="toleranceValue()" (ngModelChange)="toleranceValue.set($event ?? 0)" [min]="0" [maxFractionDigits]="2" styleClass="full-width" />
+        <p-inputnumber
+          inputId="toleranceValue"
+          name="tolerance"
+          [ngModel]="toleranceValue()"
+          (ngModelChange)="toleranceValue.set($event ?? 0)"
+          [min]="0"
+          [maxFractionDigits]="2"
+          styleClass="full-width"
+        />
         <label for="toleranceValue">Tolerancia</label>
       </p-floatlabel>
       <p-floatlabel variant="on">
-        <p-inputnumber inputId="maxRounds" name="rounds" [ngModel]="maxRounds()" (ngModelChange)="maxRounds.set($event ?? 1)" [min]="1" [max]="5" [showButtons]="true" styleClass="full-width" />
+        <p-inputnumber
+          inputId="maxRounds"
+          name="rounds"
+          [ngModel]="maxRounds()"
+          (ngModelChange)="maxRounds.set($event ?? 1)"
+          [min]="1"
+          [max]="5"
+          [showButtons]="true"
+          styleClass="full-width"
+        />
         <label for="maxRounds">Máximo de rondas</label>
       </p-floatlabel>
     </div>

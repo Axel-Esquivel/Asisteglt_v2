@@ -135,6 +135,15 @@ gantt
 | Motor de consultas con caché Redis e invalidación por versión de datos y por versión del catálogo (`catalogVersion`); validación de referencias al publicar y al calcular. | Informe típico (≈ 500 celdas) < 2 s sin caché y < 300 ms con caché. Publicar una plantilla que referencia un encabezado desactivado devuelve `FIELD_INACTIVE` indicando el elemento afectado. |
 | Exportación PDF con Chromium sobre la ruta de impresión. | Prueba visual de regresión: PDF vs previsualización. |
 
+**Estado de F6 en el código:** plantillas multipágina (Carta, Oficio, Legal, A4 o personalizada,
+vertical u horizontal) con encabezado y pie con marcadores; elementos Texto, Tabla (un informe
+matricial), Indicador (fórmula agregada) y Gráfico (barras, líneas o circular sobre columnas de un
+informe); diseñador con arrastre y redimensionado en milímetros; formato numérico (decimales,
+miles, escala, negativos con paréntesis o en rojo); vista de impresión con `@page` por página para
+imprimir o guardar como PDF desde el navegador. Pendiente: tabla dinámica, filas/columnas por
+filtros y fórmulas entre celdas y páginas, imágenes y formas, formato condicional, edición
+simultánea con bloqueo, deshacer/rehacer, PDF en el servidor y caché Redis.
+
 ### F7 · Inventarios (3 sprints, en paralelo con F5–F6) — RF-INV-01…11, RF-REP-20
 
 | Entregables | Criterios de aceptación |

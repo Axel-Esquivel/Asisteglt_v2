@@ -5,45 +5,61 @@
 
   <div #scroller class="conversation__messages" data-testid="chat-messages" (scroll)="onScroll()">
     @if (hasMore()) {
-      <p-button label="Ver mensajes anteriores" [text]="true" size="small" styleClass="conversation__older" (onClick)="loadOlder()" />
-    }
-    @if (loadFailed()) {
-      <p-message severity="error">No se pudo cargar la conversación.</p-message>
-    }
-    @for (message of messages(); track message.id) {
-      <article class="conversation__message" [class.conversation__message--mine]="isMine(message)">
-        <div class="conversation__meta">
-          <strong>{{ isMine(message) ? 'Tú' : message.senderName }}</strong>
-          <time [attr.datetime]="message.sentAt.toISOString()">{{ message.sentAt | date: 'short' }}</time>
-          @if (message.editedAt !== null && !message.deleted) {
-            <span class="conversation__edited">(editado)</span>
-          }
-        </div>
-        @if (message.deleted) {
-          <p class="conversation__text conversation__text--deleted">Mensaje eliminado</p>
-        } @else {
-          <p class="conversation__text">{{ message.text }}</p>
-          @if (isMine(message)) {
-            <div class="conversation__actions">
-              <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" size="small" ariaLabel="Editar mensaje" (onClick)="startEdit(message)" />
-              <p-button icon="pi pi-trash" [text]="true" [rounded]="true" size="small" severity="danger" ariaLabel="Eliminar mensaje" (onClick)="remove(message)" />
-            </div>
-          }
+    <p-button
+      label="Ver mensajes anteriores"
+      [text]="true"
+      size="small"
+      styleClass="conversation__older"
+      (onClick)="loadOlder()"
+    />
+    } @if (loadFailed()) {
+    <p-message severity="error">No se pudo cargar la conversación.</p-message>
+    } @for (message of messages(); track message.id) {
+    <article class="conversation__message" [class.conversation__message--mine]="isMine(message)">
+      <div class="conversation__meta">
+        <strong>{{ isMine(message) ? 'Tú' : message.senderName }}</strong>
+        <time [attr.datetime]="message.sentAt.toISOString()">{{ message.sentAt | date: 'short' }}</time>
+        @if (message.editedAt !== null && !message.deleted) {
+        <span class="conversation__edited">(editado)</span>
         }
-      </article>
-    } @empty {
-      @if (!loadFailed()) {
-        <p class="conversation__empty">Aún no hay mensajes. ¡Escribe el primero!</p>
-      }
-    }
+      </div>
+      @if (message.deleted) {
+      <p class="conversation__text conversation__text--deleted">Mensaje eliminado</p>
+      } @else {
+      <p class="conversation__text">{{ message.text }}</p>
+      @if (isMine(message)) {
+      <div class="conversation__actions">
+        <p-button
+          icon="pi pi-pencil"
+          [text]="true"
+          [rounded]="true"
+          size="small"
+          ariaLabel="Editar mensaje"
+          (onClick)="startEdit(message)"
+        />
+        <p-button
+          icon="pi pi-trash"
+          [text]="true"
+          [rounded]="true"
+          size="small"
+          severity="danger"
+          ariaLabel="Eliminar mensaje"
+          (onClick)="remove(message)"
+        />
+      </div>
+      } }
+    </article>
+    } @empty { @if (!loadFailed()) {
+    <p class="conversation__empty">Aún no hay mensajes. ¡Escribe el primero!</p>
+    } }
   </div>
 
   <form class="conversation__composer" (ngSubmit)="submit()">
     @if (editing() !== null) {
-      <div class="conversation__editing">
-        <span>Editando mensaje</span>
-        <p-button label="Cancelar" [text]="true" size="small" (onClick)="cancelEdit()" />
-      </div>
+    <div class="conversation__editing">
+      <span>Editando mensaje</span>
+      <p-button label="Cancelar" [text]="true" size="small" (onClick)="cancelEdit()" />
+    </div>
     }
     <div class="conversation__input">
       <textarea
@@ -58,7 +74,13 @@
         (ngModelChange)="draft.set($event)"
         (keydown)="onKeydown($event)"
       ></textarea>
-      <p-button type="submit" icon="pi pi-send" ariaLabel="Enviar" [loading]="sending()" [disabled]="draft().trim() === ''" />
+      <p-button
+        type="submit"
+        icon="pi pi-send"
+        ariaLabel="Enviar"
+        [loading]="sending()"
+        [disabled]="draft().trim() === ''"
+      />
     </div>
   </form>
 </section>

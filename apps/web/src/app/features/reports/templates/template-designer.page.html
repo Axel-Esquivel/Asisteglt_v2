@@ -1,0 +1,514 @@
+<p-card>
+  <ng-template #title>
+    <div class="reports__title">
+      <p-floatlabel variant="on" class="reports__grow">
+        <input
+          pInputText
+          id="templateName"
+          class="full-width"
+          [ngModel]="store.name()"
+          (ngModelChange)="store.name.set($event); store.dirty.set(true)"
+          [disabled]="!canDesign()"
+        />
+        <label for="templateName">Nombre de la plantilla</label>
+      </p-floatlabel>
+      <div class="reports__toolbar">
+        <p-button
+          label="Plantillas"
+          icon="pi pi-arrow-left"
+          size="small"
+          [text]="true"
+          [routerLink]="['/app/projects', context.id(), 'templates']"
+        />
+        <p-button
+          label="Vista previa"
+          icon="pi pi-eye"
+          size="small"
+          [outlined]="true"
+          [routerLink]="['/print/projects', context.id(), 'templates', templateId()]"
+          [disabled]="store.dirty()"
+        />
+        @if (canDesign()) {
+        <p-button
+          label="Guardar"
+          icon="pi pi-check"
+          size="small"
+          [loading]="saving()"
+          [disabled]="!store.dirty()"
+          (onClick)="save()"
+        />
+        }
+      </div>
+    </div>
+  </ng-template>
+  @if (store.dirty()) {
+  <p-message severity="warn" size="small"
+    >Hay cambios sin guardar; guarda para ver la vista previa.</p-message
+  >
+  }
+  <div class="designer">
+    <aside class="designer__side">
+      <strong>Páginas</strong>
+      <p-table
+        [value]="store.pages()"
+        selectionMode="single"
+        [selection]="store.page()"
+        (selectionChange)="store.selectPage(store.pages().indexOf($event))"
+        dataKey="id"
+        data-testid="template-pages"
+        [attr.aria-label]="'Páginas'"
+      >
+        <ng-template #body let-page let-i="rowIndex">
+          <tr [pSelectableRow]="page">
+            <td>{{ i + 1 }}. {{ page.name }}</td>
+          </tr>
+        </ng-template>
+      </p-table>
+      @if (canDesign()) {
+      <div class="reports__toolbar">
+        <p-button label="Página" icon="pi pi-plus" size="small" [text]="true" (onClick)="store.addPage()" />
+        <p-button
+          icon="pi pi-trash"
+          size="small"
+          [text]="true"
+          severity="danger"
+          ariaLabel="Quitar página"
+          [disabled]="store.pages().length <= 1"
+          (onClick)="store.removePage()"
+        />
+      </div>
+      <strong>Agregar</strong>
+      <div class="designer__palette" data-testid="designer-palette">
+        <p-button
+          label="Texto"
+          icon="pi pi-align-left"
+          size="small"
+          [outlined]="true"
+          (onClick)="store.addElement(kinds.TEXT)"
+        />
+        <p-button
+          label="Tabla"
+          icon="pi pi-table"
+          size="small"
+          [outlined]="true"
+          (onClick)="store.addElement(kinds.MATRIX)"
+        />
+        <p-button
+          label="Indicador"
+          icon="pi pi-gauge"
+          size="small"
+          [outlined]="true"
+          (onClick)="store.addElement(kinds.KPI)"
+        />
+        <p-button
+          label="Gráfico"
+          icon="pi pi-chart-bar"
+          size="small"
+          [outlined]="true"
+          (onClick)="store.addElement(kinds.CHART)"
+        />
+      </div>
+      }
+    </aside>
+
+    <div class="designer__stage">
+      @if (store.page(); as page) {
+      <div
+        class="designer__page"
+        data-testid="designer-page"
+        [style.width.px]="store.geometry().width * scale"
+        [style.height.px]="store.geometry().height * scale"
+      >
+        <div class="designer__margin" [style.inset.px]="page.margin * scale"></div>
+        <div class="designer__band designer__band--top" [style.padding-inline.px]="page.margin * scale">
+          {{ page.header }}
+        </div>
+        @for (element of page.elements; track element.id) {
+        <div
+          class="designer__element"
+          role="button"
+          tabindex="0"
+          [attr.aria-label]="kindLabel(element.kind) + ' ' + element.name"
+          [attr.data-testid]="'element-' + element.name"
+          [class.designer__element--selected]="element.id === store.selectedId()"
+          [style.left.px]="element.box.x * scale"
+          [style.top.px]="element.box.y * scale"
+          [style.width.px]="element.box.width * scale"
+          [style.height.px]="element.box.height * scale"
+          [style.font-size.pt]="element.style.fontSize * 0.75"
+          [style.font-weight]="element.style.bold ? 700 : 400"
+          [style.text-align]="element.style.align === 'CENTER' ? 'center' : element.style.align === 'RIGHT' ? 'right' : 'left'"
+          (pointerdown)="startDrag($event, element, false)"
+          (keydown)="onElementKey($event, element)"
+        >
+          <span class="designer__kind">{{ kindLabel(element.kind) }}</span>
+          <span class="designer__content">{{ preview(element) }}</span>
+          @if (canDesign()) {
+          <span
+            class="designer__handle"
+            aria-hidden="true"
+            (pointerdown)="startDrag($event, element, true)"
+          ></span>
+          }
+        </div>
+        }
+        <div class="designer__band designer__band--bottom" [style.padding-inline.px]="page.margin * scale">
+          {{ page.footer }}
+        </div>
+      </div>
+      }
+    </div>
+
+    <aside class="designer__side designer__props">
+      @if (store.selected(); as e) {
+      <strong>{{ kindLabel(e.kind) }}</strong>
+      <p-floatlabel variant="on">
+        <input pInputText id="elName" class="full-width" [ngModel]="e.name" (ngModelChange)="name($event)" />
+        <label for="elName">Nombre</label>
+      </p-floatlabel>
+      <div class="designer__pair">
+        <p-floatlabel variant="on"
+          ><p-inputnumber
+            inputId="elX"
+            [ngModel]="e.box.x"
+            (ngModelChange)="box('x', $event)"
+            suffix=" mm"
+            [maxFractionDigits]="1"
+          /><label for="elX">X</label></p-floatlabel
+        >
+        <p-floatlabel variant="on"
+          ><p-inputnumber
+            inputId="elY"
+            [ngModel]="e.box.y"
+            (ngModelChange)="box('y', $event)"
+            suffix=" mm"
+            [maxFractionDigits]="1"
+          /><label for="elY">Y</label></p-floatlabel
+        >
+        <p-floatlabel variant="on"
+          ><p-inputnumber
+            inputId="elW"
+            [ngModel]="e.box.width"
+            (ngModelChange)="box('width', $event)"
+            suffix=" mm"
+            [maxFractionDigits]="1"
+          /><label for="elW">Ancho</label></p-floatlabel
+        >
+        <p-floatlabel variant="on"
+          ><p-inputnumber
+            inputId="elH"
+            [ngModel]="e.box.height"
+            (ngModelChange)="box('height', $event)"
+            suffix=" mm"
+            [maxFractionDigits]="1"
+          /><label for="elH">Alto</label></p-floatlabel
+        >
+      </div>
+      @switch (e.kind) { @case (kinds.TEXT) {
+      <label for="elText" class="reports__hint"
+        >Texto ({{ '{' }}periodo{{ '}' }}, {{ '{' }}mes{{ '}' }}, {{ '{' }}año{{ '}' }}, {{ '{' }}fecha{{ '}'
+        }}, {{ '{' }}proyecto{{ '}' }})</label
+      >
+      <textarea
+        pTextarea
+        id="elText"
+        rows="4"
+        class="full-width"
+        [ngModel]="e.text"
+        (ngModelChange)="text($event)"
+      ></textarea>
+      } @case (kinds.KPI) {
+      <p-floatlabel variant="on">
+        <input
+          pInputText
+          id="elFormula"
+          class="full-width reports__mono"
+          autocomplete="off"
+          [ngModel]="e.formula"
+          (ngModelChange)="formula($event)"
+        />
+        <label for="elFormula">Fórmula</label>
+      </p-floatlabel>
+      @if (formulaCheck().message !== '') {
+      <p-message [severity]="formulaCheck().ok ? 'success' : 'error'" size="small" data-testid="kpi-check"
+        >{{ formulaCheck().message }}</p-message
+      >
+      }
+      <p-floatlabel variant="on">
+        <p-select
+          inputId="elCompany"
+          ariaLabel="Compañía (todas)"
+          [options]="companyOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="e.companyId"
+          (ngModelChange)="company($event)"
+          [showClear]="true"
+          styleClass="full-width"
+          appendTo="body"
+        />
+        <label for="elCompany">Compañía (todas)</label>
+      </p-floatlabel>
+      } @case (kinds.MATRIX) {
+      <p-floatlabel variant="on">
+        <p-select
+          inputId="elReport"
+          ariaLabel="Informe"
+          [options]="reportOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="e.reportId"
+          (ngModelChange)="report($event)"
+          styleClass="full-width"
+          appendTo="body"
+        />
+        <label for="elReport">Informe</label>
+      </p-floatlabel>
+      } @case (kinds.CHART) {
+      <p-floatlabel variant="on">
+        <p-select
+          inputId="elReport"
+          ariaLabel="Informe"
+          [options]="reportOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="e.reportId"
+          (ngModelChange)="report($event)"
+          styleClass="full-width"
+          appendTo="body"
+        />
+        <label for="elReport">Informe</label>
+      </p-floatlabel>
+      <p-floatlabel variant="on">
+        <p-select
+          inputId="elChartType"
+          ariaLabel="Tipo de gráfico"
+          [options]="chartTypes"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="e.chartType"
+          (ngModelChange)="chartType($event)"
+          styleClass="full-width"
+          appendTo="body"
+        />
+        <label for="elChartType">Tipo de gráfico</label>
+      </p-floatlabel>
+      <p-floatlabel variant="on">
+        <p-multiselect
+          inputId="elColumns"
+          ariaLabel="Series (columnas del informe)"
+          [options]="columnOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="e.columns"
+          (ngModelChange)="columns($event)"
+          display="chip"
+          styleClass="full-width"
+          appendTo="body"
+        />
+        <label for="elColumns">Series (columnas del informe)</label>
+      </p-floatlabel>
+      } }
+      <div class="designer__pair">
+        <p-floatlabel variant="on"
+          ><p-inputnumber
+            inputId="elFont"
+            [ngModel]="e.style.fontSize"
+            (ngModelChange)="fontSize($event)"
+            [min]="6"
+            [max]="72"
+            suffix=" pt"
+          /><label for="elFont">Letra</label></p-floatlabel
+        >
+        <p-floatlabel variant="on">
+          <p-select
+            inputId="elAlign"
+            ariaLabel="Alineación"
+            [options]="aligns"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="e.style.align"
+            (ngModelChange)="align($event)"
+            styleClass="full-width"
+            appendTo="body"
+          />
+          <label for="elAlign">Alineación</label>
+        </p-floatlabel>
+      </div>
+      <div class="reports__toolbar">
+        <p-toggleswitch inputId="elBold" [ngModel]="e.style.bold" (ngModelChange)="bold($event)" />
+        <label for="elBold">Negrita</label>
+      </div>
+      @if (e.kind !== kinds.TEXT) {
+      <strong>Formato numérico</strong>
+      <div class="designer__pair">
+        <p-floatlabel variant="on"
+          ><p-inputnumber
+            inputId="elDecimals"
+            [ngModel]="e.numberFormat.decimals"
+            (ngModelChange)="decimals($event)"
+            [min]="0"
+            [max]="6"
+          /><label for="elDecimals">Decimales</label></p-floatlabel
+        >
+        <p-floatlabel variant="on">
+          <p-select
+            inputId="elScale"
+            ariaLabel="Escala"
+            [options]="scales"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="e.numberFormat.scale"
+            (ngModelChange)="numberScale($event)"
+            styleClass="full-width"
+            appendTo="body"
+          />
+          <label for="elScale">Escala</label>
+        </p-floatlabel>
+        <p-floatlabel variant="on"
+          ><input
+            pInputText
+            id="elPrefix"
+            class="full-width"
+            [ngModel]="e.numberFormat.prefix"
+            (ngModelChange)="affix('prefix', $event)"
+          /><label for="elPrefix">Prefijo</label></p-floatlabel
+        >
+        <p-floatlabel variant="on"
+          ><input
+            pInputText
+            id="elSuffix"
+            class="full-width"
+            [ngModel]="e.numberFormat.suffix"
+            (ngModelChange)="affix('suffix', $event)"
+          /><label for="elSuffix">Sufijo</label></p-floatlabel
+        >
+      </div>
+      <p-floatlabel variant="on">
+        <p-select
+          inputId="elNegative"
+          ariaLabel="Negativos"
+          [options]="negatives"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="e.numberFormat.negative"
+          (ngModelChange)="negative($event)"
+          styleClass="full-width"
+          appendTo="body"
+        />
+        <label for="elNegative">Negativos</label>
+      </p-floatlabel>
+      <div class="reports__toolbar">
+        <p-toggleswitch
+          inputId="elThousands"
+          [ngModel]="e.numberFormat.thousands"
+          (ngModelChange)="thousands($event)"
+        />
+        <label for="elThousands">Separador de miles</label>
+      </div>
+      } @if (canDesign()) {
+      <p-button
+        label="Quitar elemento"
+        icon="pi pi-trash"
+        size="small"
+        severity="danger"
+        [text]="true"
+        (onClick)="store.removeSelected()"
+      />
+      } } @else if (store.page(); as page) {
+      <strong>Página</strong>
+      <p-floatlabel variant="on">
+        <input
+          pInputText
+          id="pgName"
+          class="full-width"
+          [ngModel]="page.name"
+          (ngModelChange)="pageText('name', $event)"
+        />
+        <label for="pgName">Nombre de la página</label>
+      </p-floatlabel>
+      <p-floatlabel variant="on">
+        <p-select
+          inputId="pgFormat"
+          ariaLabel="Tamaño"
+          [options]="formats"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="page.format"
+          (ngModelChange)="pageFormat($event)"
+          styleClass="full-width"
+          appendTo="body"
+        />
+        <label for="pgFormat">Tamaño</label>
+      </p-floatlabel>
+      @if (page.format === custom) {
+      <div class="designer__pair">
+        <p-floatlabel variant="on"
+          ><p-inputnumber
+            inputId="pgW"
+            [ngModel]="page.width"
+            (ngModelChange)="pageNumber('width', $event)"
+            suffix=" mm"
+          /><label for="pgW">Ancho</label></p-floatlabel
+        >
+        <p-floatlabel variant="on"
+          ><p-inputnumber
+            inputId="pgH"
+            [ngModel]="page.height"
+            (ngModelChange)="pageNumber('height', $event)"
+            suffix=" mm"
+          /><label for="pgH">Alto</label></p-floatlabel
+        >
+      </div>
+      }
+      <p-floatlabel variant="on">
+        <p-select
+          inputId="pgOrientation"
+          ariaLabel="Orientación"
+          [options]="orientations"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="page.orientation"
+          (ngModelChange)="pageOrientation($event)"
+          styleClass="full-width"
+          appendTo="body"
+        />
+        <label for="pgOrientation">Orientación</label>
+      </p-floatlabel>
+      <p-floatlabel variant="on"
+        ><p-inputnumber
+          inputId="pgMargin"
+          [ngModel]="page.margin"
+          (ngModelChange)="pageNumber('margin', $event)"
+          suffix=" mm"
+          [min]="0"
+          [max]="50"
+        /><label for="pgMargin">Margen</label></p-floatlabel
+      >
+      <p-floatlabel variant="on">
+        <input
+          pInputText
+          id="pgHeader"
+          class="full-width"
+          [ngModel]="page.header"
+          (ngModelChange)="pageText('header', $event)"
+        />
+        <label for="pgHeader">Encabezado</label>
+      </p-floatlabel>
+      <p-floatlabel variant="on">
+        <input
+          pInputText
+          id="pgFooter"
+          class="full-width"
+          [ngModel]="page.footer"
+          (ngModelChange)="pageText('footer', $event)"
+        />
+        <label for="pgFooter">Pie de página</label>
+      </p-floatlabel>
+      <p class="reports__hint">
+        Elige un elemento para editarlo. Flechas: mover 1 mm (Mayús: 10 mm); Supr: quitar.
+      </p>
+      }
+    </aside>
+  </div>
+</p-card>

@@ -1,0 +1,105 @@
+<div class="print__toolbar">
+  <p-button
+    label="Volver"
+    icon="pi pi-arrow-left"
+    size="small"
+    [text]="true"
+    [routerLink]="['/app/projects', projectId(), 'templates']"
+  />
+  <strong class="print__title">{{ name() }}</strong>
+  <p-datepicker
+    view="month"
+    dateFormat="mm/yy"
+    [ngModel]="month()"
+    (ngModelChange)="changeMonth($event)"
+    [readonlyInput]="true"
+    ariaLabel="Período"
+    appendTo="body"
+  />
+  <p-button
+    label="Imprimir / Guardar PDF"
+    icon="pi pi-print"
+    size="small"
+    [disabled]="loading() || sheets().length === 0"
+    (onClick)="print()"
+  />
+</div>
+
+@if (loading()) {
+<div class="print__status"><p-progressspinner ariaLabel="Calculando" /></div>
+} @else if (error(); as message) {
+<div class="print__status"><p-message severity="error">{{ message }}</p-message></div>
+} @else {
+<div class="print__sheets" data-testid="print-sheets">
+  @for (sheet of sheets(); track sheet.page.id) {
+  <section
+    class="print__sheet"
+    [attr.aria-label]="sheet.page.name"
+    [style.width.mm]="sheet.geometry.width"
+    [style.height.mm]="sheet.geometry.height"
+    [style.page]="pageName(sheet.page)"
+  >
+    <div class="print__band print__band--top" [style.inset-inline.mm]="sheet.page.margin">
+      {{ sheet.rendered === null ? '' : sheet.rendered.header }}
+    </div>
+    @for (element of sheet.page.elements; track element.id) {
+    <div
+      class="print__element"
+      [attr.data-testid]="'print-' + element.name"
+      [style.left.mm]="element.box.x"
+      [style.top.mm]="element.box.y"
+      [style.width.mm]="element.box.width"
+      [style.height.mm]="element.box.height"
+      [style.font-size.pt]="element.style.fontSize"
+      [style.font-weight]="element.style.bold ? 700 : 400"
+      [style.text-align]="align(element)"
+    >
+      @if (sheet.valueOf(element); as value) { @if (value.error !== null) {
+      <p-message severity="warn" size="small">{{ element.name }}: {{ value.error }}</p-message>
+      } @else { @switch (element.kind) { @case (kinds.TEXT) {
+      <div class="print__text">{{ value.text }}</div>
+      } @case (kinds.KPI) { @if (number(value.value, element.numberFormat); as n) {
+      <div class="print__kpi" [class.print__negative]="n.negative && element.numberFormat.negative === 'RED'">
+        {{ n.text }}
+      </div>
+      } } @case (kinds.MATRIX) { @if (value.table; as table) {
+      <p-table [value]="table.rows" size="small">
+        <ng-template #header>
+          <tr>
+            <th></th>
+            @for (column of table.columns; track column.fieldKey) {
+            <th class="print__number">{{ column.label }}</th>
+            }
+          </tr>
+        </ng-template>
+        <ng-template #body let-row>
+          <tr [class.print__total]="row.total">
+            <td [style.padding-inline-start]="indent(row)">{{ row.label }}</td>
+            @for (cell of row.values; track $index) { @if (number(cell, element.numberFormat); as n) {
+            <td
+              class="print__number"
+              [class.print__negative]="n.negative && element.numberFormat.negative === 'RED'"
+            >
+              {{ n.text }}
+            </td>
+            } }
+          </tr>
+        </ng-template>
+      </p-table>
+      } } @case (kinds.CHART) {
+      <p-chart
+        [type]="chartType(element)"
+        [data]="chartData(element, value)"
+        [options]="chartOptions"
+        height="100%"
+      />
+      } } } }
+    </div>
+    }
+    <div class="print__band print__band--bottom" [style.inset-inline.mm]="sheet.page.margin">
+      {{ sheet.rendered === null ? '' : sheet.rendered.footer }}
+    </div>
+  </section>
+  }
+</div>
+}

@@ -13,11 +13,24 @@
   <p-card header="Contraseña">
     <form class="account__form" [formGroup]="passwordForm" (ngSubmit)="savePassword()">
       <p-floatlabel variant="on">
-        <p-password inputId="currentPassword" formControlName="currentPassword" [feedback]="false" [toggleMask]="true" styleClass="full-width" inputStyleClass="full-width" />
+        <p-password
+          inputId="currentPassword"
+          formControlName="currentPassword"
+          [feedback]="false"
+          [toggleMask]="true"
+          styleClass="full-width"
+          inputStyleClass="full-width"
+        />
         <label for="currentPassword">Contraseña actual</label>
       </p-floatlabel>
       <p-floatlabel variant="on">
-        <p-password inputId="newPassword" formControlName="newPassword" [toggleMask]="true" styleClass="full-width" inputStyleClass="full-width" />
+        <p-password
+          inputId="newPassword"
+          formControlName="newPassword"
+          [toggleMask]="true"
+          styleClass="full-width"
+          inputStyleClass="full-width"
+        />
         <label for="newPassword">Nueva contraseña</label>
       </p-floatlabel>
       <p-button type="submit" label="Cambiar contraseña" icon="pi pi-lock" [loading]="savingPassword()" />
@@ -39,9 +52,8 @@
     <ng-template #body let-item>
       <tr>
         <td>
-          {{ item.deviceLabel() }}
-          @if (item.current) {
-            <p-tag value="Esta sesión" severity="info" />
+          {{ item.deviceLabel() }} @if (item.current) {
+          <p-tag value="Esta sesión" severity="info" />
           }
         </td>
         <td>{{ item.ipAddress }}</td>
@@ -49,7 +61,13 @@
         <td>{{ item.lastSeenAt | date: 'short' }}</td>
         <td>
           @if (!item.current) {
-            <p-button icon="pi pi-sign-out" [text]="true" severity="danger" ariaLabel="Cerrar sesión" (onClick)="confirmRevoke(item)" />
+          <p-button
+            icon="pi pi-sign-out"
+            [text]="true"
+            severity="danger"
+            ariaLabel="Cerrar sesión"
+            (onClick)="confirmRevoke(item)"
+          />
           }
         </td>
       </tr>

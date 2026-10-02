@@ -32,6 +32,7 @@ export class ProjectSections {
     }
     if (project.can(ProjectPermission.REPORTS_VIEW)) {
       sections.push({ path: 'reports', label: 'Informes', icon: 'pi pi-chart-bar' });
+      sections.push({ path: 'templates', label: 'Plantillas', icon: 'pi pi-file' });
     }
     const inventory: boolean = [
       ProjectPermission.INVENTORY_CONFIGURE,

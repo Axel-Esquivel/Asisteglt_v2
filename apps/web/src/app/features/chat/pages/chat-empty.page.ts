@@ -5,6 +5,8 @@ import { Message } from 'primeng/message';
   selector: 'app-chat-empty-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [Message],
-  template: `<p-message severity="secondary" icon="pi pi-comments">Selecciona una conversación o inicia una nueva.</p-message>`,
+  template: `<p-message severity="secondary" icon="pi pi-comments"
+    >Selecciona una conversación o inicia una nueva.</p-message
+  >`,
 })
 export class ChatEmptyPage {}

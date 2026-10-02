@@ -10,6 +10,7 @@ import {
   OperationsRequest,
   ProfileRequest,
   ReportDefinitionRequest,
+  TemplateRequest,
   UpdateOrgUnitRequest,
 } from '@asisteglt/shared-contracts';
 import { ArrayDecoder, EmptyDecoder, FieldDecoder, Nullable, Result } from '@asisteglt/shared-kernel';
@@ -19,6 +20,7 @@ import { CatalogFieldView, CatalogView } from './catalog.model';
 import { CollectionView } from './collections.model';
 import { RecordPage, ImportBatchView } from './import.model';
 import { OperationsView } from './operations.model';
+import { RenderedTemplate, TemplateView } from './templates.model';
 import { OrgTree, OrgUnitView } from './org.model';
 import { ProfileView } from './profile.model';
 
@@ -52,6 +54,11 @@ export class ReportsApiClient extends ApiClient {
   private readonly collectionsDecoder: ArrayDecoder<CollectionView> = new ArrayDecoder<CollectionView>(
     CollectionView.decoder(),
   );
+  private readonly templateDecoder: FieldDecoder<TemplateView> = TemplateView.decoder();
+  private readonly templatesDecoder: ArrayDecoder<TemplateView> = new ArrayDecoder<TemplateView>(
+    TemplateView.decoder(),
+  );
+  private readonly renderedDecoder: FieldDecoder<RenderedTemplate> = RenderedTemplate.decoder();
   private readonly operationsDecoder: FieldDecoder<OperationsView> = OperationsView.decoder();
   private readonly computedDecoder: FieldDecoder<ComputedReport> = ComputedReport.decoder();
 
@@ -293,6 +300,39 @@ export class ReportsApiClient extends ApiClient {
     return this.delete(
       `${ReportsApiClient.base(projectId)}/collections/${encodeURIComponent(id)}`,
       this.empty,
+    );
+  }
+
+  public templates(projectId: string): Promise<Result<TemplateView[]>> {
+    return this.get(`${ReportsApiClient.base(projectId)}/templates`, this.templatesDecoder);
+  }
+
+  public template(projectId: string, id: string): Promise<Result<TemplateView>> {
+    return this.get(
+      `${ReportsApiClient.base(projectId)}/templates/${encodeURIComponent(id)}`,
+      this.templateDecoder,
+    );
+  }
+
+  public saveTemplate(
+    projectId: string,
+    id: Nullable<string>,
+    request: TemplateRequest,
+  ): Promise<Result<TemplateView>> {
+    const path: string = `${ReportsApiClient.base(projectId)}/templates`;
+    return id === null
+      ? this.post(path, request, this.templateDecoder)
+      : this.put(`${path}/${encodeURIComponent(id)}`, request, this.templateDecoder);
+  }
+
+  public deleteTemplate(projectId: string, id: string): Promise<Result<true>> {
+    return this.delete(`${ReportsApiClient.base(projectId)}/templates/${encodeURIComponent(id)}`, this.empty);
+  }
+
+  public renderTemplate(projectId: string, id: string, period: string): Promise<Result<RenderedTemplate>> {
+    return this.get(
+      `${ReportsApiClient.base(projectId)}/templates/${encodeURIComponent(id)}/render?period=${encodeURIComponent(period)}`,
+      this.renderedDecoder,
     );
   }
 

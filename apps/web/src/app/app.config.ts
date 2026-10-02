@@ -1,4 +1,8 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZonelessChangeDetection } from '@angular/core';
+import {
+  ApplicationConfig,
+  provideBrowserGlobalErrorListeners,
+  provideZonelessChangeDetection,
+} from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideAsisteGltCore } from '@asisteglt/web-core';
 import { Environment } from '../environments/environment';

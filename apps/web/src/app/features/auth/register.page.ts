@@ -1,5 +1,11 @@
 import { ChangeDetectionStrategy, Component, WritableSignal, inject, signal } from '@angular/core';
-import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormControl,
+  FormGroup,
+  NonNullableFormBuilder,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Nullable, Result } from '@asisteglt/shared-kernel';
 import { AuthSession, CurrentUser } from '@asisteglt/web-core';
@@ -30,7 +36,10 @@ export class RegisterPage {
   protected readonly form: FormGroup<RegisterFormControls> = inject(NonNullableFormBuilder).group({
     displayName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(80)]],
     email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(12), Validators.pattern(/^(?=.*[A-Za-z])(?=.*\d).+$/)]],
+    password: [
+      '',
+      [Validators.required, Validators.minLength(12), Validators.pattern(/^(?=.*[A-Za-z])(?=.*\d).+$/)],
+    ],
   });
   protected readonly submitting: WritableSignal<boolean> = signal<boolean>(false);
   protected readonly error: WritableSignal<Nullable<string>> = signal<Nullable<string>>(null);
@@ -48,6 +57,11 @@ export class RegisterPage {
       await this.router.navigateByUrl('/app');
       return;
     }
-    this.error.set(result.match((): string => '', (failure): string => failure.message));
+    this.error.set(
+      result.match(
+        (): string => '',
+        (failure): string => failure.message,
+      ),
+    );
   }
 }

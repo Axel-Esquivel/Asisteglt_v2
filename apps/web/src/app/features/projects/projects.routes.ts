@@ -81,6 +81,17 @@ export const PROJECTS_ROUTES: Route[] = [
         loadComponent: () => import('../reports/report-viewer/reports.page').then((m) => m.ReportsPage),
       },
       {
+        path: 'templates',
+        title: 'Plantillas · AsisteGLT',
+        loadComponent: () => import('../reports/templates/templates.page').then((m) => m.TemplatesPage),
+      },
+      {
+        path: 'templates/:templateId',
+        title: 'Diseñador de plantilla · AsisteGLT',
+        loadComponent: () =>
+          import('../reports/templates/template-designer.page').then((m) => m.TemplateDesignerPage),
+      },
+      {
         path: 'inventory',
         title: 'Tomas · AsisteGLT',
         loadComponent: () => import('../inventory/list/counts.page').then((m) => m.CountsPage),

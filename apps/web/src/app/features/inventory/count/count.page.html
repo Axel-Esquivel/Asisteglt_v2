@@ -1,191 +1,272 @@
 @if (count(); as current) {
-  <p-card>
-    <ng-template #title>
-      <div class="inventory__title">
-        <span>{{ current.s.name }}</span>
-        <div class="inventory__toolbar">
-          <p-tag [value]="current.statusLabel().label" [severity]="current.statusLabel().severity" data-testid="count-status" />
-          <p-tag [value]="'Tolerancia ' + current.toleranceLabel()" severity="secondary" />
-          <p-tag [value]="current.s.items + ' ítems'" severity="secondary" />
-        </div>
+<p-card>
+  <ng-template #title>
+    <div class="inventory__title">
+      <span>{{ current.s.name }}</span>
+      <div class="inventory__toolbar">
+        <p-tag
+          [value]="current.statusLabel().label"
+          [severity]="current.statusLabel().severity"
+          data-testid="count-status"
+        />
+        <p-tag [value]="'Tolerancia ' + current.toleranceLabel()" severity="secondary" />
+        <p-tag [value]="current.s.items + ' ítems'" severity="secondary" />
       </div>
-    </ng-template>
+    </div>
+  </ng-template>
 
-    <p-tabs [value]="tab()" (valueChange)="tab.set($event + '')">
-      <p-tablist>
-        @if (canConfigure() && current.isDraft()) {
-          <p-tab value="config">Configuración</p-tab>
-        }
-        @if (canCount()) {
-          <p-tab value="work">Mi conteo</p-tab>
-        }
-        @if (canView()) {
-          <p-tab value="supervision">Supervisión</p-tab>
-        }
-      </p-tablist>
-      <p-tabpanels>
-        @if (canConfigure() && current.isDraft()) {
-          <p-tabpanel value="config">
-            <div class="inventory__stack">
-              <h3>1. Ítems a contar</h3>
-              <p class="inventory__hint">Archivo delimitado (CSV, punto y coma o tabulador) con títulos en la primera fila. Se lee en tu navegador.</p>
-              <p-fileupload mode="basic" name="items" chooseLabel="Elegir archivo de ítems" chooseIcon="pi pi-file" [auto]="false" [customUpload]="true" (onSelect)="onItemsFile($event)" />
-              @if (sheet() !== null) {
-                <div class="inventory__grid">
-                  @for (role of mappingRoles; track role.key) {
-                    <p-select
-                      [options]="columnOptions()"
-                      optionLabel="label"
-                      optionValue="value"
-                      [ngModel]="mapping()[role.key]"
-                      (ngModelChange)="setMapping(role.key, $event)"
-                      [showClear]="true"
-                      [placeholder]="role.label"
-                      [ariaLabel]="'Columna para ' + role.label"
-                      styleClass="full-width"
-                      appendTo="body"
-                    />
-                  }
-                </div>
-                <p-button [label]="'Cargar ' + sheetItems().length + ' ítems'" icon="pi pi-upload" (onClick)="uploadItems()" />
-              }
+  <p-tabs [value]="tab()" (valueChange)="tab.set($event + '')">
+    <p-tablist>
+      @if (canConfigure() && current.isDraft()) {
+      <p-tab value="config">Configuración</p-tab>
+      } @if (canCount()) {
+      <p-tab value="work">Mi conteo</p-tab>
+      } @if (canView()) {
+      <p-tab value="supervision">Supervisión</p-tab>
+      }
+    </p-tablist>
+    <p-tabpanels>
+      @if (canConfigure() && current.isDraft()) {
+      <p-tabpanel value="config">
+        <div class="inventory__stack">
+          <h3>1. Ítems a contar</h3>
+          <p class="inventory__hint">
+            Archivo delimitado (CSV, punto y coma o tabulador) con títulos en la primera fila. Se lee en tu
+            navegador.
+          </p>
+          <p-fileupload
+            mode="basic"
+            name="items"
+            chooseLabel="Elegir archivo de ítems"
+            chooseIcon="pi pi-file"
+            [auto]="false"
+            [customUpload]="true"
+            (onSelect)="onItemsFile($event)"
+          />
+          @if (sheet() !== null) {
+          <div class="inventory__grid">
+            @for (role of mappingRoles; track role.key) {
+            <p-select
+              [options]="columnOptions()"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="mapping()[role.key]"
+              (ngModelChange)="setMapping(role.key, $event)"
+              [showClear]="true"
+              [placeholder]="role.label"
+              [ariaLabel]="'Columna para ' + role.label"
+              styleClass="full-width"
+              appendTo="body"
+            />
+            }
+          </div>
+          <p-button
+            [label]="'Cargar ' + sheetItems().length + ' ítems'"
+            icon="pi pi-upload"
+            (onClick)="uploadItems()"
+          />
+          }
 
-              <h3>2. Participantes</h3>
-              <p-table [value]="members()" [tableStyle]="{ 'min-width': '28rem' }" data-testid="participants-table">
-                <ng-template #body let-choice>
-                  <tr>
-                    <td>{{ choice.member.displayName }}</td>
-                    <td>
-                      <p-select [options]="roleOptions" optionLabel="label" optionValue="value" [(ngModel)]="choice.role" [ariaLabel]="'Participación de ' + choice.member.displayName" appendTo="body" />
-                    </td>
-                  </tr>
-                </ng-template>
-              </p-table>
-              <div><p-button label="Guardar participantes" icon="pi pi-users" [outlined]="true" (onClick)="saveParticipants()" /></div>
+          <h3>2. Participantes</h3>
+          <p-table
+            [value]="members()"
+            [tableStyle]="{ 'min-width': '28rem' }"
+            data-testid="participants-table"
+          >
+            <ng-template #body let-choice>
+              <tr>
+                <td>{{ choice.member.displayName }}</td>
+                <td>
+                  <p-select
+                    [options]="roleOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    [(ngModel)]="choice.role"
+                    [ariaLabel]="'Participación de ' + choice.member.displayName"
+                    appendTo="body"
+                  />
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+          <div>
+            <p-button
+              label="Guardar participantes"
+              icon="pi pi-users"
+              [outlined]="true"
+              (onClick)="saveParticipants()"
+            />
+          </div>
 
-              <h3>3. Iniciar</h3>
-              <p class="inventory__hint">Se asignan zonas completas a cada contador equilibrando la cantidad de ítems; cada uno recorre su ruta por ubicación.</p>
-              <div>
-                <p-button label="Iniciar toma" icon="pi pi-play" [disabled]="current.s.items === 0" (onClick)="act('start', 'Toma iniciada: ronda 1 asignada', '¿Iniciar la toma y asignar las zonas?')" />
-              </div>
+          <h3>3. Iniciar</h3>
+          <p class="inventory__hint">
+            Se asignan zonas completas a cada contador equilibrando la cantidad de ítems; cada uno recorre su
+            ruta por ubicación.
+          </p>
+          <div>
+            <p-button
+              label="Iniciar toma"
+              icon="pi pi-play"
+              [disabled]="current.s.items === 0"
+              (onClick)="act('start', 'Toma iniciada: ronda 1 asignada', '¿Iniciar la toma y asignar las zonas?')"
+            />
+          </div>
+        </div>
+      </p-tabpanel>
+      } @if (canCount()) {
+      <p-tabpanel value="work">
+        @if (work(); as w) { @if (w.s.round === null) {
+        <p-message severity="info">No hay una ronda abierta en este momento.</p-message>
+        } @else if (w.s.items.length === 0) {
+        <p-message severity="info">No tienes ítems asignados en la ronda {{ w.s.round }}.</p-message>
+        } @else {
+        <div class="inventory__stack">
+          <span class="inventory__hint"
+            >Ronda {{ w.s.round }} · {{ w.done() }} de {{ w.s.items.length }} ítems contados</span
+          >
+          <p-progressbar [value]="workProgress()" />
+          <div class="inventory__work" data-testid="work-items">
+            @for (item of w.s.items; track item.itemId) {
+            <div class="inventory__work-item" [class.inventory__work-item--done]="item.counted !== null">
+              <strong>{{ item.location }} · {{ item.sku }}</strong>
+              <span>{{ item.description }}</span>
+              <form class="inventory__entry" (ngSubmit)="record(item)">
+                <input
+                  pInputText
+                  inputmode="decimal"
+                  [name]="'qty-' + item.itemId"
+                  [ngModel]="draftOf(item)"
+                  (ngModelChange)="setDraft(item, $event)"
+                  [attr.aria-label]="'Cantidad de ' + item.sku"
+                  [placeholder]="item.unit === '' ? 'Cantidad' : 'Cantidad (' + item.unit + ')'"
+                />
+                <p-button type="submit" icon="pi pi-check" [ariaLabel]="'Guardar conteo de ' + item.sku" />
+              </form>
             </div>
-          </p-tabpanel>
-        }
-
-        @if (canCount()) {
-          <p-tabpanel value="work">
-            @if (work(); as w) {
-              @if (w.s.round === null) {
-                <p-message severity="info">No hay una ronda abierta en este momento.</p-message>
-              } @else if (w.s.items.length === 0) {
-                <p-message severity="info">No tienes ítems asignados en la ronda {{ w.s.round }}.</p-message>
-              } @else {
-                <div class="inventory__stack">
-                  <span class="inventory__hint">Ronda {{ w.s.round }} · {{ w.done() }} de {{ w.s.items.length }} ítems contados</span>
-                  <p-progressbar [value]="workProgress()" />
-                  <div class="inventory__work" data-testid="work-items">
-                    @for (item of w.s.items; track item.itemId) {
-                      <div class="inventory__work-item" [class.inventory__work-item--done]="item.counted !== null">
-                        <strong>{{ item.location }} · {{ item.sku }}</strong>
-                        <span>{{ item.description }}</span>
-                        <form class="inventory__entry" (ngSubmit)="record(item)">
-                          <input
-                            pInputText
-                            inputmode="decimal"
-                            [name]="'qty-' + item.itemId"
-                            [ngModel]="draftOf(item)"
-                            (ngModelChange)="setDraft(item, $event)"
-                            [attr.aria-label]="'Cantidad de ' + item.sku"
-                            [placeholder]="item.unit === '' ? 'Cantidad' : 'Cantidad (' + item.unit + ')'"
-                          />
-                          <p-button type="submit" icon="pi pi-check" [ariaLabel]="'Guardar conteo de ' + item.sku" />
-                        </form>
-                      </div>
-                    }
-                  </div>
-                </div>
-              }
             }
-          </p-tabpanel>
-        }
-
-        @if (canView()) {
-          <p-tabpanel value="supervision">
-            @if (supervision(); as s) {
-              <div class="inventory__stack">
-                <div class="inventory__kpis">
-                  <div class="inventory__kpi"><span class="inventory__hint">Contados</span><strong data-testid="kpi-counted">{{ s.counted }} / {{ s.items.length }}</strong></div>
-                  <div class="inventory__kpi"><span class="inventory__hint">Fuera de tolerancia</span><strong data-testid="kpi-exceeding">{{ s.exceeding }}</strong></div>
-                  <div class="inventory__kpi"><span class="inventory__hint">Diferencia valorizada</span><strong>{{ s.differenceValue }}</strong></div>
-                  <div class="inventory__kpi"><span class="inventory__hint">Ronda</span><strong>{{ current.s.rounds.length }} / {{ current.s.maxRounds }}</strong></div>
-                </div>
-                @if (current.currentRound() !== null) {
-                  <p-table [value]="assignments()" [tableStyle]="{ 'min-width': '28rem' }">
-                    <ng-template #header>
-                      <tr>
-                        <th>Contador</th>
-                        <th>Zonas</th>
-                        <th>Avance</th>
-                      </tr>
-                    </ng-template>
-                    <ng-template #body let-a>
-                      <tr>
-                        <td>{{ a.displayName }}</td>
-                        <td>{{ a.zones.join(', ') }}</td>
-                        <td><p-progressbar [value]="percent(a.counted, a.assigned)" /> {{ a.counted }} / {{ a.assigned }}</td>
-                      </tr>
-                    </ng-template>
-                  </p-table>
-                }
-                @if (canSupervise() && current.isInProgress()) {
-                  <div class="inventory__toolbar">
-                    @if (current.currentRound() !== null) {
-                      <p-button label="Cerrar ronda" icon="pi pi-stop" [outlined]="true" (onClick)="act('rounds/close', 'Ronda cerrada', '¿Cerrar la ronda actual?')" />
-                    } @else {
-                      <p-button label="Recontar diferencias" icon="pi pi-replay" [outlined]="true" (onClick)="act('recount', 'Reconteo abierto', '¿Abrir una ronda de reconteo con los ítems fuera de tolerancia?')" />
-                    }
-                    <p-button label="Cerrar toma" icon="pi pi-lock" severity="danger" [outlined]="true" (onClick)="act('close', 'Toma cerrada', '¿Cerrar la toma? Los conteos quedarán definitivos.')" />
-                  </div>
-                }
-                <span class="inventory__toolbar">
-                  <p-toggleswitch inputId="onlyDiff" [ngModel]="onlyDifferences()" (ngModelChange)="onlyDifferences.set($event)" />
-                  <label for="onlyDiff">Solo ítems con diferencia</label>
-                </span>
-                <div class="inventory__scroll">
-                  <p-table [value]="visibleItems()" [paginator]="visibleItems().length > 50" [rows]="50" [tableStyle]="{ 'min-width': '52rem' }" data-testid="supervision-table">
-                    <ng-template #header>
-                      <tr>
-                        <th>Ubicación</th>
-                        <th>SKU</th>
-                        <th>Descripción</th>
-                        <th class="inventory__number">Esperado</th>
-                        <th class="inventory__number">Contado</th>
-                        <th class="inventory__number">Diferencia</th>
-                        <th class="inventory__number">Valor</th>
-                        <th>Rondas</th>
-                        <th>Contó</th>
-                      </tr>
-                    </ng-template>
-                    <ng-template #body let-item>
-                      <tr>
-                        <td>{{ item.location }}</td>
-                        <td>{{ item.sku }}</td>
-                        <td>{{ item.description }}</td>
-                        <td class="inventory__number">{{ item.expected }}</td>
-                        <td class="inventory__number">{{ item.counted ?? '—' }}</td>
-                        <td class="inventory__number" [class.inventory__exceeds]="item.exceedsTolerance">{{ item.difference ?? '—' }}</td>
-                        <td class="inventory__number">{{ item.differenceValue ?? '—' }}</td>
-                        <td>{{ item.rounds }}</td>
-                        <td>{{ item.counterName ?? '—' }}</td>
-                      </tr>
-                    </ng-template>
-                  </p-table>
-                </div>
-              </div>
+          </div>
+        </div>
+        } }
+      </p-tabpanel>
+      } @if (canView()) {
+      <p-tabpanel value="supervision">
+        @if (supervision(); as s) {
+        <div class="inventory__stack">
+          <div class="inventory__kpis">
+            <div class="inventory__kpi">
+              <span class="inventory__hint">Contados</span
+              ><strong data-testid="kpi-counted">{{ s.counted }} / {{ s.items.length }}</strong>
+            </div>
+            <div class="inventory__kpi">
+              <span class="inventory__hint">Fuera de tolerancia</span
+              ><strong data-testid="kpi-exceeding">{{ s.exceeding }}</strong>
+            </div>
+            <div class="inventory__kpi">
+              <span class="inventory__hint">Diferencia valorizada</span
+              ><strong>{{ s.differenceValue }}</strong>
+            </div>
+            <div class="inventory__kpi">
+              <span class="inventory__hint">Ronda</span
+              ><strong>{{ current.s.rounds.length }} / {{ current.s.maxRounds }}</strong>
+            </div>
+          </div>
+          @if (current.currentRound() !== null) {
+          <p-table [value]="assignments()" [tableStyle]="{ 'min-width': '28rem' }">
+            <ng-template #header>
+              <tr>
+                <th>Contador</th>
+                <th>Zonas</th>
+                <th>Avance</th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-a>
+              <tr>
+                <td>{{ a.displayName }}</td>
+                <td>{{ a.zones.join(', ') }}</td>
+                <td>
+                  <p-progressbar [value]="percent(a.counted, a.assigned)" /> {{ a.counted }} / {{ a.assigned
+                  }}
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+          } @if (canSupervise() && current.isInProgress()) {
+          <div class="inventory__toolbar">
+            @if (current.currentRound() !== null) {
+            <p-button
+              label="Cerrar ronda"
+              icon="pi pi-stop"
+              [outlined]="true"
+              (onClick)="act('rounds/close', 'Ronda cerrada', '¿Cerrar la ronda actual?')"
+            />
+            } @else {
+            <p-button
+              label="Recontar diferencias"
+              icon="pi pi-replay"
+              [outlined]="true"
+              (onClick)="act('recount', 'Reconteo abierto', '¿Abrir una ronda de reconteo con los ítems fuera de tolerancia?')"
+            />
             }
-          </p-tabpanel>
+            <p-button
+              label="Cerrar toma"
+              icon="pi pi-lock"
+              severity="danger"
+              [outlined]="true"
+              (onClick)="act('close', 'Toma cerrada', '¿Cerrar la toma? Los conteos quedarán definitivos.')"
+            />
+          </div>
+          }
+          <span class="inventory__toolbar">
+            <p-toggleswitch
+              inputId="onlyDiff"
+              [ngModel]="onlyDifferences()"
+              (ngModelChange)="onlyDifferences.set($event)"
+            />
+            <label for="onlyDiff">Solo ítems con diferencia</label>
+          </span>
+          <div class="inventory__scroll">
+            <p-table
+              [value]="visibleItems()"
+              [paginator]="visibleItems().length > 50"
+              [rows]="50"
+              [tableStyle]="{ 'min-width': '52rem' }"
+              data-testid="supervision-table"
+            >
+              <ng-template #header>
+                <tr>
+                  <th>Ubicación</th>
+                  <th>SKU</th>
+                  <th>Descripción</th>
+                  <th class="inventory__number">Esperado</th>
+                  <th class="inventory__number">Contado</th>
+                  <th class="inventory__number">Diferencia</th>
+                  <th class="inventory__number">Valor</th>
+                  <th>Rondas</th>
+                  <th>Contó</th>
+                </tr>
+              </ng-template>
+              <ng-template #body let-item>
+                <tr>
+                  <td>{{ item.location }}</td>
+                  <td>{{ item.sku }}</td>
+                  <td>{{ item.description }}</td>
+                  <td class="inventory__number">{{ item.expected }}</td>
+                  <td class="inventory__number">{{ item.counted ?? '—' }}</td>
+                  <td class="inventory__number" [class.inventory__exceeds]="item.exceedsTolerance">
+                    {{ item.difference ?? '—' }}
+                  </td>
+                  <td class="inventory__number">{{ item.differenceValue ?? '—' }}</td>
+                  <td>{{ item.rounds }}</td>
+                  <td>{{ item.counterName ?? '—' }}</td>
+                </tr>
+              </ng-template>
+            </p-table>
+          </div>
+        </div>
         }
-      </p-tabpanels>
-    </p-tabs>
-  </p-card>
+      </p-tabpanel>
+      }
+    </p-tabpanels>
+  </p-tabs>
+</p-card>
 }

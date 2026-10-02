@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, OnInit, Signal, WritableSignal, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  Signal,
+  WritableSignal,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
@@ -40,7 +49,9 @@ export class ChatLayout implements OnInit {
   );
 
   /** En pantallas pequeñas solo se ve la lista o la conversación abierta. */
-  protected readonly conversationOpen: Signal<boolean> = computed((): boolean => /^\/app\/chat\/[^/?#]+/.test(this.url()));
+  protected readonly conversationOpen: Signal<boolean> = computed((): boolean =>
+    /^\/app\/chat\/[^/?#]+/.test(this.url()),
+  );
 
   public ngOnInit(): void {
     this.store
@@ -68,7 +79,12 @@ export class ChatLayout implements OnInit {
 
   protected async search(event: AutoCompleteCompleteEvent): Promise<void> {
     const result: Result<UserMatch[]> = await this.api.searchUsers(event.query);
-    this.suggestions.set(result.match((users: UserMatch[]): UserMatch[] => users, (): UserMatch[] => []));
+    this.suggestions.set(
+      result.match(
+        (users: UserMatch[]): UserMatch[] => users,
+        (): UserMatch[] => [],
+      ),
+    );
   }
 
   protected async startDirect(event: AutoCompleteSelectEvent): Promise<void> {

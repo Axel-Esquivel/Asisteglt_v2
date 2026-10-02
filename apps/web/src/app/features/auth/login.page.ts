@@ -1,5 +1,11 @@
 import { ChangeDetectionStrategy, Component, WritableSignal, inject, signal } from '@angular/core';
-import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormControl,
+  FormGroup,
+  NonNullableFormBuilder,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Nullable, Result } from '@asisteglt/shared-kernel';
 import { AuthSession, CurrentUser } from '@asisteglt/web-core';
@@ -46,6 +52,11 @@ export class LoginPage {
       await this.router.navigateByUrl('/app');
       return;
     }
-    this.error.set(result.match((): string => '', (failure): string => failure.message));
+    this.error.set(
+      result.match(
+        (): string => '',
+        (failure): string => failure.message,
+      ),
+    );
   }
 }

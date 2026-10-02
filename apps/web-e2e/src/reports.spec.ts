@@ -51,7 +51,7 @@ const assignBand = async (page: Page, band: number, label: string): Promise<void
 test('configura un proyecto de reportes y carga un balance con el asistente', async ({
   page,
 }): Promise<void> => {
-  test.setTimeout(120_000);
+  test.setTimeout(180_000);
   await TestUser.unique('Reportes').register(page);
   await page.goto('/app/projects');
   await page.getByRole('button', { name: 'Nuevo proyecto' }).click();
@@ -238,4 +238,41 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
     timeout: 15_000,
   });
   await expect(page.getByTestId('checks-balance_demo_2026_09.txt')).toHaveText('No cuadra');
+
+  // Plantilla con texto, tabla de un informe e indicador; vista previa del período 08/2026
+  await page.getByRole('tab', { name: 'Plantillas' }).click();
+  await page.getByRole('button', { name: 'Nueva plantilla' }).click();
+  await page.getByRole('dialog', { name: 'Nueva plantilla' }).getByLabel('Nombre').fill('Balance mensual');
+  await page.getByRole('dialog', { name: 'Nueva plantilla' }).getByRole('button', { name: 'Crear' }).click();
+  await expect(page.getByTestId('designer-page')).toBeVisible();
+  const palette = page.getByTestId('designer-palette');
+  await palette.getByRole('button', { name: 'Texto' }).click();
+  await palette.getByRole('button', { name: 'Tabla' }).click();
+  await page.getByRole('combobox', { name: 'Informe', exact: true }).click();
+  await page.getByRole('option', { name: 'Saldos por clasificación' }).click();
+  await page.getByTestId('element-Tabla').press('ArrowDown');
+  await palette.getByRole('button', { name: 'Indicador' }).click();
+  await page.getByLabel('Fórmula').fill('=SUMA([Debe])');
+  await expect(page.getByTestId('kpi-check')).toContainText('Resultado: Monto');
+  await page.getByLabel('Y', { exact: true }).fill('200');
+  await page.getByLabel('Y', { exact: true }).press('Tab');
+  await palette.getByRole('button', { name: 'Gráfico' }).click();
+  await page.getByRole('combobox', { name: 'Informe', exact: true }).click();
+  await page.getByRole('option', { name: 'Saldos por clasificación' }).click();
+  await page.locator('p-multiselect:has(#elColumns)').click();
+  await page.getByRole('option', { name: 'Debe', exact: true }).click();
+  await page.keyboard.press('Escape');
+  await page.getByLabel('Y', { exact: true }).fill('120');
+  await page.getByLabel('Y', { exact: true }).press('Tab');
+  await page.getByRole('button', { name: 'Guardar' }).click();
+  await expect(page.getByRole('button', { name: 'Vista previa' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Vista previa' }).click();
+  await expect(page).toHaveURL(/\/print\/projects\//);
+  await page.goto(`${page.url()}?period=2026-08`);
+  await expect(page.getByTestId('print-Texto')).toHaveText('Informe de agosto de 2026');
+  await expect(page.getByTestId('print-Tabla')).toContainText('15,600.00');
+  await expect(page.getByTestId('print-Indicador')).toHaveText('4,020.00');
+  await expect(page.getByTestId('print-Gráfico').locator('canvas')).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath('plantilla.png'), fullPage: true });
+  await expect(page.getByRole('button', { name: 'Imprimir / Guardar PDF' })).toBeEnabled();
 });

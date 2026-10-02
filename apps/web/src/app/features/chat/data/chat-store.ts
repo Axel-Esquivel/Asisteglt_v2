@@ -18,7 +18,9 @@ export class ChatStore extends BaseStore<ChatState> {
   public readonly conversations: Signal<ReadonlyArray<ConversationSummary>> = this.select(
     (s: ChatState): ReadonlyArray<ConversationSummary> => s.conversations,
   );
-  public readonly activeId: Signal<Nullable<string>> = this.select((s: ChatState): Nullable<string> => s.activeId);
+  public readonly activeId: Signal<Nullable<string>> = this.select(
+    (s: ChatState): Nullable<string> => s.activeId,
+  );
   public readonly totalUnread: Signal<number> = computed((): number =>
     this.conversations().reduce((sum: number, c: ConversationSummary): number => sum + c.unread, 0),
   );
@@ -26,7 +28,9 @@ export class ChatStore extends BaseStore<ChatState> {
   private readonly api: ChatApiClient = inject(ChatApiClient);
   private readonly realtime: RealtimeClient = inject(RealtimeClient);
   private readonly session: AuthSession = inject(AuthSession);
-  private readonly online: Signal<ReadonlySet<string>> = this.select((s: ChatState): ReadonlySet<string> => s.online);
+  private readonly online: Signal<ReadonlySet<string>> = this.select(
+    (s: ChatState): ReadonlySet<string> => s.online,
+  );
 
   public constructor() {
     super({ conversations: [], online: new Set<string>(), activeId: null });
@@ -53,13 +57,11 @@ export class ChatStore extends BaseStore<ChatState> {
     );
     list.match(
       (items: ConversationSummary[]): void =>
-        this.update(
-          (current: ChatState): ChatState => ({
-            ...current,
-            conversations: [...items].sort(ConversationSummary.compare),
-            online: new Set<string>(users),
-          }),
-        ),
+        this.update((current: ChatState): ChatState => ({
+          ...current,
+          conversations: [...items].sort(ConversationSummary.compare),
+          online: new Set<string>(users),
+        })),
       (): void => {
         // El componente informa el error.
       },
@@ -80,8 +82,8 @@ export class ChatStore extends BaseStore<ChatState> {
     this.update((current: ChatState): ChatState => ({
       ...current,
       activeId: id,
-      conversations: current.conversations.map(
-        (c: ConversationSummary): ConversationSummary => (c.id === id ? c.withUnread(0) : c),
+      conversations: current.conversations.map((c: ConversationSummary): ConversationSummary =>
+        c.id === id ? c.withUnread(0) : c,
       ),
     }));
   }
@@ -89,7 +91,9 @@ export class ChatStore extends BaseStore<ChatState> {
   private onMessage(message: ChatMessage): void {
     const me: Nullable<CurrentUser> = this.session.currentUser();
     const mine: boolean = me !== null && me.id === message.senderId;
-    const known: boolean = this.snapshot().conversations.some((c: ConversationSummary): boolean => c.id === message.conversationId);
+    const known: boolean = this.snapshot().conversations.some(
+      (c: ConversationSummary): boolean => c.id === message.conversationId,
+    );
     if (!known) {
       this.load().catch((): void => {
         // Se reintenta con el siguiente evento.

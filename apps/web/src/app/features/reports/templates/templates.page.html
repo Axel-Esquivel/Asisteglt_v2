@@ -1,0 +1,98 @@
+<p-card>
+  <ng-template #title>
+    <div class="reports__title">
+      <span>Plantillas de informe</span>
+      @if (canDesign()) {
+      <p-button
+        label="Nueva plantilla"
+        icon="pi pi-plus"
+        size="small"
+        (onClick)="newName.set(''); creating.set(true)"
+      />
+      }
+    </div>
+  </ng-template>
+  <p class="reports__hint">
+    Combina páginas de distintos tamaños con textos, tablas de informes, indicadores y gráficos. La vista
+    previa calcula un período y se imprime o guarda como PDF desde el navegador.
+  </p>
+  <p-table
+    [value]="templates()"
+    dataKey="id"
+    [tableStyle]="{ 'min-width': '32rem' }"
+    data-testid="templates-table"
+  >
+    <ng-template #header>
+      <tr>
+        <th>Nombre</th>
+        <th>Páginas</th>
+        <th>Versión</th>
+        <th></th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-template>
+      <tr>
+        <td>{{ template.name }}</td>
+        <td>{{ pagesLabel(template) }}</td>
+        <td>v{{ template.version }}</td>
+        <td class="reports__actions">
+          <p-button
+            icon="pi pi-eye"
+            [text]="true"
+            size="small"
+            [ariaLabel]="'Vista previa de ' + template.name"
+            [routerLink]="['/print/projects', context.id(), 'templates', template.id]"
+          />
+          @if (canDesign()) {
+          <p-button
+            icon="pi pi-pencil"
+            [text]="true"
+            size="small"
+            [ariaLabel]="'Diseñar ' + template.name"
+            [routerLink]="['/app/projects', context.id(), 'templates', template.id]"
+          />
+          <p-button
+            icon="pi pi-trash"
+            [text]="true"
+            size="small"
+            severity="danger"
+            [ariaLabel]="'Eliminar ' + template.name"
+            (onClick)="confirmDelete(template)"
+          />
+          }
+        </td>
+      </tr>
+    </ng-template>
+    <ng-template #emptymessage>
+      <tr>
+        <td colspan="4">Aún no hay plantillas.</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</p-card>
+
+<p-dialog
+  header="Nueva plantilla"
+  [modal]="true"
+  [visible]="creating()"
+  (visibleChange)="creating.set($event)"
+  [style]="{ width: 'min(26rem, 95vw)' }"
+>
+  <form class="reports__form" (ngSubmit)="create()">
+    <p-floatlabel variant="on">
+      <input
+        pInputText
+        id="newTemplateName"
+        name="newTemplateName"
+        class="full-width"
+        [ngModel]="newName()"
+        (ngModelChange)="newName.set($event)"
+      />
+      <label for="newTemplateName">Nombre</label>
+    </p-floatlabel>
+    <div class="reports__dialog-actions">
+      <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="creating.set(false)" />
+      <p-button type="submit" label="Crear" icon="pi pi-check" />
+    </div>
+  </form>
+</p-dialog>

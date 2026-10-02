@@ -22,6 +22,15 @@ export class ThemeService {
     this.writePreference(this.dark() ? 'dark' : 'light');
   }
 
+  /** Vistas de impresión: siempre en modo claro mientras están abiertas, sin cambiar la preferencia. */
+  public suspendDarkMode(): void {
+    this.document.documentElement.classList.remove(DARK_MODE_CLASS);
+  }
+
+  public restoreDarkMode(): void {
+    this.apply(this.dark());
+  }
+
   private apply(dark: boolean): void {
     this.dark.set(dark);
     this.document.documentElement.classList.toggle(DARK_MODE_CLASS, dark);

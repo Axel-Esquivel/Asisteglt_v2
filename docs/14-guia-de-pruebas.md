@@ -69,6 +69,17 @@ Proyecto de demostración: **Demo · Balance ficticio** (o crea uno nuevo).
 | 5.14 | Cargar un archivo que no cuadra | Estado «Con errores» con la etiqueta «No cuadra» y el detalle de ambos valores; los datos anteriores del período siguen vigentes |
 | 5.15 | Desmarcar «Rechazar…» y volver a cargar | Se publica con la etiqueta «No cuadra» como aviso |
 
+### 5.b Plantillas de informe y PDF
+
+| # | Paso | Resultado esperado |
+|---|---|---|
+| 5.16 | Plantillas → Nueva plantilla | Abre el diseñador con una página Carta vertical, encabezado `{proyecto}` y pie `Página {pagina} de {paginas}` |
+| 5.17 | Agregar Texto, Tabla (elegir un informe), Indicador (`=SUMA([Debe])`) y Gráfico (informe y series) | Los elementos se arrastran y redimensionan con el ratón o el dedo y se mueven con las flechas (1 mm; Mayús: 10 mm); la fórmula del indicador se valida al escribir |
+| 5.18 | Cambiar el tamaño (Oficio, Legal, A4, personalizado), la orientación y el formato numérico (decimales, miles, escala, negativos entre paréntesis o en rojo) | Un elemento fuera de la página o un formato inválido se rechaza al guardar |
+| 5.19 | Guardar → Vista previa y elegir el período | Cada página a su tamaño real con los valores del período; un indicador que suma monedas distintas muestra el aviso en su lugar |
+| 5.20 | «Imprimir / Guardar PDF» | El diálogo del navegador respeta el tamaño de cada página; elegir «Guardar como PDF» |
+| 5.21 | Intentar eliminar un informe usado en una plantilla | Se rechaza con «El informe se usa en una plantilla» |
+
 ## 6. Inventarios
 
 Proyecto de demostración: **Demo · Bodega ficticia** (toma ya iniciada; entra como
@@ -86,7 +97,7 @@ Proyecto de demostración: **Demo · Bodega ficticia** (toma ya iniciada; entra 
 
 ## 7. Pendiente después de esta fase
 
-- Diseñador de informes multipágina con fórmulas (`[Nombre]`), gráficos, KPI y PDF (docs/04 §10-11).
+- Plantillas: tablas dinámicas, filas/columnas por filtros y fórmulas entre celdas, imágenes y formas, formato condicional, PDF generado en el servidor y caché Redis de cálculos (docs/04 §11).
 - Consolidación entre compañías con eliminaciones, importación de colecciones desde archivo y `COLECCION()` en fórmulas.
 - Otros tipos de fuente (delimitado, hoja de cálculo, BD), metadatos de archivo y validaciones de cuadre.
 - Inventarios: evidencias fotográficas, mapeo desde un conjunto de datos de Reportes, visibilidad por rol.

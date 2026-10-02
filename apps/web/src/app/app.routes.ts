@@ -5,6 +5,7 @@ import { authGuard, guestGuard } from '@asisteglt/web-core';
  * Contextos de navegación (cada uno con su layout y `router-outlet`, cargados de forma diferida):
  * - /auth → acceso (login, registro)
  * - /app  → aplicación autenticada (inicio, proyectos, chat, cuenta…)
+ * - /print → vistas de impresión sin la interfaz de la aplicación (plantillas de informe)
  */
 export const appRoutes: Route[] = [
   { path: '', pathMatch: 'full', redirectTo: 'app' },
@@ -19,6 +20,12 @@ export const appRoutes: Route[] = [
     canMatch: [authGuard],
     loadComponent: () => import('./layouts/app-layout/app-layout').then((m) => m.AppLayout),
     loadChildren: () => import('./app-context.routes').then((m) => m.APP_CONTEXT_ROUTES),
+  },
+  {
+    path: 'print',
+    canMatch: [authGuard],
+    loadComponent: () => import('./layouts/print-layout/print-layout').then((m) => m.PrintLayout),
+    loadChildren: () => import('./print-context.routes').then((m) => m.PRINT_CONTEXT_ROUTES),
   },
   {
     path: '**',

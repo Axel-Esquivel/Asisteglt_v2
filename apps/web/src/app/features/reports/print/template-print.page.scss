@@ -1,0 +1,114 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: var(--p-content-hover-background);
+}
+
+.print__toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: var(--p-content-background);
+  border-block-end: 1px solid var(--p-content-border-color);
+}
+
+.print__title {
+  flex: 1 1 12rem;
+}
+
+.print__status {
+  display: flex;
+  justify-content: center;
+  padding: 3rem 1rem;
+}
+
+.print__sheets {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  align-items: center;
+  padding: 1.5rem 1rem;
+  overflow-x: auto;
+}
+
+.print__sheet {
+  position: relative;
+  flex: none;
+  overflow: hidden;
+  color: var(--p-text-color);
+  background: var(--p-content-background);
+  box-shadow: 0 0.25rem 1rem color-mix(in srgb, var(--p-text-color) 15%, transparent);
+}
+
+.print__band {
+  position: absolute;
+  font-size: 8pt;
+  color: var(--p-text-muted-color);
+}
+
+.print__band--top {
+  top: 5mm;
+}
+
+.print__band--bottom {
+  bottom: 5mm;
+  text-align: end;
+}
+
+.print__element {
+  position: absolute;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.print__text {
+  white-space: pre-wrap;
+}
+
+.print__kpi {
+  font-variant-numeric: tabular-nums;
+}
+
+.print__number {
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  white-space: nowrap;
+}
+
+.print__total {
+  font-weight: 700;
+}
+
+.print__negative {
+  color: var(--p-red-500);
+}
+
+@media print {
+  :host {
+    background: none;
+  }
+
+  .print__toolbar {
+    display: none;
+  }
+
+  .print__sheets {
+    display: block;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .print__sheet {
+    break-after: page;
+    box-shadow: none;
+  }
+
+  .print__sheet:last-child {
+    break-after: auto;
+  }
+}

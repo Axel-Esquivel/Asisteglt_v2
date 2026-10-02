@@ -49,7 +49,8 @@ export class ConversationView {
   protected readonly hasMore: WritableSignal<boolean> = signal<boolean>(false);
   protected readonly loadFailed: WritableSignal<boolean> = signal<boolean>(false);
 
-  private readonly scroller: Signal<ElementRef<HTMLElement>> = viewChild.required<ElementRef<HTMLElement>>('scroller');
+  private readonly scroller: Signal<ElementRef<HTMLElement>> =
+    viewChild.required<ElementRef<HTMLElement>>('scroller');
   private readonly api: ChatApiClient = inject(ChatApiClient);
   private readonly session: AuthSession = inject(AuthSession);
   private readonly notifier: Notifier = inject(Notifier);
@@ -127,7 +128,9 @@ export class ConversationView {
     this.sending.set(true);
     const target: Nullable<ChatMessage> = this.editing();
     const result: Result<ChatMessage> =
-      target === null ? await this.api.send(this.conversationId(), text) : await this.api.edit(target.id, text);
+      target === null
+        ? await this.api.send(this.conversationId(), text)
+        : await this.api.edit(target.id, text);
     this.sending.set(false);
     result.match(
       (message: ChatMessage): void => {
