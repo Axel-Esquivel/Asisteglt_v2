@@ -91,6 +91,14 @@ export class StringDecoder extends Decoder<string> {
   }
 }
 
+export class NumberDecoder extends Decoder<number> {
+  public override decode(value: unknown): Result<number> {
+    return typeof value === 'number' && Number.isFinite(value)
+      ? Result.ok(value)
+      : Result.fail(new ValidationError('INVALID_JSON_FIELD', 'Se esperaba un número'));
+  }
+}
+
 export class EnumDecoder<T extends string> extends Decoder<T> {
   public constructor(private readonly allowed: ReadonlyArray<T>) {
     super();

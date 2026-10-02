@@ -721,6 +721,138 @@ describe('Reportes: importación (e2e)', () => {
     expect(warned).toMatchObject({ status: 'PUBLISHED', checks: [{ passed: false, blocking: false }] });
   });
 
+  it('diseña una plantilla multipágina y la calcula por período', async (): Promise<void> => {
+    const catalog: Response = await request(app.server())
+      .get(api('/catalog'))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    const fields: CatalogFieldResponse[] = Body.list(Reflect.get(catalog.body, 'fields')).filter(
+      (f: unknown): f is CatalogFieldResponse => typeof f === 'object' && f !== null && 'key' in f,
+    );
+    const keyOf = (label: string): string =>
+      fields
+        .filter((f: CatalogFieldResponse): boolean => f.label === label)
+        .map((f: CatalogFieldResponse): string => f.key)[0] ?? '';
+    const definition: Response = await request(app.server())
+      .post(api('/report-definitions'))
+      .set('authorization', owner.bearer())
+      .send({
+        name: 'Movimientos por cuenta',
+        rowSource: 'FIELD',
+        classificationId: null,
+        rowFieldKey: keyOf('Código de cuenta'),
+        measures: [keyOf('Debe'), keyOf('Haber')],
+        profileId: null,
+        companyId: String(scope['companyId']),
+        onlyWhenFieldKey: null,
+        includeUnclassified: true,
+        formulaColumns: [],
+      })
+      .expect(201);
+    const reportId: string = Body.text(definition.body, 'id');
+    const format = {
+      decimals: 2,
+      thousands: true,
+      negative: 'PARENTHESES',
+      scale: 'UNITS',
+      prefix: '',
+      suffix: '',
+    };
+    const style = { fontSize: 10, bold: false, align: 'LEFT' };
+    const element = (id: string, kind: string, extra: Record<string, unknown>): Record<string, unknown> => ({
+      id,
+      kind,
+      name: id,
+      box: { x: 15, y: 15, width: 100, height: 20 },
+      style,
+      numberFormat: format,
+      text: null,
+      reportId: null,
+      formula: null,
+      profileId: null,
+      companyId: null,
+      chartType: null,
+      columns: [],
+      ...extra,
+    });
+    const page = (elements: Array<Record<string, unknown>>): Record<string, unknown> => ({
+      id: 'p1',
+      name: 'Resumen',
+      format: 'LETTER',
+      width: 0,
+      height: 0,
+      orientation: 'PORTRAIT',
+      margin: 15,
+      header: 'Balance {periodo}',
+      footer: 'Página {pagina} de {paginas}',
+      elements,
+    });
+    const elements: Array<Record<string, unknown>> = [
+      element('e1', 'TEXT', { text: 'Informe de {mes} de {año}' }),
+      element('e2', 'MATRIX', { reportId, box: { x: 15, y: 40, width: 180, height: 80 } }),
+      element('e3', 'KPI', {
+        formula: '=SUMA([Debe]) - SUMA([haber])',
+        companyId: String(scope['companyId']),
+        box: { x: 15, y: 125, width: 60, height: 20 },
+      }),
+      element('e4', 'CHART', {
+        reportId,
+        chartType: 'BAR',
+        columns: [0, 1],
+        box: { x: 15, y: 150, width: 180, height: 90 },
+      }),
+    ];
+    const send = (pages: Array<Record<string, unknown>>): Test =>
+      request(app.server())
+        .post(api('/templates'))
+        .set('authorization', owner.bearer())
+        .send({ name: 'Balance mensual', pages });
+    await send([
+      page([element('x', 'TEXT', { text: 'x', box: { x: 200, y: 10, width: 50, height: 10 } })]),
+    ]).expect(400);
+    await send([page([element('x', 'KPI', { formula: '=[Nombre de cuenta]' })])]).expect(400);
+    await send([page([element('x', 'CHART', { reportId, chartType: 'BAR', columns: [5] })])]).expect(400);
+    const created: Response = await send([page(elements)]).expect(201);
+    const createdBody: unknown = created.body;
+    expect(createdBody).toMatchObject({
+      version: 1,
+      pages: [
+        { width: 215.9, height: 279.4, elements: [{}, {}, { formula: '=SUMA([Debe]) - SUMA([Haber])' }, {}] },
+      ],
+    });
+
+    const rendered: Response = await request(app.server())
+      .get(api(`/templates/${Body.text(created.body, 'id')}/render?period=2026-08`))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    const renderedBody: unknown = rendered.body;
+    expect(renderedBody).toMatchObject({
+      name: 'Balance mensual',
+      pages: [
+        {
+          header: 'Balance 08/2026',
+          footer: 'Página 1 de 1',
+          elements: [
+            { kind: 'TEXT', text: 'Informe de agosto de 2026' },
+            { kind: 'MATRIX', table: { name: 'Movimientos por cuenta' }, error: null },
+            { kind: 'KPI', value: '800', error: null },
+            {
+              kind: 'CHART',
+              chart: {
+                labels: ['1.001.001.0000', '1.001.001.0003'],
+                series: [{ label: 'Debe' }, { label: 'Haber' }],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    await request(app.server())
+      .delete(api(`/report-definitions/${reportId}`))
+      .set('authorization', owner.bearer())
+      .expect(400);
+  });
+
   it('rechaza alcances incoherentes y marca como fallido un archivo con demasiados rechazos', async (): Promise<void> => {
     await request(app.server())
       .post(api('/imports'))

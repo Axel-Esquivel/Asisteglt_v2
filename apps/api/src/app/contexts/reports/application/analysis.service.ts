@@ -4,15 +4,36 @@ import {
   ClassificationRequest,
   ComputedReportResponse,
   FormulaColumnDto,
+  NumericNature,
   ProjectPermission,
   ReportDefinitionRequest,
   ReportDefinitionResponse,
   RowSource,
 } from '@asisteglt/shared-contracts';
-import { Clock, EntityId, NotFoundError, Nullable, Result, ValidationError } from '@asisteglt/shared-kernel';
+import {
+  Clock,
+  Decimal,
+  EntityId,
+  NotFoundError,
+  Nullable,
+  Result,
+  ValidationError,
+} from '@asisteglt/shared-kernel';
 import { ProjectAccess } from '../../projects/application/project-access';
 import { Project } from '../../projects/domain/project';
-import { FormulaFormatter, ListFieldResolver } from '@asisteglt/shared-formula-engine';
+import {
+  AggregateRequest,
+  AggregateRequestCollector,
+  Evaluator,
+  Expression,
+  FormulaFormatter,
+  FormulaValue,
+  Lexer,
+  ListFieldResolver,
+  Parser,
+  Token,
+} from '@asisteglt/shared-formula-engine';
+import { RecordAggregates } from '../domain/record-aggregates';
 import { CatalogResolver } from '../domain/catalog-resolver';
 import { Classification } from '../domain/classification';
 import { FieldCatalog } from '../domain/field-catalog';
@@ -21,7 +42,9 @@ import {
   DataRecordRepository,
   RecordQuery,
   ReportDefinitionRepository,
+  ReportTemplateRepository,
 } from '../domain/ports';
+import { ReportTemplate } from '../domain/report-template';
 import { ReportDefinition } from '../domain/report-definition';
 import { ReportEngine } from '../domain/report-engine';
 import { CatalogService } from './catalog.service';
@@ -35,6 +58,7 @@ export class AnalysisService {
     private readonly classifications: ClassificationRepository,
     private readonly definitions: ReportDefinitionRepository,
     private readonly records: DataRecordRepository,
+    private readonly templates: ReportTemplateRepository,
     private readonly catalogs: CatalogService,
     private readonly operations: OperationsService,
     private readonly access: ProjectAccess,
@@ -138,6 +162,14 @@ export class AnalysisService {
     return (await this.access.require(projectId, userId, ProjectPermission.REPORTS_DESIGN)).flatMapAsync(
       async (p: Project): Promise<Result<true>> =>
         (await this.report(p, reportId)).flatMapAsync(async (d: ReportDefinition): Promise<Result<true>> => {
+          const used: boolean = (await this.templates.findByProject(p.getId())).some(
+            (t: ReportTemplate): boolean => t.usesReport(d.getId().toString()),
+          );
+          if (used) {
+            return Result.fail(
+              new ValidationError(AnalysisErrorCode.INVALID_REPORT, 'El informe se usa en una plantilla'),
+            );
+          }
           await this.definitions.delete(d.getId());
           return Result.ok(true);
         }),
@@ -157,39 +189,106 @@ export class AnalysisService {
       );
     }
     return (await this.access.require(projectId, userId, ProjectPermission.REPORTS_VIEW)).flatMapAsync(
-      async (p: Project): Promise<Result<ComputedReportResponse>> =>
-        (await this.report(p, reportId)).flatMapAsync(
-          async (definition: ReportDefinition): Promise<Result<ComputedReportResponse>> => {
-            const spec: ReportDefinitionRequest = definition.getSpec();
-            const classification: Nullable<Classification> =
-              spec.classificationId === null
-                ? null
-                : (await this.classification(p, spec.classificationId)).match(
-                    (c: Classification): Nullable<Classification> => c,
-                    (): Nullable<Classification> => null,
-                  );
-            const engine: ReportEngine = new ReportEngine(
-              definition,
-              await this.catalogs.of(p.getId()),
-              classification,
-              await this.operations.convertedCurrencies(p.getId()),
-            );
-            const query: RecordQuery = new RecordQuery(
-              p.getId().toString(),
-              period,
-              spec.profileId,
-              spec.companyId,
-              [],
-              null,
-            );
-            const runner: OperationRunner = await this.operations.runner(p.getId(), query, [period]);
-            for await (const record of this.records.stream(query)) {
-              engine.add(runner.apply(record));
-            }
-            return Result.ok(engine.result(definition.getId().toString(), period));
-          },
-        ),
+      (p: Project): Promise<Result<ComputedReportResponse>> => this.compute(p, reportId, period),
     );
+  }
+
+  /** Calcula un informe del proyecto (sin revisar permisos: lo hace quien llama). */
+  public async compute(
+    p: Project,
+    reportId: string,
+    period: string,
+  ): Promise<Result<ComputedReportResponse>> {
+    return (await this.report(p, reportId)).flatMapAsync(
+      async (definition: ReportDefinition): Promise<Result<ComputedReportResponse>> => {
+        const spec: ReportDefinitionRequest = definition.getSpec();
+        const classification: Nullable<Classification> =
+          spec.classificationId === null
+            ? null
+            : (await this.classification(p, spec.classificationId)).match(
+                (c: Classification): Nullable<Classification> => c,
+                (): Nullable<Classification> => null,
+              );
+        const engine: ReportEngine = new ReportEngine(
+          definition,
+          await this.catalogs.of(p.getId()),
+          classification,
+          await this.operations.convertedCurrencies(p.getId()),
+        );
+        const query: RecordQuery = new RecordQuery(
+          p.getId().toString(),
+          period,
+          spec.profileId,
+          spec.companyId,
+          [],
+          null,
+        );
+        const runner: OperationRunner = await this.operations.runner(p.getId(), query, [period]);
+        for await (const record of this.records.stream(query)) {
+          engine.add(runner.apply(record));
+        }
+        return Result.ok(engine.result(definition.getId().toString(), period));
+      },
+    );
+  }
+
+  /**
+   * Evalúa una fórmula agregada (forma canónica) sobre los registros del período, con las
+   * operaciones aplicadas. Falla si suma montos de monedas distintas.
+   */
+  public async kpi(
+    p: Project,
+    formula: string,
+    period: string,
+    profileId: Nullable<string>,
+    companyId: Nullable<string>,
+  ): Promise<Result<Nullable<string>>> {
+    const catalog: FieldCatalog = await this.catalogs.of(p.getId());
+    const resolver: ListFieldResolver = CatalogResolver.of(catalog);
+    const root: Nullable<Expression> = new Lexer()
+      .tokenize(formula)
+      .flatMap((tokens: Token[]): Result<Expression> => new Parser(resolver).parse(tokens))
+      .match(
+        (e: Expression): Nullable<Expression> => e,
+        (): Nullable<Expression> => null,
+      );
+    if (root === null) {
+      return Result.fail(new ValidationError(AnalysisErrorCode.INVALID_REPORT, 'La fórmula ya no es válida'));
+    }
+    const requests: AggregateRequest[] = new AggregateRequestCollector(resolver).collect(root);
+    const sensitive: string[] = requests
+      .map((r: AggregateRequest): string => r.key)
+      .filter((key: string): boolean => {
+        const field = resolver.find(key);
+        return (
+          field !== null &&
+          (field.nature === NumericNature.AMOUNT || field.nature === NumericNature.UNIT_PRICE)
+        );
+      });
+    const converted: ReadonlyMap<string, string> = await this.operations.convertedCurrencies(p.getId());
+    const aggregates: RecordAggregates = new RecordAggregates(requests);
+    const currencies: Set<string> = new Set<string>();
+    const query: RecordQuery = new RecordQuery(p.getId().toString(), period, profileId, companyId, [], null);
+    const runner: OperationRunner = await this.operations.runner(p.getId(), query, [period]);
+    for await (const raw of this.records.stream(query)) {
+      const record = runner.apply(raw);
+      aggregates.add(record.values);
+      for (const key of sensitive) {
+        if (typeof record.values[key] === 'string') {
+          currencies.add(converted.get(key) ?? record.currency);
+        }
+      }
+    }
+    if (currencies.size > 1) {
+      return Result.fail(
+        new ValidationError(
+          AnalysisErrorCode.INVALID_REPORT,
+          `Suma montos en varias monedas (${[...currencies].sort().join(', ')}); usa un encabezado convertido o filtra por compañía`,
+        ),
+      );
+    }
+    const value: FormulaValue = new Evaluator(resolver, aggregates).evaluate(root);
+    return Result.ok(value instanceof Decimal ? value.toString() : null);
   }
 
   /** Respuesta con las fórmulas de las columnas calculadas escritas con los nombres vigentes. */

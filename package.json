@@ -96,6 +96,7 @@
     "@nestjs/websockets": "^12.1.2",
     "@primeuix/themes": "^3.0.1",
     "argon2": "^0.45.1",
+    "chart.js": "^4.5.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "cookie-parser": "^1.4.7",

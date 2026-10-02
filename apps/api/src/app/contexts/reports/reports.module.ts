@@ -3,6 +3,10 @@ import { DataStore } from '../../common/persistence/data-store';
 import { RepositoryBinding } from '../../common/persistence/persistence.module';
 import { AnalysisService } from './application/analysis.service';
 import { OperationsService } from './application/operations.service';
+import { TemplatesService } from './application/templates.service';
+import { InMemoryReportTemplateRepository } from './infrastructure/memory/in-memory-templates.repository';
+import { MongoReportTemplateRepository } from './infrastructure/mongo/mongo-templates.repository';
+import { TemplatesController } from './presentation/templates.controller';
 import { CollectionsService } from './application/collections.service';
 import { InMemoryCollectionRepository } from './infrastructure/memory/in-memory-collections.repository';
 import { MongoCollectionRepository } from './infrastructure/mongo/mongo-collections.repository';
@@ -20,6 +24,7 @@ import { ReportsAccess } from './application/reports-access';
 import {
   ClassificationRepository,
   OperationPipelineRepository,
+  ReportTemplateRepository,
   CollectionRepository,
   DataRecordRepository,
   FieldCatalogRepository,
@@ -77,6 +82,7 @@ export class ReportsModule {
         AnalysisController,
         OperationsController,
         CollectionsController,
+        TemplatesController,
       ],
       providers: [
         RepositoryBinding.bind(
@@ -128,6 +134,12 @@ export class ReportsModule {
           InMemoryCollectionRepository,
           MongoCollectionRepository,
         ),
+        RepositoryBinding.bind(
+          ReportTemplateRepository,
+          store,
+          InMemoryReportTemplateRepository,
+          MongoReportTemplateRepository,
+        ),
         storage,
         { provide: ImportQueue, useClass: InProcessImportQueue },
         ReportsAccess,
@@ -140,6 +152,7 @@ export class ReportsModule {
         AnalysisService,
         OperationsService,
         CollectionsService,
+        TemplatesService,
       ],
       exports: [
         CatalogService,
