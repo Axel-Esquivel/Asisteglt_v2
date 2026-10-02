@@ -48,7 +48,7 @@ import { ProjectContext } from '../../projects/data/project-context';
 import { ProjectMemberView } from '../../projects/data/project.model';
 import { ProjectsApiClient } from '../../projects/data/projects.api-client';
 import { InventoryApiClient } from '../data/inventory.api-client';
-import { CountView, InventoryEventView, MyWork, Supervision } from '../data/inventory.model';
+import { CountView, EvidenceView, InventoryEventView, MyWork, Supervision } from '../data/inventory.model';
 import { AccessQr } from '../data/access-qr';
 import { EntryDraft } from '../data/entry-draft';
 import { FlushOutcome, PendingEntries, PendingEntry } from '../data/pending-entries';
@@ -62,6 +62,14 @@ interface MemberChoice {
 interface Option<T> {
   readonly label: string;
   readonly value: T;
+}
+
+/** Foto lista para mostrar: datos y una URL local (`blob:`) que se libera al cerrar. */
+class PhotoView {
+  public constructor(
+    public readonly evidence: EvidenceView,
+    public readonly url: string,
+  ) {}
 }
 
 /** Toma física: configuración, «Mi conteo» (a ciegas) y supervisión en vivo con rondas. */
@@ -145,6 +153,13 @@ export class CountPage implements OnInit {
     { key: 'cost', label: 'Costo unitario' },
   ];
 
+  protected readonly photoItem: WritableSignal<Nullable<ItemStatusResponse>> =
+    signal<Nullable<ItemStatusResponse>>(null);
+  protected readonly photoViews: WritableSignal<PhotoView[]> = signal<PhotoView[]>([]);
+  protected readonly photoTitle: Signal<string> = computed((): string => {
+    const item: Nullable<ItemStatusResponse> = this.photoItem();
+    return item === null ? 'Fotos' : `Fotos de ${item.sku}`;
+  });
   protected readonly qrVisible: WritableSignal<boolean> = signal<boolean>(false);
   protected readonly qrUrl: WritableSignal<string> = signal<string>('');
   protected readonly qrImage: WritableSignal<Nullable<string>> = signal<Nullable<string>>(null);
@@ -333,6 +348,62 @@ export class CountPage implements OnInit {
 
   protected isLocalOnly(): boolean {
     return AccessQr.isLocalOnly(this.qrUrl());
+  }
+
+  protected async uploadPhoto(
+    item: WorkItemResponse,
+    event: FileSelectEvent,
+    uploader: FileUpload,
+  ): Promise<void> {
+    const file: Nullable<File> = event.currentFiles[0] ?? null;
+    uploader.clear();
+    if (file === null) {
+      return;
+    }
+    const result: Result<EvidenceView> = await this.api.uploadPhoto(
+      this.context.id(),
+      this.countId(),
+      item.itemId,
+      file,
+    );
+    const error: Nullable<DomainError> = result.errorOrNull();
+    if (error !== null) {
+      this.notifier.error(error);
+      return;
+    }
+    this.notifier.success(`Foto agregada a ${item.sku}`);
+    await this.refresh();
+  }
+
+  protected async openPhotos(item: ItemStatusResponse): Promise<void> {
+    this.closePhotos();
+    this.photoItem.set(item);
+    const list: Result<EvidenceView[]> = await this.api.photos(
+      this.context.id(),
+      this.countId(),
+      item.itemId,
+    );
+    const error: Nullable<DomainError> = list.errorOrNull();
+    if (error !== null) {
+      this.notifier.error(error);
+      return;
+    }
+    const shown: PhotoView[] = [];
+    for (const evidence of list.unwrap()) {
+      const blob: Result<Blob> = await this.api.photo(this.context.id(), this.countId(), evidence.s.id);
+      if (blob.isOk()) {
+        shown.push(new PhotoView(evidence, URL.createObjectURL(blob.unwrap())));
+      }
+    }
+    this.photoViews.set(shown);
+  }
+
+  protected closePhotos(): void {
+    for (const view of this.photoViews()) {
+      URL.revokeObjectURL(view.url);
+    }
+    this.photoViews.set([]);
+    this.photoItem.set(null);
   }
 
   protected isPending(item: WorkItemResponse): boolean {

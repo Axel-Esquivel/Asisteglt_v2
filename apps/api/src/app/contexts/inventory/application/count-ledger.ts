@@ -58,7 +58,10 @@ export class CountLedger {
     );
   }
 
-  public statuses(names: ReadonlyMap<string, string>): ItemStatusResponse[] {
+  public statuses(
+    names: ReadonlyMap<string, string>,
+    photos: ReadonlyMap<string, number>,
+  ): ItemStatusResponse[] {
     return [...this.items]
       .sort(
         (a: InventoryItemSnapshot, b: InventoryItemSnapshot): number =>
@@ -84,6 +87,7 @@ export class CountLedger {
           counterName: entry === null ? null : (names.get(entry.counterId) ?? null),
           condition: entry === null ? null : entry.condition,
           comment: entry === null ? '' : entry.comment,
+          photos: photos.get(item.id) ?? 0,
         };
       });
   }

@@ -195,6 +195,24 @@
                   [attr.aria-label]="'Comentario de ' + item.sku"
                   placeholder="Comentario (opcional)"
                 />
+                <div class="inventory__toolbar">
+                  <p-fileupload
+                    #uploader
+                    mode="basic"
+                    accept="image/*"
+                    [maxFileSize]="5242880"
+                    chooseLabel="Agregar foto"
+                    chooseIcon="pi pi-camera"
+                    [auto]="false"
+                    [customUpload]="true"
+                    (onSelect)="uploadPhoto(item, $event, uploader)"
+                  />
+                  @if (item.photos > 0) {
+                  <span class="inventory__hint" [attr.data-testid]="'photos-' + item.sku"
+                    >{{ item.photos }} foto(s)</span
+                  >
+                  }
+                </div>
               </form>
             </div>
             }
@@ -325,6 +343,7 @@
                   <th class="inventory__number">Diferencia</th>
                   <th class="inventory__number">Valor</th>
                   <th>Novedad</th>
+                  <th>Fotos</th>
                   <th>Rondas</th>
                   <th>Contó</th>
                 </tr>
@@ -349,6 +368,18 @@
                     />
                     } @else if (item.comment !== '') {
                     <span class="inventory__hint" [pTooltip]="item.comment">Comentario</span>
+                    }
+                  </td>
+                  <td>
+                    @if (item.photos > 0) {
+                    <p-button
+                      icon="pi pi-images"
+                      [label]="'' + item.photos"
+                      [text]="true"
+                      size="small"
+                      [ariaLabel]="'Ver fotos de ' + item.sku"
+                      (onClick)="openPhotos(item)"
+                    />
                     }
                   </td>
                   <td>{{ item.rounds }}</td>
@@ -434,6 +465,27 @@
       Este enlace usa «localhost» y no abre en otro equipo: reemplázalo por la IP de esta computadora en la
       red (p. ej. http://192.168.1.20:4200/…).
     </p-message>
+    }
+  </div>
+</p-dialog>
+
+<p-dialog
+  [header]="photoTitle()"
+  [modal]="true"
+  [visible]="photoItem() !== null"
+  (visibleChange)="$event ? null : closePhotos()"
+  [style]="{ width: 'min(40rem, 95vw)' }"
+>
+  <div class="inventory__photos" data-testid="photo-gallery">
+    @for (photo of photoViews(); track photo.evidence.s.id) {
+    <figure class="inventory__photo">
+      <img [src]="photo.url" [alt]="'Foto de evidencia de la ronda ' + photo.evidence.s.round" />
+      <figcaption class="inventory__hint">
+        Ronda {{ photo.evidence.s.round }} · {{ photo.evidence.s.uploadedBy }}
+      </figcaption>
+    </figure>
+    } @empty {
+    <p class="inventory__hint">Cargando…</p>
     }
   </div>
 </p-dialog>

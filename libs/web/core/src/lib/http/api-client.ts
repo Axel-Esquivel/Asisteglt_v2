@@ -30,6 +30,19 @@ export abstract class ApiClient {
     return this.request('DELETE', path, null, decoder);
   }
 
+  /** Archivo binario (p. ej. una foto) con la sesión del usuario. */
+  protected async getBlob(path: string): Promise<Result<Blob>> {
+    try {
+      return Result.ok(
+        await firstValueFrom(
+          this.http.get(this.config.url(path), { responseType: 'blob', withCredentials: true }),
+        ),
+      );
+    } catch (error: unknown) {
+      return Result.fail<Blob>(ApiClient.toError(error));
+    }
+  }
+
   protected async upload<T>(path: string, form: FormData, decoder: Decoder<T>): Promise<Result<T>> {
     try {
       const response: unknown = await firstValueFrom(this.http.post<unknown>(this.config.url(path), form));

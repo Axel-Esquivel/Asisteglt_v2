@@ -23,3 +23,16 @@ export interface CountEntrySnapshot {
   readonly condition: ItemCondition;
   readonly recordedAt: Date;
 }
+
+/** Foto de evidencia: el archivo vive en el almacén de archivos, aquí solo su referencia. */
+export interface EvidenceSnapshot {
+  readonly id: string;
+  readonly countId: string;
+  readonly itemId: string;
+  readonly round: number;
+  readonly userId: string;
+  readonly contentType: string;
+  readonly size: number;
+  readonly storageKey: string;
+  readonly createdAt: Date;
+}

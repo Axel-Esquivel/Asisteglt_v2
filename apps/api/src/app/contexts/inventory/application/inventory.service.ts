@@ -34,7 +34,12 @@ import { Project, ProjectMember } from '../../projects/domain/project';
 import { CounterAssignment, ZoneAssignmentStrategy } from '../domain/assignment-strategy';
 import { CountSettings, InventoryCount, RoundSnapshot } from '../domain/inventory-count';
 import { CountEntrySnapshot, InventoryItemSnapshot } from '../domain/inventory-records';
-import { CountEntryRepository, InventoryCountRepository, InventoryItemRepository } from '../domain/ports';
+import {
+  CountEntryRepository,
+  EvidenceRepository,
+  InventoryCountRepository,
+  InventoryItemRepository,
+} from '../domain/ports';
 import { CountLedger } from './count-ledger';
 
 /** Tomas físicas: configuración, rondas, conteo a ciegas, supervisión en vivo y cierre. */
@@ -47,6 +52,7 @@ export class InventoryService {
     private readonly counts: InventoryCountRepository,
     private readonly items: InventoryItemRepository,
     private readonly entries: CountEntryRepository,
+    private readonly evidence: EvidenceRepository,
     private readonly access: ProjectAccess,
     private readonly directory: UserDirectory,
     private readonly publisher: RealtimeEventPublisher,
@@ -191,6 +197,7 @@ export class InventoryService {
               await this.entries.findByCount(count.getId().toString()),
               count.getTolerance(),
             );
+            const photos: ReadonlyMap<string, number> = await this.photoCounts(count, userId.toString());
             const items: WorkItemResponse[] = [];
             for (const itemId of mine) {
               const item: Nullable<InventoryItemSnapshot> = byId.get(itemId) ?? null;
@@ -203,6 +210,7 @@ export class InventoryService {
                   location: item.location,
                   counted: ledger.countedIn(itemId, round.number),
                   condition: ledger.conditionIn(itemId, round.number),
+                  photos: photos.get(itemId) ?? 0,
                 });
               }
             }
@@ -268,7 +276,10 @@ export class InventoryService {
         (await this.find(p, countId)).flatMapAsync(
           async (count: InventoryCount): Promise<Result<SupervisionResponse>> => {
             const ledger: CountLedger = await this.ledger(count);
-            const statuses: ItemStatusResponse[] = ledger.statuses(await this.names(count));
+            const statuses: ItemStatusResponse[] = ledger.statuses(
+              await this.names(count),
+              await this.photoCounts(count, null),
+            );
             const valuation = ledger.valuation();
             return Result.ok({
               count: await this.present(count),
@@ -442,6 +453,20 @@ export class InventoryService {
       await this.entries.findByCount(id),
       count.getTolerance(),
     );
+  }
+
+  /** Fotos por ítem (de un usuario, o de todos con `null`). */
+  private async photoCounts(
+    count: InventoryCount,
+    userId: Nullable<string>,
+  ): Promise<ReadonlyMap<string, number>> {
+    const counts: Map<string, number> = new Map<string, number>();
+    for (const e of await this.evidence.findByCount(count.getId().toString())) {
+      if (userId === null || e.userId === userId) {
+        counts.set(e.itemId, (counts.get(e.itemId) ?? 0) + 1);
+      }
+    }
+    return counts;
   }
 
   private async names(count: InventoryCount): Promise<ReadonlyMap<string, string>> {

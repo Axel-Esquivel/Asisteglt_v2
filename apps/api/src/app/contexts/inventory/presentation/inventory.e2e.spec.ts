@@ -292,6 +292,32 @@ describe('Inventarios (e2e)', () => {
     await record('N-003', '10', 'DAMAGED').expect(204);
     await record('N-004', '7', 'OK').expect(204);
 
+    // Evidencia: una foto PNG (FICTICIA: solo la firma del formato) para el ítem dañado
+    const png: Buffer = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3, 4]);
+    const photo = (client: AuthenticatedClient, content: Buffer, name: string): request.Test =>
+      request(app.server())
+        .post(api(`/${countId}/items/${idOf('N-003')}/photos`))
+        .set('authorization', client.bearer())
+        .attach('photo', content, name);
+    await photo(ana, Buffer.from('no es una imagen'), 'nota.txt').expect(400);
+    const uploaded: Response = await photo(ana, png, 'danio.png').expect(201);
+    const photoId: string = Body.text(uploaded.body, 'id');
+    const listed: Response = await request(app.server())
+      .get(api(`/${countId}/items/${idOf('N-003')}/photos`))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    expect(Body.list(listed.body)).toHaveLength(1);
+    const file: Response = await request(app.server())
+      .get(api(`/${countId}/photos/${photoId}`))
+      .set('authorization', owner.bearer())
+      .buffer(true)
+      .expect(200);
+    expect(file.headers['content-type']).toBe('image/png');
+    await request(app.server())
+      .get(api(`/${countId}/photos/${photoId}`))
+      .set('authorization', beto.bearer())
+      .expect(404);
+
     const supervision: Response = await request(app.server())
       .get(api(`/${countId}/supervision`))
       .set('authorization', owner.bearer())
@@ -307,6 +333,9 @@ describe('Inventarios (e2e)', () => {
     });
     expect(Body.list(Body.get(supervision.body, 'items'))).toContainEqual(
       expect.objectContaining({ sku: 'N-002', counted: '0', condition: 'NOT_FOUND', comment: 'Revisar' }),
+    );
+    expect(Body.list(Body.get(supervision.body, 'items'))).toContainEqual(
+      expect.objectContaining({ sku: 'N-003', photos: 1 }),
     );
 
     await request(app.server())

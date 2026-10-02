@@ -162,6 +162,8 @@ export class ReportsModule {
         AnalysisService,
         OperationsService,
         DataRecordRepository,
+        ProfileRepository,
+        FileStorage,
         ImportQueue,
         ReportsAccess,
       ],

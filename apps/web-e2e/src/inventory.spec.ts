@@ -85,6 +85,16 @@ test('toma física con conteo a ciegas y supervisión en vivo', async ({ browser
   await expect(counter.page.getByLabel('Cantidad de P-002')).toBeDisabled();
   await counter.page.getByLabel('Comentario de P-002').fill('Estante vacío');
   await counter.page.getByRole('button', { name: 'Guardar conteo de P-002' }).click();
+  // Foto de evidencia (PNG de 1×1 generado para la prueba)
+  const pixel: Buffer = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+    'base64',
+  );
+  await counter.page
+    .getByTestId('work-P-002')
+    .locator('input[type="file"]')
+    .setInputFiles({ name: 'evidencia.png', mimeType: 'image/png', buffer: pixel });
+  await expect(counter.page.getByTestId('photos-P-002')).toHaveText('1 foto(s)');
 
   await expect(page.getByTestId('kpi-counted')).toHaveText('2 / 2');
   await expect(page.getByTestId('kpi-exceeding')).toHaveText('2');
@@ -92,6 +102,9 @@ test('toma física con conteo a ciegas y supervisión en vivo', async ({ browser
   await expect(page.getByTestId('kpi-difference')).toHaveText('-12.50');
   await expect(page.getByTestId('kpi-valuation')).toHaveText('60.00 · 47.50 · 0.00');
   await expect(page.getByTestId('supervision-table')).toContainText('No encontrado');
+  await page.getByRole('button', { name: 'Ver fotos de P-002' }).click();
+  await expect(page.getByTestId('photo-gallery').locator('img')).toBeVisible();
+  await page.keyboard.press('Escape');
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Exportar resultados (CSV)' }).click();
   const file: string = await (await download).path();

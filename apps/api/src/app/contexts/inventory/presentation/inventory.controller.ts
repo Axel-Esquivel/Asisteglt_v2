@@ -1,14 +1,41 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Put } from '@nestjs/common';
-import { CountResponse, MyWorkResponse, SupervisionResponse } from '@asisteglt/shared-contracts';
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Put,
+  StreamableFile,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  CountResponse,
+  EvidenceResponse,
+  MyWorkResponse,
+  SupervisionResponse,
+} from '@asisteglt/shared-contracts';
 import { CurrentPrincipal } from '../../../common/auth/auth.decorators';
 import type { AuthenticatedPrincipal } from '../../iam/domain/ports';
+import { EvidenceFile, EvidenceService } from '../application/evidence.service';
 import { InventoryService } from '../application/inventory.service';
+
+interface ReceivedPhoto {
+  readonly buffer: Buffer;
+}
 import { InventoryParsers } from './inventory.parsers';
 
 /** Tomas físicas de inventario de un proyecto. */
 @Controller('projects/:projectId/inventory/counts')
 export class InventoryController {
-  public constructor(private readonly inventory: InventoryService) {}
+  public constructor(
+    private readonly inventory: InventoryService,
+    private readonly evidence: EvidenceService,
+  ) {}
 
   @Get()
   public async list(
@@ -141,5 +168,41 @@ export class InventoryController {
     @Param('countId') countId: string,
   ): Promise<CountResponse> {
     return (await this.inventory.close(projectId, p.userId, countId)).unwrap();
+  }
+
+  @Post(':countId/items/:itemId/photos')
+  @UseInterceptors(FileInterceptor('photo', { limits: { fileSize: EvidenceService.MAX_BYTES } }))
+  public async addPhoto(
+    @CurrentPrincipal() p: AuthenticatedPrincipal,
+    @Param('projectId') projectId: string,
+    @Param('countId') countId: string,
+    @Param('itemId') itemId: string,
+    @UploadedFile() file: ReceivedPhoto,
+  ): Promise<EvidenceResponse> {
+    return (
+      await this.evidence.add(projectId, p.userId, countId, itemId, new Uint8Array(file.buffer))
+    ).unwrap();
+  }
+
+  @Get(':countId/items/:itemId/photos')
+  public async photos(
+    @CurrentPrincipal() p: AuthenticatedPrincipal,
+    @Param('projectId') projectId: string,
+    @Param('countId') countId: string,
+    @Param('itemId') itemId: string,
+  ): Promise<EvidenceResponse[]> {
+    return (await this.evidence.list(projectId, p.userId, countId, itemId)).unwrap();
+  }
+
+  @Get(':countId/photos/:photoId')
+  @Header('Cache-Control', 'private, max-age=300')
+  public async photo(
+    @CurrentPrincipal() p: AuthenticatedPrincipal,
+    @Param('projectId') projectId: string,
+    @Param('countId') countId: string,
+    @Param('photoId') photoId: string,
+  ): Promise<StreamableFile> {
+    const file: EvidenceFile = (await this.evidence.file(projectId, p.userId, countId, photoId)).unwrap();
+    return new StreamableFile(file.bytes, { type: file.contentType });
   }
 }

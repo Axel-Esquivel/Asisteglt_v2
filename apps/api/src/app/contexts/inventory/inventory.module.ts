@@ -2,7 +2,15 @@ import { DynamicModule, Module } from '@nestjs/common';
 import { DataStore } from '../../common/persistence/data-store';
 import { RepositoryBinding } from '../../common/persistence/persistence.module';
 import { InventoryService } from './application/inventory.service';
-import { CountEntryRepository, InventoryCountRepository, InventoryItemRepository } from './domain/ports';
+import {
+  CountEntryRepository,
+  EvidenceRepository,
+  InventoryCountRepository,
+  InventoryItemRepository,
+} from './domain/ports';
+import { EvidenceService } from './application/evidence.service';
+import { InMemoryEvidenceRepository } from './infrastructure/memory/in-memory-evidence.repository';
+import { MongoEvidenceRepository } from './infrastructure/mongo/mongo-evidence.repository';
 import {
   InMemoryCountEntryRepository,
   InMemoryInventoryCountRepository,
@@ -42,7 +50,14 @@ export class InventoryModule {
           InMemoryCountEntryRepository,
           MongoCountEntryRepository,
         ),
+        RepositoryBinding.bind(
+          EvidenceRepository,
+          store,
+          InMemoryEvidenceRepository,
+          MongoEvidenceRepository,
+        ),
         InventoryService,
+        EvidenceService,
       ],
       exports: [InventoryService],
     };

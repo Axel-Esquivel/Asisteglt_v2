@@ -97,6 +97,7 @@ export interface WorkItemResponse {
   readonly location: string;
   readonly counted: string | null;
   readonly condition: ItemCondition | null;
+  readonly photos: number;
 }
 
 export interface MyWorkResponse {
@@ -131,6 +132,17 @@ export interface ItemStatusResponse {
   readonly counterName: string | null;
   readonly condition: ItemCondition | null;
   readonly comment: string;
+  readonly photos: number;
+}
+
+/** Foto de evidencia de un ítem (el archivo se pide aparte, con autenticación). */
+export interface EvidenceResponse {
+  readonly id: string;
+  readonly itemId: string;
+  readonly round: number;
+  readonly uploadedBy: string;
+  readonly contentType: string;
+  readonly createdAt: string;
 }
 
 export interface SupervisionResponse {
@@ -160,4 +172,6 @@ export enum InventoryErrorCode {
   NOT_ASSIGNED = 'NOT_ASSIGNED',
   INVALID_QUANTITY = 'INVALID_QUANTITY',
   INVALID_REASSIGNMENT = 'INVALID_REASSIGNMENT',
+  INVALID_EVIDENCE = 'INVALID_EVIDENCE',
+  EVIDENCE_NOT_FOUND = 'EVIDENCE_NOT_FOUND',
 }

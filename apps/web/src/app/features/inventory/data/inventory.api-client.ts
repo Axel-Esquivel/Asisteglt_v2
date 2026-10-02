@@ -8,7 +8,7 @@ import {
 } from '@asisteglt/shared-contracts';
 import { ArrayDecoder, EmptyDecoder, FieldDecoder, Result } from '@asisteglt/shared-kernel';
 import { ApiClient } from '@asisteglt/web-core';
-import { CountView, MyWork, Supervision } from './inventory.model';
+import { CountView, EvidenceView, MyWork, Supervision } from './inventory.model';
 
 @Injectable({ providedIn: 'root' })
 export class InventoryApiClient extends ApiClient {
@@ -17,6 +17,10 @@ export class InventoryApiClient extends ApiClient {
   private readonly work: FieldDecoder<MyWork> = MyWork.decoder();
   private readonly supervisionDecoder: FieldDecoder<Supervision> = Supervision.decoder();
   private readonly empty: EmptyDecoder = new EmptyDecoder();
+  private readonly evidence: FieldDecoder<EvidenceView> = EvidenceView.decoder();
+  private readonly evidenceList: ArrayDecoder<EvidenceView> = new ArrayDecoder<EvidenceView>(
+    EvidenceView.decoder(),
+  );
 
   public list(projectId: string): Promise<Result<CountView[]>> {
     return this.get(InventoryApiClient.base(projectId), this.counts);
@@ -71,6 +75,34 @@ export class InventoryApiClient extends ApiClient {
       `${InventoryApiClient.base(projectId)}/${encodeURIComponent(countId)}/reassign`,
       request,
       this.count,
+    );
+  }
+
+  public uploadPhoto(
+    projectId: string,
+    countId: string,
+    itemId: string,
+    file: File,
+  ): Promise<Result<EvidenceView>> {
+    const form: FormData = new FormData();
+    form.append('photo', file, file.name);
+    return this.upload(
+      `${InventoryApiClient.base(projectId)}/${encodeURIComponent(countId)}/items/${encodeURIComponent(itemId)}/photos`,
+      form,
+      this.evidence,
+    );
+  }
+
+  public photos(projectId: string, countId: string, itemId: string): Promise<Result<EvidenceView[]>> {
+    return this.get(
+      `${InventoryApiClient.base(projectId)}/${encodeURIComponent(countId)}/items/${encodeURIComponent(itemId)}/photos`,
+      this.evidenceList,
+    );
+  }
+
+  public photo(projectId: string, countId: string, photoId: string): Promise<Result<Blob>> {
+    return this.getBlob(
+      `${InventoryApiClient.base(projectId)}/${encodeURIComponent(countId)}/photos/${encodeURIComponent(photoId)}`,
     );
   }
 

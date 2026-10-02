@@ -1,5 +1,6 @@
 import {
   CountResponse,
+  EvidenceResponse,
   InventoryCountStatus,
   ItemCondition,
   ItemStatusResponse,
@@ -101,6 +102,7 @@ export class MyWork {
         location: f.string('location'),
         counted: f.nullableString('counted'),
         condition: f.raw('condition') === null ? null : f.oneOf('condition', Object.values(ItemCondition)),
+        photos: f.number('photos'),
       }),
     );
     return new FieldDecoder<MyWork>(
@@ -197,6 +199,7 @@ export class Supervision {
         counterName: f.nullableString('counterName'),
         condition: f.raw('condition') === null ? null : f.oneOf('condition', Object.values(ItemCondition)),
         comment: f.string('comment'),
+        photos: f.number('photos'),
       }),
     );
     return new FieldDecoder<Supervision>(
@@ -226,6 +229,25 @@ export class InventoryEventView {
     return new FieldDecoder<InventoryEventView>(
       (f: FieldReader): InventoryEventView =>
         new InventoryEventView(f.string('projectId'), f.string('countId')),
+    );
+  }
+}
+
+/** Foto de evidencia (sus datos; la imagen se descarga aparte con la sesión). */
+export class EvidenceView {
+  public constructor(public readonly s: EvidenceResponse) {}
+
+  public static decoder(): FieldDecoder<EvidenceView> {
+    return new FieldDecoder<EvidenceView>(
+      (f: FieldReader): EvidenceView =>
+        new EvidenceView({
+          id: f.string('id'),
+          itemId: f.string('itemId'),
+          round: f.number('round'),
+          uploadedBy: f.string('uploadedBy'),
+          contentType: f.string('contentType'),
+          createdAt: f.string('createdAt'),
+        }),
     );
   }
 }
