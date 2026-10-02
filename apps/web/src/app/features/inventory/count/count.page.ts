@@ -11,10 +11,12 @@ import {
   input,
   signal,
 } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import {
   AssignmentResponse,
+  CountEntryRequest,
   InventoryItemRequest,
   ItemCondition,
   ItemStatusResponse,
@@ -47,7 +49,9 @@ import { ProjectMemberView } from '../../projects/data/project.model';
 import { ProjectsApiClient } from '../../projects/data/projects.api-client';
 import { InventoryApiClient } from '../data/inventory.api-client';
 import { CountView, InventoryEventView, MyWork, Supervision } from '../data/inventory.model';
+import { AccessQr } from '../data/access-qr';
 import { EntryDraft } from '../data/entry-draft';
+import { FlushOutcome, PendingEntries, PendingEntry } from '../data/pending-entries';
 import { ItemMapping, ItemSheet } from '../data/item-sheet';
 
 interface MemberChoice {
@@ -87,8 +91,11 @@ interface Option<T> {
   ],
   templateUrl: './count.page.html',
   styleUrl: '../inventory.scss',
+  host: { '(window:online)': 'onOnline()' },
 })
 export class CountPage implements OnInit {
+  private static readonly RETRY_MS: number = 15_000;
+
   public readonly countId: InputSignal<string> = input.required<string>();
 
   protected readonly count: WritableSignal<Nullable<CountView>> = signal<Nullable<CountView>>(null);
@@ -138,6 +145,15 @@ export class CountPage implements OnInit {
     { key: 'cost', label: 'Costo unitario' },
   ];
 
+  protected readonly qrVisible: WritableSignal<boolean> = signal<boolean>(false);
+  protected readonly qrUrl: WritableSignal<string> = signal<string>('');
+  protected readonly qrImage: WritableSignal<Nullable<string>> = signal<Nullable<string>>(null);
+  private readonly document: Document = inject(DOCUMENT);
+  protected readonly pending: PendingEntries = inject(PendingEntries);
+  protected readonly pendingHere: Signal<number> = computed(
+    (): number =>
+      this.pending.all().filter((p: PendingEntry): boolean => p.countId === this.countId()).length,
+  );
   private readonly context: ProjectContext = inject(ProjectContext);
   private readonly api: InventoryApiClient = inject(InventoryApiClient);
   private readonly projects: ProjectsApiClient = inject(ProjectsApiClient);
@@ -194,6 +210,12 @@ export class CountPage implements OnInit {
 
   public constructor() {
     const destroyRef: DestroyRef = inject(DestroyRef);
+    const timer: ReturnType<typeof setInterval> = setInterval((): void => {
+      this.flushPending().catch((): void => {
+        // Se reintenta en el siguiente ciclo.
+      });
+    }, CountPage.RETRY_MS);
+    destroyRef.onDestroy((): void => clearInterval(timer));
     inject(RealtimeClient)
       .events(RealtimeEvent.INVENTORY_CHANGED, InventoryEventView.decoder())
       .pipe(takeUntilDestroyed(destroyRef))
@@ -297,6 +319,48 @@ export class CountPage implements OnInit {
     this.setDraft(item, (d: EntryDraft): EntryDraft => d.withComment(value));
   }
 
+  protected async openQr(): Promise<void> {
+    const view: Nullable<Window> = this.document.defaultView;
+    this.qrUrl.set(view === null ? '' : view.location.href);
+    this.qrVisible.set(true);
+    await this.renderQr();
+  }
+
+  protected async changeQrUrl(url: string): Promise<void> {
+    this.qrUrl.set(url);
+    await this.renderQr();
+  }
+
+  protected isLocalOnly(): boolean {
+    return AccessQr.isLocalOnly(this.qrUrl());
+  }
+
+  protected isPending(item: WorkItemResponse): boolean {
+    return this.pending
+      .all()
+      .some((p: PendingEntry): boolean => p.countId === this.countId() && p.entry.itemId === item.itemId);
+  }
+
+  protected onOnline(): void {
+    this.flushPending().catch((): void => {
+      // Se reintenta en el siguiente ciclo.
+    });
+  }
+
+  protected async flushPending(): Promise<void> {
+    if (this.pending.size() === 0) {
+      return;
+    }
+    const outcome: FlushOutcome = await this.pending.flush();
+    for (const error of outcome.rejected) {
+      this.notifier.error(error);
+    }
+    if (outcome.sent > 0) {
+      this.notifier.success(`Se enviaron ${String(outcome.sent)} conteos guardados sin conexión`);
+      await this.refresh();
+    }
+  }
+
   protected conditionLabel(condition: Nullable<ItemCondition>): string {
     return Supervision.conditionLabel(condition);
   }
@@ -339,12 +403,14 @@ export class CountPage implements OnInit {
     if (!draft.isComplete()) {
       return;
     }
-    const result: Result<true> = await this.api.record(
-      this.context.id(),
-      this.countId(),
-      draft.toRequest(item.itemId),
-    );
+    const request: CountEntryRequest = draft.toRequest(item.itemId);
+    const result: Result<true> = await this.api.record(this.context.id(), this.countId(), request);
     const error: Nullable<DomainError> = result.errorOrNull();
+    if (error !== null && PendingEntries.isRetriable(error)) {
+      this.pending.enqueue(this.context.id(), this.countId(), request);
+      this.notifier.info('Sin conexión: el conteo quedó guardado en este dispositivo y se enviará solo');
+      return;
+    }
     if (error !== null) {
       this.notifier.error(error);
       return;
@@ -354,6 +420,10 @@ export class CountPage implements OnInit {
 
   protected percent(counted: number, assigned: number): number {
     return assigned === 0 ? 0 : Math.round((counted * 100) / assigned);
+  }
+
+  private async renderQr(): Promise<void> {
+    this.qrImage.set(await AccessQr.dataUrl(this.qrUrl()));
   }
 
   private defaultTab(): string {

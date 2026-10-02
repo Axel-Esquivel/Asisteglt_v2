@@ -11,6 +11,14 @@
         />
         <p-tag [value]="'Tolerancia ' + current.toleranceLabel()" severity="secondary" />
         <p-tag [value]="current.s.items + ' ítems'" severity="secondary" />
+        <p-button
+          icon="pi pi-qrcode"
+          [text]="true"
+          size="small"
+          ariaLabel="Abrir en otro dispositivo"
+          pTooltip="Abrir en otro dispositivo"
+          (onClick)="openQr()"
+        />
       </div>
     </div>
   </ng-template>
@@ -125,6 +133,20 @@
             >Ronda {{ w.s.round }} · {{ w.done() }} de {{ w.s.items.length }} ítems contados</span
           >
           <p-progressbar [value]="workProgress()" />
+          @if (pendingHere() > 0) {
+          <p-message severity="warn" data-testid="pending-banner">
+            <div class="inventory__toolbar">
+              <span>{{ pendingHere() }} conteos guardados en este dispositivo, pendientes de envío.</span>
+              <p-button
+                label="Reintentar ahora"
+                icon="pi pi-refresh"
+                size="small"
+                [text]="true"
+                (onClick)="flushPending()"
+              />
+            </div>
+          </p-message>
+          }
           <div class="inventory__work" data-testid="work-items">
             @for (item of w.s.items; track item.itemId) {
             <div
@@ -134,7 +156,9 @@
             >
               <strong>{{ item.location }} · {{ item.sku }}</strong>
               <span>{{ item.description }}</span>
-              @if (item.condition !== null && item.condition !== 'OK') {
+              @if (isPending(item)) {
+              <p-tag value="Pendiente de envío" severity="info" [attr.data-testid]="'pending-' + item.sku" />
+              } @if (item.condition !== null && item.condition !== 'OK') {
               <p-tag [value]="conditionLabel(item.condition)" severity="warn" />
               }
               <form class="inventory__entry-form" (ngSubmit)="record(item)">
@@ -377,4 +401,39 @@
     </div>
   </div>
   }
+</p-dialog>
+
+<p-dialog
+  header="Abrir en otro dispositivo"
+  [modal]="true"
+  [visible]="qrVisible()"
+  (visibleChange)="qrVisible.set($event)"
+  [style]="{ width: 'min(24rem, 95vw)' }"
+>
+  <div class="inventory__stack inventory__qr">
+    <p class="inventory__hint">Escanea el código con el celular conectado a la misma red Wi-Fi.</p>
+    @if (qrImage(); as image) {
+    <img
+      [src]="image"
+      alt="Código QR del enlace de la toma"
+      width="256"
+      height="256"
+      data-testid="access-qr"
+    />
+    }
+    <label for="qrUrl" class="inventory__hint">Enlace</label>
+    <input
+      pInputText
+      id="qrUrl"
+      class="full-width"
+      [ngModel]="qrUrl()"
+      (ngModelChange)="changeQrUrl($event)"
+    />
+    @if (isLocalOnly()) {
+    <p-message severity="warn" size="small">
+      Este enlace usa «localhost» y no abre en otro equipo: reemplázalo por la IP de esta computadora en la
+      red (p. ej. http://192.168.1.20:4200/…).
+    </p-message>
+    }
+  </div>
 </p-dialog>

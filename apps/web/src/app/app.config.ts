@@ -1,9 +1,11 @@
 import {
   ApplicationConfig,
+  isDevMode,
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideServiceWorker } from '@angular/service-worker';
 import { provideAsisteGltCore } from '@asisteglt/web-core';
 import { Environment } from '../environments/environment';
 import { appRoutes } from './app.routes';
@@ -13,6 +15,11 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZonelessChangeDetection(),
     provideRouter(appRoutes, withComponentInputBinding()),
+    // PWA instalable: guarda la aplicación (no los datos de la API) para abrirla sin conexión.
+    provideServiceWorker('ngsw-worker.js', {
+      enabled: !isDevMode(),
+      registrationStrategy: 'registerWhenStable:30000',
+    }),
     provideAsisteGltCore(
       Environment.API_BASE_URL,
       Environment.PRIMEUI_LICENSE_KEY.trim() === '' ? null : Environment.PRIMEUI_LICENSE_KEY.trim(),

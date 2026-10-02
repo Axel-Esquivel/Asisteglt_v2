@@ -155,6 +155,14 @@ simultánea con bloqueo, deshacer/rehacer, PDF en el servidor y caché Redis.
 | Cierre con resultados valorizados y exportación. | Totales valorizados cuadran con `Decimal`. |
 | **Modo servidor local**: paquete Docker Compose instalable sin internet, CA local, QR de acceso, PWA, exportar/importar paquete de toma. | Toma completa con 3 móviles en una red Wi-Fi sin internet; cortes de Wi-Fi de 2 min sin pérdida de conteos. |
 
+**Estado de F7 en el código:** tomas con importación de ítems, participantes y asignación por
+zonas; conteo a ciegas con novedades (no encontrado, dañado) y comentarios; supervisión en vivo,
+reasignación dinámica de pendientes, rondas de reconteo (fuera de tolerancia + no encontrados +
+dañados), cierre valorizado con `Decimal` y exportación CSV; cola local de reenvío ante cortes de
+Wi-Fi, PWA instalable y acceso por QR en la red local. Pendiente: fotos como evidencia, mapeo de
+campos por nombre desde el catálogo (`FIELD_NATURE_MISMATCH`), estrategias manual por rangos y
+clúster espacial, paquete Docker de servidor local con CA propia y exportar/importar paquete de toma.
+
 ### F8 · Endurecimiento y despliegue (2 sprints)
 
 | Entregables | Criterios de aceptación |

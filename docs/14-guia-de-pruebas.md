@@ -93,12 +93,18 @@ Proyecto de demostración: **Demo · Bodega ficticia** (toma ya iniciada; entra 
 | 6.4 | Como contador: Mi conteo | Solo ve sus ítems, sin la existencia esperada (conteo a ciegas); funciona en el celular |
 | 6.5 | Como supervisor: Supervisión | Avance por contador, diferencias y valor de la diferencia en vivo |
 | 6.6 | Cerrar ronda → «Recontar diferencias» | Ronda 2 solo con ítems fuera de tolerancia, asignados a otro contador |
-| 6.7 | Cerrar toma | Estado «Cerrada»; conteos definitivos |
+| 6.7 | Contar un ítem marcando «No está» (y un comentario) y otro como «Dañado» | La cantidad de «No está» queda en 0; en Supervisión aparecen en «Novedades» y la columna «Novedad» |
+| 6.8 | Supervisión → «Reasignar pendientes» de un contador | Sus ítems sin contar pasan al contador elegido en la ronda abierta |
+| 6.9 | Recontar | La ronda nueva incluye los fuera de tolerancia, los no encontrados y los dañados |
+| 6.10 | Valor esperado · contado · sin contar y «Exportar resultados (CSV)» | Esperado − sin contar + diferencia = contado; el CSV abre en hojas de cálculo |
+| 6.11 | Como contador, apagar el Wi-Fi (o modo avión) y contar | Etiqueta «Pendiente de envío» y aviso de conteos guardados; al volver la red se envían solos |
+| 6.12 | `npm run start:demo:lan` y «Abrir en otro dispositivo» | El QR abre la toma en el celular conectado a la misma red (usar la IP, no `localhost`) |
+| 6.13 | Cerrar toma | Estado «Cerrada»; conteos definitivos |
 
 ## 7. Pendiente después de esta fase
 
 - Plantillas: tablas dinámicas, filas/columnas por filtros y fórmulas entre celdas, imágenes y formas, formato condicional, PDF generado en el servidor y caché Redis de cálculos (docs/04 §11).
 - Consolidación entre compañías con eliminaciones, importación de colecciones desde archivo y `COLECCION()` en fórmulas.
 - Otros tipos de fuente (delimitado, hoja de cálculo, BD), metadatos de archivo y validaciones de cuadre.
-- Inventarios: evidencias fotográficas, mapeo desde un conjunto de datos de Reportes, visibilidad por rol.
+- Inventarios: evidencias fotográficas, mapeo de campos desde el catálogo, estrategias manual por rangos y clúster espacial, paquete de servidor local con HTTPS (CA local) y exportar/importar paquete de toma.
 - 2FA, invitación por correo, colas BullMQ/Redis para varias instancias y la decisión de licencia PrimeUI.

@@ -60,13 +60,27 @@ test('toma física con conteo a ciegas y supervisión en vivo', async ({ browser
   await expect(page.getByTestId('count-status')).toHaveText('En curso');
   await page.getByRole('tab', { name: 'Supervisión' }).click();
   await expect(page.getByTestId('kpi-counted')).toHaveText('0 / 2');
+  await page.getByRole('button', { name: 'Abrir en otro dispositivo' }).click();
+  const qr = page.getByRole('dialog', { name: 'Abrir en otro dispositivo' });
+  await expect(qr.getByTestId('access-qr')).toBeVisible();
+  await expect(qr).toContainText('usa «localhost»');
+  await qr.getByLabel('Enlace').fill('http://192.168.1.20:4200/app');
+  await expect(qr).not.toContainText('usa «localhost»');
+  await page.keyboard.press('Escape');
 
   await counter.page.getByRole('tab', { name: 'Tomas' }).click();
   await counter.page.getByTestId('counts-table').getByRole('button', { name: 'Abrir' }).click();
   await expect(counter.page.getByTestId('work-items')).toContainText('Tornillo demo');
   await expect(counter.page.getByTestId('work-items')).not.toContainText('100');
+  // Sin conexión: el conteo se guarda en el dispositivo y se envía al volver la red
+  await counter.context.setOffline(true);
   await counter.page.getByLabel('Cantidad de P-001').fill('95');
   await counter.page.getByRole('button', { name: 'Guardar conteo de P-001' }).click();
+  await expect(counter.page.getByTestId('pending-P-001')).toBeVisible();
+  await expect(counter.page.getByTestId('pending-banner')).toContainText('1 conteos guardados');
+  await counter.context.setOffline(false);
+  await expect(counter.page.getByTestId('pending-banner')).toBeHidden({ timeout: 20_000 });
+  await expect(page.getByTestId('kpi-counted')).toHaveText('1 / 2');
   await counter.page.getByTestId('work-P-002').getByRole('button', { name: 'No está' }).click();
   await expect(counter.page.getByLabel('Cantidad de P-002')).toBeDisabled();
   await counter.page.getByLabel('Comentario de P-002').fill('Estante vacío');

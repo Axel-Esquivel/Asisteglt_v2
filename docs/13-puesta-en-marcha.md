@@ -52,6 +52,29 @@ npm run start:web               # Web en http://localhost:4200 (proxy /api y Web
 
 Comprobación: `curl http://localhost:3000/api/v1/health` → `{"status":"UP",...}`.
 
+### 3.1 Servidor local para tomas de inventario (Wi-Fi sin internet)
+
+Una laptop hace de servidor y los celulares de los contadores se conectan a la misma red Wi-Fi:
+
+```bash
+npm run start:demo:lan     # demostración en memoria, accesible desde la red (0.0.0.0:4200)
+# o, con datos persistentes:
+npm run start:api          # API (MongoDB local)
+npx nx serve web --host 0.0.0.0 --allowed-hosts
+```
+
+- El supervisor abre la toma y usa el botón **«Abrir en otro dispositivo»** (código QR). Si la
+  dirección dice `localhost`, cámbiala por la IP de la laptop en la red (p. ej.
+  `http://192.168.1.20:4200/…`); el diálogo lo advierte.
+- **Cortes de Wi-Fi:** si el servidor no responde, cada conteo queda guardado en el navegador del
+  celular («Pendiente de envío») y se reenvía solo al volver la red (cada 15 s y al recuperar la
+  conexión). El último conteo de cada ítem es el que vale, así que reenviar no duplica resultados.
+- **PWA:** la compilación de producción incluye *service worker* y manifiesto, así que la
+  aplicación se puede instalar y abrir sin conexión. Los navegadores solo lo permiten en HTTPS (o
+  `localhost`); en la red local hace falta un certificado de una CA local, previsto en el paquete de
+  despliegue (F8). La cola de conteos funciona también sin HTTPS. El *service worker* nunca guarda
+  respuestas de la API: los datos del cliente no quedan en caché.
+
 ## 4. Comandos
 
 | Comando | Qué hace |
@@ -102,6 +125,17 @@ PrimeNG 22 usa la **licencia PrimeUI** (Community gratuita para organizaciones p
 Commercial para el resto). Sin clave aparece el aviso «Invalid PrimeUI License»; la aplicación
 funciona igual. La clave va en `apps/web/src/environments/environment.ts` → `PRIMEUI_LICENSE_KEY`
 (verificación local, sin internet). **Pendiente de decisión del cliente.**
+
+- El aviso aparece desde **PrimeNG 22** (incluye el verificador `@primeui/license-manager`);
+  este proyecto siempre usó 22.1.2, así que no es un cambio reciente del código.
+- PrimeNG 21 no trae el verificador, pero exige Angular 21 (habría que bajar Angular, Nx y el tema)
+  y su paquete se publica con la misma licencia PrimeUI; las versiones MIT son las 17.x (Angular
+  17/18). Bajar de versión no resuelve la licencia, solo oculta el aviso, por lo que **no se
+  recomienda**.
+- Si la organización es elegible (menos de USD 1 M de ingresos anuales, menos de 5
+  desarrolladores, menos de 10 empleados y menos de USD 3 M de financiación externa), la licencia
+  **Community es gratuita**: se solicita en https://primeui.dev/licenses/community, se pega la clave
+  en `PRIMEUI_LICENSE_KEY` y el aviso desaparece (también en la vista de impresión y los PDF).
 
 ## 8. Confidencialidad
 
