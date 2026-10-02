@@ -205,4 +205,118 @@ describe('Inventarios (e2e)', () => {
     const closedBody: unknown = closed.body;
     expect(closedBody).toMatchObject({ status: 'CLOSED' });
   });
+  it('registra novedades, reasigna pendientes y valoriza el cierre con Decimal', async (): Promise<void> => {
+    const created: Response = await request(app.server())
+      .post(api(''))
+      .set('authorization', owner.bearer())
+      .send({
+        name: 'Bodega norte',
+        warehouse: 'Norte',
+        toleranceKind: 'ABSOLUTE',
+        toleranceValue: '0',
+        maxRounds: 2,
+      })
+      .expect(201);
+    const countId: string = Body.text(created.body, 'id');
+    const item = (
+      sku: string,
+      location: string,
+      expected: string,
+      cost: string | null,
+    ): Record<string, string | null> => ({
+      sku,
+      description: `Artículo ${sku}`,
+      unit: 'u',
+      location,
+      expectedQuantity: expected,
+      unitCost: cost,
+    });
+    await request(app.server())
+      .put(api(`/${countId}/items`))
+      .set('authorization', owner.bearer())
+      .send({
+        items: [
+          item('N-001', 'A-01', '100', '0.50'),
+          item('N-002', 'A-02', '40', '0.25'),
+          item('N-003', 'B-01', '10', null),
+          item('N-004', 'B-02', '7', '1'),
+        ],
+      })
+      .expect(200);
+    await request(app.server())
+      .put(api(`/${countId}/participants`))
+      .set('authorization', owner.bearer())
+      .send({
+        participants: [
+          { userId: ana.userId, role: 'COUNTER' },
+          { userId: beto.userId, role: 'COUNTER' },
+          { userId: owner.userId, role: 'SUPERVISOR' },
+        ],
+      })
+      .expect(200);
+    await request(app.server())
+      .post(api(`/${countId}/start`))
+      .set('authorization', owner.bearer())
+      .expect(201);
+
+    const reassign = (fromUserId: string, toUserId: string): request.Test =>
+      request(app.server())
+        .post(api(`/${countId}/reassign`))
+        .set('authorization', owner.bearer())
+        .send({ fromUserId, toUserId });
+    await reassign(beto.userId, beto.userId).expect(400);
+    await reassign(beto.userId, owner.userId).expect(400);
+    const moved: Response = await reassign(beto.userId, ana.userId).expect(201);
+    const assignments: unknown[] = Body.list(
+      Body.get(Body.list(Body.get(moved.body, 'rounds'))[0], 'assignments'),
+    );
+    expect(assignments.map((a: unknown): unknown => Body.get(a, 'assigned')).sort()).toEqual([0, 4]);
+
+    const work: Response = await request(app.server())
+      .get(api(`/${countId}/my-work`))
+      .set('authorization', ana.bearer())
+      .expect(200);
+    const items: unknown[] = Body.list(Body.get(work.body, 'items'));
+    expect(items).toHaveLength(4);
+    const idOf = (sku: string): string =>
+      items
+        .filter((i: unknown): boolean => Body.text(i, 'sku') === sku)
+        .map((i: unknown): string => Body.text(i, 'itemId'))[0] ?? '';
+    const record = (sku: string, quantity: string, condition: string): request.Test =>
+      request(app.server())
+        .post(api(`/${countId}/entries`))
+        .set('authorization', ana.bearer())
+        .send({ itemId: idOf(sku), quantity, comment: condition === 'OK' ? '' : 'Revisar', condition });
+    await record('N-001', '100', 'OK').expect(204);
+    await record('N-002', '5', 'NOT_FOUND').expect(204);
+    await record('N-003', '10', 'DAMAGED').expect(204);
+    await record('N-004', '7', 'OK').expect(204);
+
+    const supervision: Response = await request(app.server())
+      .get(api(`/${countId}/supervision`))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    const supervisionBody: unknown = supervision.body;
+    expect(supervisionBody).toMatchObject({
+      counted: 4,
+      issues: 2,
+      differenceValue: '-10.00',
+      expectedValue: '67.00',
+      countedValue: '57.00',
+      uncountedValue: '0.00',
+    });
+    expect(Body.list(Body.get(supervision.body, 'items'))).toContainEqual(
+      expect.objectContaining({ sku: 'N-002', counted: '0', condition: 'NOT_FOUND', comment: 'Revisar' }),
+    );
+
+    await request(app.server())
+      .post(api(`/${countId}/rounds/close`))
+      .set('authorization', owner.bearer())
+      .expect(201);
+    const recount: Response = await request(app.server())
+      .post(api(`/${countId}/recount`))
+      .set('authorization', owner.bearer())
+      .expect(201);
+    expect(Body.list(Body.get(recount.body, 'rounds'))[1]).toMatchObject({ number: 2, items: 2 });
+  });
 });

@@ -4,6 +4,7 @@ import {
   CreateCountRequest,
   InventoryItemRequest,
   ParticipantDto,
+  ReassignRequest,
 } from '@asisteglt/shared-contracts';
 import { ArrayDecoder, EmptyDecoder, FieldDecoder, Result } from '@asisteglt/shared-kernel';
 import { ApiClient } from '@asisteglt/web-core';
@@ -61,6 +62,14 @@ export class InventoryApiClient extends ApiClient {
     return this.post(
       `${InventoryApiClient.base(projectId)}/${encodeURIComponent(countId)}/${action}`,
       null,
+      this.count,
+    );
+  }
+
+  public reassign(projectId: string, countId: string, request: ReassignRequest): Promise<Result<CountView>> {
+    return this.post(
+      `${InventoryApiClient.base(projectId)}/${encodeURIComponent(countId)}/reassign`,
+      request,
       this.count,
     );
   }

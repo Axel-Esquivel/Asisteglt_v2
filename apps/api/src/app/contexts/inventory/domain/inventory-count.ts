@@ -223,6 +223,48 @@ export class InventoryCount extends AggregateRoot {
     return Result.ok(this.open(itemIds, plan, clock));
   }
 
+  /** Mueve a `toUserId` los ítems de `fromUserId` que aún no se contaron en la ronda abierta. */
+  public reassign(fromUserId: string, toUserId: string, counted: ReadonlySet<string>): Result<RoundSnapshot> {
+    const round: Nullable<RoundSnapshot> = this.currentRound();
+    if (round === null) {
+      return InventoryCount.invalid(InventoryErrorCode.INVALID_STATE, 'No hay una ronda abierta');
+    }
+    if (fromUserId === toUserId || !this.counters().includes(toUserId)) {
+      return InventoryCount.invalid(
+        InventoryErrorCode.INVALID_REASSIGNMENT,
+        'Elige otro contador de la toma para recibir los pendientes',
+      );
+    }
+    const from: Nullable<CounterAssignment> =
+      round.assignments.find((a: CounterAssignment): boolean => a.userId === fromUserId) ?? null;
+    const moving: string[] =
+      from === null ? [] : from.itemIds.filter((id: string): boolean => !counted.has(id));
+    if (moving.length === 0) {
+      return InventoryCount.invalid(
+        InventoryErrorCode.INVALID_REASSIGNMENT,
+        'Ese contador no tiene ítems pendientes',
+      );
+    }
+    const moved: Set<string> = new Set<string>(moving);
+    const hasTarget: boolean = round.assignments.some(
+      (a: CounterAssignment): boolean => a.userId === toUserId,
+    );
+    const assignments: CounterAssignment[] = [
+      ...round.assignments.map((a: CounterAssignment): CounterAssignment => {
+        if (a.userId === fromUserId) {
+          return { ...a, itemIds: a.itemIds.filter((id: string): boolean => !moved.has(id)) };
+        }
+        return a.userId === toUserId ? { ...a, itemIds: [...a.itemIds, ...moving] } : a;
+      }),
+      ...(hasTarget ? [] : [{ userId: toUserId, itemIds: moving }]),
+    ];
+    const updated: RoundSnapshot = { ...round, assignments };
+    this.rounds = this.rounds.map((r: RoundSnapshot): RoundSnapshot =>
+      r.number === round.number ? updated : r,
+    );
+    return Result.ok(updated);
+  }
+
   public close(clock: Clock): Result<InventoryCount> {
     if (this.status !== InventoryCountStatus.IN_PROGRESS) {
       return InventoryCount.invalid(InventoryErrorCode.INVALID_STATE, 'Solo se cierra una toma en curso');

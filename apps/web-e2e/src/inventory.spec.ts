@@ -67,12 +67,24 @@ test('toma física con conteo a ciegas y supervisión en vivo', async ({ browser
   await expect(counter.page.getByTestId('work-items')).not.toContainText('100');
   await counter.page.getByLabel('Cantidad de P-001').fill('95');
   await counter.page.getByRole('button', { name: 'Guardar conteo de P-001' }).click();
-  await counter.page.getByLabel('Cantidad de P-002').fill('40');
+  await counter.page.getByTestId('work-P-002').getByRole('button', { name: 'No está' }).click();
+  await expect(counter.page.getByLabel('Cantidad de P-002')).toBeDisabled();
+  await counter.page.getByLabel('Comentario de P-002').fill('Estante vacío');
   await counter.page.getByRole('button', { name: 'Guardar conteo de P-002' }).click();
 
   await expect(page.getByTestId('kpi-counted')).toHaveText('2 / 2');
-  await expect(page.getByTestId('kpi-exceeding')).toHaveText('1');
-  await expect(page.getByTestId('supervision-table')).toContainText('-2.50');
+  await expect(page.getByTestId('kpi-exceeding')).toHaveText('2');
+  await expect(page.getByTestId('kpi-issues')).toHaveText('1');
+  await expect(page.getByTestId('kpi-difference')).toHaveText('-12.50');
+  await expect(page.getByTestId('kpi-valuation')).toHaveText('60.00 · 47.50 · 0.00');
+  await expect(page.getByTestId('supervision-table')).toContainText('No encontrado');
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Exportar resultados (CSV)' }).click();
+  const file: string = await (await download).path();
+  const { readFileSync } = await import('node:fs');
+  const csv: string = readFileSync(file, 'utf8');
+  expect(csv).toContain('P-002;Tuerca demo;40;0;-40;-10.00;No encontrado;Estante vacío');
+  expect(csv).toContain('Diferencia valorizada;-12.50');
 
   await chief.context.close();
   await counter.context.close();

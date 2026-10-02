@@ -1,3 +1,4 @@
+import { ItemCondition } from '@asisteglt/shared-contracts';
 import { Injectable } from '@nestjs/common';
 import { EntityId, Nullable, Optional } from '@asisteglt/shared-kernel';
 import { Model, Schema } from 'mongoose';
@@ -51,6 +52,7 @@ const ENTRY_SCHEMA: Schema<EntryRecord> = new Schema<EntryRecord>(
     counterId: { type: String, required: true },
     quantity: { type: String, required: true },
     comment: { type: String, default: '' },
+    condition: { type: String, enum: Object.values(ItemCondition), default: ItemCondition.OK },
     recordedAt: { type: Date, required: true },
   },
   { collection: 'inventory_count_entries', versionKey: false },
@@ -141,7 +143,11 @@ export class MongoCountEntryRepository extends CountEntryRepository {
     const records: EntryRecord[] = await this.model.find({ countId }).lean<EntryRecord[]>().exec();
     return records.map((r: EntryRecord): CountEntrySnapshot => {
       const { _id, ...rest } = r;
-      return { ...rest, id: _id };
+      return {
+        ...rest,
+        id: _id,
+        condition: Object.values(ItemCondition).includes(r.condition) ? r.condition : ItemCondition.OK,
+      };
     });
   }
 }

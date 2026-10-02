@@ -2,8 +2,10 @@ import {
   CountEntryRequest,
   CreateCountRequest,
   InventoryItemRequest,
+  ItemCondition,
   ParticipantDto,
   ParticipantRole,
+  ReassignRequest,
   ToleranceKind,
 } from '@asisteglt/shared-contracts';
 import { FieldDecoder, FieldReader, Result } from '@asisteglt/shared-kernel';
@@ -55,6 +57,15 @@ export class InventoryParsers {
       itemId: f.string('itemId'),
       quantity: f.string('quantity'),
       comment: f.string('comment'),
+      condition:
+        f.raw('condition') === null ? ItemCondition.OK : f.oneOf('condition', Object.values(ItemCondition)),
+    })).decode(body);
+  }
+
+  public static reassign(body: unknown): Result<ReassignRequest> {
+    return new FieldDecoder<ReassignRequest>((f: FieldReader): ReassignRequest => ({
+      fromUserId: f.string('fromUserId'),
+      toUserId: f.string('toUserId'),
     })).decode(body);
   }
 }

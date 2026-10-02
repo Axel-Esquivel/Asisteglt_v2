@@ -106,3 +106,14 @@
   gap: 0.5rem;
   align-items: center;
 }
+
+.inventory__entry-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.inventory__actions {
+  text-align: end;
+  white-space: nowrap;
+}

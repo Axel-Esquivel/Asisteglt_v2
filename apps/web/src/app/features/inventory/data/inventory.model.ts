@@ -1,6 +1,7 @@
 import {
   CountResponse,
   InventoryCountStatus,
+  ItemCondition,
   ItemStatusResponse,
   MyWorkResponse,
   ParticipantRole,
@@ -99,6 +100,7 @@ export class MyWork {
         unit: f.string('unit'),
         location: f.string('location'),
         counted: f.nullableString('counted'),
+        condition: f.raw('condition') === null ? null : f.oneOf('condition', Object.values(ItemCondition)),
       }),
     );
     return new FieldDecoder<MyWork>(
@@ -118,8 +120,66 @@ export class Supervision {
     public readonly items: ItemStatusResponse[],
     public readonly counted: number,
     public readonly exceeding: number,
+    public readonly issues: number,
     public readonly differenceValue: string,
+    public readonly expectedValue: string,
+    public readonly countedValue: string,
+    public readonly uncountedValue: string,
   ) {}
+
+  public static conditionLabel(condition: Nullable<ItemCondition>): string {
+    switch (condition) {
+      case null:
+      case ItemCondition.OK:
+        return '';
+      case ItemCondition.NOT_FOUND:
+        return 'No encontrado';
+      case ItemCondition.DAMAGED:
+        return 'Dañado';
+    }
+  }
+
+  /** Resultados para hojas de cálculo (separador «;», importes con `Decimal` desde la API). */
+  public toCsv(): string {
+    const escape = (text: string): string => (/[";\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text);
+    const header: string[] = [
+      'Ubicación',
+      'SKU',
+      'Descripción',
+      'Esperado',
+      'Contado',
+      'Diferencia',
+      'Valor diferencia',
+      'Novedad',
+      'Comentario',
+      'Rondas',
+      'Contó',
+    ];
+    const lines: string[] = this.items.map((i: ItemStatusResponse): string =>
+      [
+        i.location,
+        i.sku,
+        i.description,
+        i.expected,
+        i.counted ?? '',
+        i.difference ?? '',
+        i.differenceValue ?? '',
+        Supervision.conditionLabel(i.condition),
+        i.comment,
+        String(i.rounds),
+        i.counterName ?? '',
+      ]
+        .map(escape)
+        .join(';'),
+    );
+    const totals: string[] = [
+      `Valor esperado;${this.expectedValue}`,
+      `Valor contado;${this.countedValue}`,
+      `Valor sin contar;${this.uncountedValue}`,
+      `Diferencia valorizada;${this.differenceValue}`,
+    ];
+    return [header.map(escape).join(';'), ...lines, '', ...totals].join('\r\n');
+  }
 
   public static decoder(): FieldDecoder<Supervision> {
     const item: FieldDecoder<ItemStatusResponse> = new FieldDecoder<ItemStatusResponse>(
@@ -135,6 +195,8 @@ export class Supervision {
         exceedsTolerance: f.boolean('exceedsTolerance'),
         rounds: f.number('rounds'),
         counterName: f.nullableString('counterName'),
+        condition: f.raw('condition') === null ? null : f.oneOf('condition', Object.values(ItemCondition)),
+        comment: f.string('comment'),
       }),
     );
     return new FieldDecoder<Supervision>(
@@ -144,7 +206,11 @@ export class Supervision {
           f.list('items', item),
           f.number('counted'),
           f.number('exceeding'),
+          f.number('issues'),
           f.string('differenceValue'),
+          f.string('expectedValue'),
+          f.string('countedValue'),
+          f.string('uncountedValue'),
         ),
     );
   }

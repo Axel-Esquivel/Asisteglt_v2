@@ -20,6 +20,13 @@ export enum RoundStatus {
   CLOSED = 'CLOSED',
 }
 
+/** Novedad de un ítem al contarlo: no encontrado (cuenta 0) o dañado; ambos van al reconteo. */
+export enum ItemCondition {
+  OK = 'OK',
+  NOT_FOUND = 'NOT_FOUND',
+  DAMAGED = 'DAMAGED',
+}
+
 export interface CreateCountRequest {
   readonly name: string;
   readonly warehouse: string;
@@ -89,6 +96,7 @@ export interface WorkItemResponse {
   readonly unit: string;
   readonly location: string;
   readonly counted: string | null;
+  readonly condition: ItemCondition | null;
 }
 
 export interface MyWorkResponse {
@@ -100,6 +108,13 @@ export interface CountEntryRequest {
   readonly itemId: string;
   readonly quantity: string;
   readonly comment: string;
+  readonly condition: ItemCondition;
+}
+
+/** Pasa a otro contador los ítems que un contador aún no contó en la ronda abierta. */
+export interface ReassignRequest {
+  readonly fromUserId: string;
+  readonly toUserId: string;
 }
 
 export interface ItemStatusResponse {
@@ -114,6 +129,8 @@ export interface ItemStatusResponse {
   readonly exceedsTolerance: boolean;
   readonly rounds: number;
   readonly counterName: string | null;
+  readonly condition: ItemCondition | null;
+  readonly comment: string;
 }
 
 export interface SupervisionResponse {
@@ -121,7 +138,13 @@ export interface SupervisionResponse {
   readonly items: ReadonlyArray<ItemStatusResponse>;
   readonly counted: number;
   readonly exceeding: number;
+  /** Ítems con novedad (no encontrados o dañados) en su último conteo. */
+  readonly issues: number;
   readonly differenceValue: string;
+  /** Valorización (solo ítems con costo): esperado = sin contar + contado − diferencia. */
+  readonly expectedValue: string;
+  readonly countedValue: string;
+  readonly uncountedValue: string;
 }
 
 export interface InventoryEvent {
@@ -136,4 +159,5 @@ export enum InventoryErrorCode {
   INVALID_STATE = 'INVALID_STATE',
   NOT_ASSIGNED = 'NOT_ASSIGNED',
   INVALID_QUANTITY = 'INVALID_QUANTITY',
+  INVALID_REASSIGNMENT = 'INVALID_REASSIGNMENT',
 }

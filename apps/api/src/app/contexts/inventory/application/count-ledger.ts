@@ -1,4 +1,4 @@
-import { ItemStatusResponse } from '@asisteglt/shared-contracts';
+import { ItemCondition, ItemStatusResponse } from '@asisteglt/shared-contracts';
 import { Decimal, Nullable } from '@asisteglt/shared-kernel';
 import { CountEntrySnapshot, InventoryItemSnapshot } from '../domain/inventory-records';
 import { StorageLocation, Tolerance } from '../domain/tolerance';
@@ -36,6 +36,17 @@ export class CountLedger {
     return entry !== null && entry.round === round ? entry.quantity : null;
   }
 
+  public conditionIn(itemId: string, round: number): Nullable<ItemCondition> {
+    const entry: Nullable<CountEntrySnapshot> = this.entryOf(itemId);
+    return entry !== null && entry.round === round ? entry.condition : null;
+  }
+
+  /** Va al reconteo: fuera de tolerancia, sin contar, no encontrado o dañado. */
+  public needsRecount(item: InventoryItemSnapshot): boolean {
+    const entry: Nullable<CountEntrySnapshot> = this.entryOf(item.id);
+    return this.exceeds(item) || (entry !== null && entry.condition !== ItemCondition.OK);
+  }
+
   public exceeds(item: InventoryItemSnapshot): boolean {
     const entry: Nullable<CountEntrySnapshot> = this.entryOf(item.id);
     return (
@@ -71,8 +82,32 @@ export class CountLedger {
           exceedsTolerance: entry !== null && this.exceeds(item),
           rounds: (this.rounds.get(item.id) ?? new Set<number>()).size,
           counterName: entry === null ? null : (names.get(entry.counterId) ?? null),
+          condition: entry === null ? null : entry.condition,
+          comment: entry === null ? '' : entry.comment,
         };
       });
+  }
+
+  /** Valorización con `Decimal` de los ítems con costo: esperado, contado y sin contar. */
+  public valuation(): { readonly expected: string; readonly counted: string; readonly uncounted: string } {
+    let expected: Decimal = Decimal.zero();
+    let counted: Decimal = Decimal.zero();
+    let uncounted: Decimal = Decimal.zero();
+    for (const item of this.items) {
+      if (item.unitCost === null) {
+        continue;
+      }
+      const cost: Decimal = Decimal.of(item.unitCost).unwrap();
+      const value: Decimal = Decimal.of(item.expectedQuantity).unwrap().multiply(cost);
+      expected = expected.add(value);
+      const entry: Nullable<CountEntrySnapshot> = this.entryOf(item.id);
+      if (entry === null) {
+        uncounted = uncounted.add(value);
+      } else {
+        counted = counted.add(Decimal.of(entry.quantity).unwrap().multiply(cost));
+      }
+    }
+    return { expected: expected.toFixed(2), counted: counted.toFixed(2), uncounted: uncounted.toFixed(2) };
   }
 
   public totalDifferenceValue(statuses: ReadonlyArray<ItemStatusResponse>): string {

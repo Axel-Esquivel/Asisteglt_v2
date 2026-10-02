@@ -1,3 +1,4 @@
+import { ItemCondition } from '@asisteglt/shared-contracts';
 import { Nullable } from '@asisteglt/shared-kernel';
 
 export interface InventoryItemSnapshot {
@@ -19,5 +20,6 @@ export interface CountEntrySnapshot {
   readonly counterId: string;
   readonly quantity: string;
   readonly comment: string;
+  readonly condition: ItemCondition;
   readonly recordedAt: Date;
 }

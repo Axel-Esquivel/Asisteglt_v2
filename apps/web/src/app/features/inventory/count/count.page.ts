@@ -16,6 +16,7 @@ import { FormsModule } from '@angular/forms';
 import {
   AssignmentResponse,
   InventoryItemRequest,
+  ItemCondition,
   ItemStatusResponse,
   ParticipantDto,
   ParticipantRole,
@@ -34,6 +35,9 @@ import { InputText } from 'primeng/inputtext';
 import { Message } from 'primeng/message';
 import { ProgressBar } from 'primeng/progressbar';
 import { Select } from 'primeng/select';
+import { SelectButton } from 'primeng/selectbutton';
+import { Dialog } from 'primeng/dialog';
+import { Tooltip } from 'primeng/tooltip';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
@@ -43,6 +47,7 @@ import { ProjectMemberView } from '../../projects/data/project.model';
 import { ProjectsApiClient } from '../../projects/data/projects.api-client';
 import { InventoryApiClient } from '../data/inventory.api-client';
 import { CountView, InventoryEventView, MyWork, Supervision } from '../data/inventory.model';
+import { EntryDraft } from '../data/entry-draft';
 import { ItemMapping, ItemSheet } from '../data/item-sheet';
 
 interface MemberChoice {
@@ -68,6 +73,9 @@ interface Option<T> {
     Message,
     ProgressBar,
     Select,
+    SelectButton,
+    Dialog,
+    Tooltip,
     Tabs,
     TabList,
     Tab,
@@ -96,9 +104,24 @@ export class CountPage implements OnInit {
     cost: null,
   });
   protected readonly members: WritableSignal<MemberChoice[]> = signal<MemberChoice[]>([]);
-  protected readonly drafts: WritableSignal<ReadonlyMap<string, string>> = signal<
-    ReadonlyMap<string, string>
-  >(new Map<string, string>());
+  protected readonly conditions: Option<ItemCondition>[] = [
+    { label: 'Bien', value: ItemCondition.OK },
+    { label: 'No está', value: ItemCondition.NOT_FOUND },
+    { label: 'Dañado', value: ItemCondition.DAMAGED },
+  ];
+  protected readonly notFound: ItemCondition = ItemCondition.NOT_FOUND;
+  protected readonly reassignFrom: WritableSignal<Nullable<AssignmentResponse>> =
+    signal<Nullable<AssignmentResponse>>(null);
+  protected readonly reassignTo: WritableSignal<Nullable<string>> = signal<Nullable<string>>(null);
+  protected readonly reassignOptions: Signal<Option<string>[]> = computed((): Option<string>[] => {
+    const from: Nullable<AssignmentResponse> = this.reassignFrom();
+    return this.assignments()
+      .filter((a: AssignmentResponse): boolean => from === null || a.userId !== from.userId)
+      .map((a: AssignmentResponse): Option<string> => ({ label: a.displayName, value: a.userId }));
+  });
+  protected readonly drafts: WritableSignal<ReadonlyMap<string, EntryDraft>> = signal<
+    ReadonlyMap<string, EntryDraft>
+  >(new Map<string, EntryDraft>());
   protected readonly onlyDifferences: WritableSignal<boolean> = signal<boolean>(false);
   protected readonly tab: WritableSignal<string> = signal<string>('');
   protected readonly roleOptions: Option<Nullable<ParticipantRole>>[] = [
@@ -150,7 +173,11 @@ export class CountPage implements OnInit {
     const supervision: Nullable<Supervision> = this.supervision();
     const items: ItemStatusResponse[] = supervision === null ? [] : supervision.items;
     return this.onlyDifferences()
-      ? items.filter((i: ItemStatusResponse): boolean => i.difference !== null && i.difference !== '0')
+      ? items.filter(
+          (i: ItemStatusResponse): boolean =>
+            (i.difference !== null && i.difference !== '0') ||
+            (i.condition !== null && i.condition !== ItemCondition.OK),
+        )
       : items;
   });
   protected readonly assignments: Signal<AssignmentResponse[]> = computed((): AssignmentResponse[] => {
@@ -246,27 +273,77 @@ export class CountPage implements OnInit {
     });
   }
 
-  protected draftOf(item: WorkItemResponse): string {
-    return this.drafts().get(item.itemId) ?? item.counted ?? '';
+  protected draftOf(item: WorkItemResponse): EntryDraft {
+    return this.drafts().get(item.itemId) ?? EntryDraft.of(item);
   }
 
-  protected setDraft(item: WorkItemResponse, value: string): void {
+  protected setDraft(item: WorkItemResponse, change: (draft: EntryDraft) => EntryDraft): void {
+    const next: EntryDraft = change(this.draftOf(item));
     this.drafts.update(
-      (d: ReadonlyMap<string, string>): ReadonlyMap<string, string> =>
-        new Map<string, string>([...d, [item.itemId, value]]),
+      (d: ReadonlyMap<string, EntryDraft>): ReadonlyMap<string, EntryDraft> =>
+        new Map<string, EntryDraft>([...d, [item.itemId, next]]),
     );
   }
 
-  protected async record(item: WorkItemResponse): Promise<void> {
-    const quantity: string = this.draftOf(item).trim();
-    if (quantity === '') {
+  protected setQuantity(item: WorkItemResponse, value: string): void {
+    this.setDraft(item, (d: EntryDraft): EntryDraft => d.withQuantity(value));
+  }
+
+  protected setCondition(item: WorkItemResponse, value: ItemCondition): void {
+    this.setDraft(item, (d: EntryDraft): EntryDraft => d.withCondition(value));
+  }
+
+  protected setComment(item: WorkItemResponse, value: string): void {
+    this.setDraft(item, (d: EntryDraft): EntryDraft => d.withComment(value));
+  }
+
+  protected conditionLabel(condition: Nullable<ItemCondition>): string {
+    return Supervision.conditionLabel(condition);
+  }
+
+  protected openReassign(assignment: AssignmentResponse): void {
+    this.reassignFrom.set(assignment);
+    this.reassignTo.set(null);
+  }
+
+  protected async reassign(): Promise<void> {
+    const from: Nullable<AssignmentResponse> = this.reassignFrom();
+    const to: Nullable<string> = this.reassignTo();
+    if (from === null || to === null) {
       return;
     }
-    const result: Result<true> = await this.api.record(this.context.id(), this.countId(), {
-      itemId: item.itemId,
-      quantity,
-      comment: '',
-    });
+    await this.apply(
+      this.api.reassign(this.context.id(), this.countId(), { fromUserId: from.userId, toUserId: to }),
+      `Pendientes de ${from.displayName} reasignados`,
+    );
+    this.reassignFrom.set(null);
+  }
+
+  protected exportCsv(): void {
+    const supervision: Nullable<Supervision> = this.supervision();
+    const count: Nullable<CountView> = this.count();
+    if (supervision === null || count === null) {
+      return;
+    }
+    const blob: Blob = new Blob([`\uFEFF${supervision.toCsv()}`], { type: 'text/csv;charset=utf-8' });
+    const url: string = URL.createObjectURL(blob);
+    const link: HTMLAnchorElement = document.createElement('a');
+    link.href = url;
+    link.download = `${count.s.name.replace(/[^\p{L}\p{N}_-]+/gu, '_')}_resultados.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  protected async record(item: WorkItemResponse): Promise<void> {
+    const draft: EntryDraft = this.draftOf(item);
+    if (!draft.isComplete()) {
+      return;
+    }
+    const result: Result<true> = await this.api.record(
+      this.context.id(),
+      this.countId(),
+      draft.toRequest(item.itemId),
+    );
     const error: Nullable<DomainError> = result.errorOrNull();
     if (error !== null) {
       this.notifier.error(error);

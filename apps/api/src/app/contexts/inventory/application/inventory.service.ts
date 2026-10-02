@@ -6,11 +6,13 @@ import {
   InventoryErrorCode,
   InventoryEvent,
   InventoryItemRequest,
+  ItemCondition,
   ItemStatusResponse,
   MyWorkResponse,
   ParticipantDto,
   ProjectPermission,
   RealtimeEvent,
+  ReassignRequest,
   RoundResponse,
   SupervisionResponse,
   WorkItemResponse,
@@ -200,6 +202,7 @@ export class InventoryService {
                   unit: item.unit,
                   location: item.location,
                   counted: ledger.countedIn(itemId, round.number),
+                  condition: ledger.conditionIn(itemId, round.number),
                 });
               }
             }
@@ -227,7 +230,9 @@ export class InventoryService {
               ),
             );
           }
-          const quantity: Result<Decimal> = Decimal.of(request.quantity.trim().replace(',', '.'));
+          const raw: string =
+            request.condition === ItemCondition.NOT_FOUND ? '0' : request.quantity.trim().replace(',', '.');
+          const quantity: Result<Decimal> = Decimal.of(raw);
           if (!quantity.isOk() || quantity.unwrap().isNegative()) {
             return Result.fail(
               new ValidationError(
@@ -242,8 +247,9 @@ export class InventoryService {
             round: round.number,
             itemId: request.itemId,
             counterId: userId.toString(),
-            quantity: quantity.unwrap().toString(),
+            quantity: request.condition === ItemCondition.NOT_FOUND ? '0' : quantity.unwrap().toString(),
             comment: request.comment.trim().slice(0, 500),
+            condition: request.condition,
             recordedAt: this.clock.now(),
           });
           this.notify(p, count);
@@ -263,12 +269,19 @@ export class InventoryService {
           async (count: InventoryCount): Promise<Result<SupervisionResponse>> => {
             const ledger: CountLedger = await this.ledger(count);
             const statuses: ItemStatusResponse[] = ledger.statuses(await this.names(count));
+            const valuation = ledger.valuation();
             return Result.ok({
               count: await this.present(count),
               items: statuses,
               counted: statuses.filter((s: ItemStatusResponse): boolean => s.counted !== null).length,
               exceeding: statuses.filter((s: ItemStatusResponse): boolean => s.exceedsTolerance).length,
+              issues: statuses.filter(
+                (s: ItemStatusResponse): boolean => s.condition !== null && s.condition !== ItemCondition.OK,
+              ).length,
               differenceValue: ledger.totalDifferenceValue(statuses),
+              expectedValue: valuation.expected,
+              countedValue: valuation.counted,
+              uncountedValue: valuation.uncounted,
             });
           },
         ),
@@ -305,7 +318,7 @@ export class InventoryService {
           count.getTolerance(),
         );
         const pending: InventoryItemSnapshot[] = items.filter((i: InventoryItemSnapshot): boolean =>
-          ledger.exceeds(i),
+          ledger.needsRecount(i),
         );
         const previous: Map<string, string> = new Map<string, string>();
         for (const item of pending) {
@@ -321,6 +334,32 @@ export class InventoryService {
             plan,
             this.clock,
           )
+          .flatMapAsync((): Promise<Result<CountResponse>> => this.persist(p, count));
+      },
+    );
+  }
+
+  /** Reasignación dinámica: los pendientes de un contador pasan a otro en la ronda abierta. */
+  public async reassign(
+    projectId: string,
+    userId: EntityId,
+    countId: string,
+    request: ReassignRequest,
+  ): Promise<Result<CountResponse>> {
+    return this.supervise(
+      projectId,
+      userId,
+      countId,
+      async (p: Project, count: InventoryCount): Promise<Result<CountResponse>> => {
+        const round: Nullable<RoundSnapshot> = count.currentRound();
+        const entries: CountEntrySnapshot[] = await this.entries.findByCount(count.getId().toString());
+        const counted: Set<string> = new Set<string>(
+          entries
+            .filter((e: CountEntrySnapshot): boolean => round !== null && e.round === round.number)
+            .map((e: CountEntrySnapshot): string => e.itemId),
+        );
+        return count
+          .reassign(request.fromUserId, request.toUserId, counted)
           .flatMapAsync((): Promise<Result<CountResponse>> => this.persist(p, count));
       },
     );

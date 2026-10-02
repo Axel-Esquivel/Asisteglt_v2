@@ -127,20 +127,50 @@
           <p-progressbar [value]="workProgress()" />
           <div class="inventory__work" data-testid="work-items">
             @for (item of w.s.items; track item.itemId) {
-            <div class="inventory__work-item" [class.inventory__work-item--done]="item.counted !== null">
+            <div
+              class="inventory__work-item"
+              [attr.data-testid]="'work-' + item.sku"
+              [class.inventory__work-item--done]="item.counted !== null"
+            >
               <strong>{{ item.location }} · {{ item.sku }}</strong>
               <span>{{ item.description }}</span>
-              <form class="inventory__entry" (ngSubmit)="record(item)">
+              @if (item.condition !== null && item.condition !== 'OK') {
+              <p-tag [value]="conditionLabel(item.condition)" severity="warn" />
+              }
+              <form class="inventory__entry-form" (ngSubmit)="record(item)">
+                <span class="inventory__hint" [id]="'cond-label-' + item.itemId">Novedad</span>
+                <p-selectbutton
+                  [options]="conditions"
+                  optionLabel="label"
+                  optionValue="value"
+                  [allowEmpty]="false"
+                  size="small"
+                  [name]="'cond-' + item.itemId"
+                  [ngModel]="draftOf(item).condition"
+                  (ngModelChange)="setCondition(item, $event)"
+                  [ariaLabelledBy]="'cond-label-' + item.itemId"
+                />
+                <div class="inventory__entry">
+                  <input
+                    pInputText
+                    inputmode="decimal"
+                    [name]="'qty-' + item.itemId"
+                    [ngModel]="draftOf(item).quantity"
+                    (ngModelChange)="setQuantity(item, $event)"
+                    [disabled]="draftOf(item).condition === notFound"
+                    [attr.aria-label]="'Cantidad de ' + item.sku"
+                    [placeholder]="item.unit === '' ? 'Cantidad' : 'Cantidad (' + item.unit + ')'"
+                  />
+                  <p-button type="submit" icon="pi pi-check" [ariaLabel]="'Guardar conteo de ' + item.sku" />
+                </div>
                 <input
                   pInputText
-                  inputmode="decimal"
-                  [name]="'qty-' + item.itemId"
-                  [ngModel]="draftOf(item)"
-                  (ngModelChange)="setDraft(item, $event)"
-                  [attr.aria-label]="'Cantidad de ' + item.sku"
-                  [placeholder]="item.unit === '' ? 'Cantidad' : 'Cantidad (' + item.unit + ')'"
+                  [name]="'comment-' + item.itemId"
+                  [ngModel]="draftOf(item).comment"
+                  (ngModelChange)="setComment(item, $event)"
+                  [attr.aria-label]="'Comentario de ' + item.sku"
+                  placeholder="Comentario (opcional)"
                 />
-                <p-button type="submit" icon="pi pi-check" [ariaLabel]="'Guardar conteo de ' + item.sku" />
               </form>
             </div>
             }
@@ -162,8 +192,18 @@
               ><strong data-testid="kpi-exceeding">{{ s.exceeding }}</strong>
             </div>
             <div class="inventory__kpi">
+              <span class="inventory__hint">Novedades</span
+              ><strong data-testid="kpi-issues">{{ s.issues }}</strong>
+            </div>
+            <div class="inventory__kpi">
               <span class="inventory__hint">Diferencia valorizada</span
-              ><strong>{{ s.differenceValue }}</strong>
+              ><strong data-testid="kpi-difference">{{ s.differenceValue }}</strong>
+            </div>
+            <div class="inventory__kpi">
+              <span class="inventory__hint">Valor esperado · contado · sin contar</span
+              ><strong data-testid="kpi-valuation"
+                >{{ s.expectedValue }} · {{ s.countedValue }} · {{ s.uncountedValue }}</strong
+              >
             </div>
             <div class="inventory__kpi">
               <span class="inventory__hint">Ronda</span
@@ -177,6 +217,7 @@
                 <th>Contador</th>
                 <th>Zonas</th>
                 <th>Avance</th>
+                <th></th>
               </tr>
             </ng-template>
             <ng-template #body let-a>
@@ -186,6 +227,17 @@
                 <td>
                   <p-progressbar [value]="percent(a.counted, a.assigned)" /> {{ a.counted }} / {{ a.assigned
                   }}
+                </td>
+                <td class="inventory__actions">
+                  @if (canSupervise() && a.counted < a.assigned && assignments().length > 1) {
+                  <p-button
+                    icon="pi pi-arrow-right-arrow-left"
+                    [text]="true"
+                    size="small"
+                    [ariaLabel]="'Reasignar pendientes de ' + a.displayName"
+                    (onClick)="openReassign(a)"
+                  />
+                  }
                 </td>
               </tr>
             </ng-template>
@@ -217,12 +269,19 @@
           </div>
           }
           <span class="inventory__toolbar">
+            <p-button
+              label="Exportar resultados (CSV)"
+              icon="pi pi-download"
+              size="small"
+              [outlined]="true"
+              (onClick)="exportCsv()"
+            />
             <p-toggleswitch
               inputId="onlyDiff"
               [ngModel]="onlyDifferences()"
               (ngModelChange)="onlyDifferences.set($event)"
             />
-            <label for="onlyDiff">Solo ítems con diferencia</label>
+            <label for="onlyDiff">Solo ítems con diferencia o novedad</label>
           </span>
           <div class="inventory__scroll">
             <p-table
@@ -241,6 +300,7 @@
                   <th class="inventory__number">Contado</th>
                   <th class="inventory__number">Diferencia</th>
                   <th class="inventory__number">Valor</th>
+                  <th>Novedad</th>
                   <th>Rondas</th>
                   <th>Contó</th>
                 </tr>
@@ -256,6 +316,17 @@
                     {{ item.difference ?? '—' }}
                   </td>
                   <td class="inventory__number">{{ item.differenceValue ?? '—' }}</td>
+                  <td>
+                    @if (conditionLabel(item.condition) !== '') {
+                    <p-tag
+                      [value]="conditionLabel(item.condition)"
+                      severity="warn"
+                      [pTooltip]="item.comment"
+                    />
+                    } @else if (item.comment !== '') {
+                    <span class="inventory__hint" [pTooltip]="item.comment">Comentario</span>
+                    }
+                  </td>
                   <td>{{ item.rounds }}</td>
                   <td>{{ item.counterName ?? '—' }}</td>
                 </tr>
@@ -270,3 +341,40 @@
   </p-tabs>
 </p-card>
 }
+
+<p-dialog
+  header="Reasignar pendientes"
+  [modal]="true"
+  [visible]="reassignFrom() !== null"
+  (visibleChange)="$event ? null : reassignFrom.set(null)"
+  [style]="{ width: 'min(26rem, 95vw)' }"
+>
+  @if (reassignFrom(); as from) {
+  <div class="inventory__stack">
+    <p class="inventory__hint">
+      Los {{ from.assigned - from.counted }} ítems que {{ from.displayName }} aún no contó en esta ronda pasan
+      al contador elegido.
+    </p>
+    <p-select
+      [options]="reassignOptions()"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="reassignTo()"
+      (ngModelChange)="reassignTo.set($event)"
+      placeholder="Contador que recibe"
+      ariaLabel="Contador que recibe"
+      styleClass="full-width"
+      appendTo="body"
+    />
+    <div class="inventory__toolbar">
+      <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="reassignFrom.set(null)" />
+      <p-button
+        label="Reasignar"
+        icon="pi pi-check"
+        [disabled]="reassignTo() === null"
+        (onClick)="reassign()"
+      />
+    </div>
+  </div>
+  }
+</p-dialog>

@@ -123,6 +123,17 @@ export class InventoryController {
     return (await this.inventory.recount(projectId, p.userId, countId)).unwrap();
   }
 
+  @Post(':countId/reassign')
+  public async reassign(
+    @CurrentPrincipal() p: AuthenticatedPrincipal,
+    @Param('projectId') projectId: string,
+    @Param('countId') countId: string,
+    @Body() body: unknown,
+  ): Promise<CountResponse> {
+    const request = InventoryParsers.reassign(body).unwrap();
+    return (await this.inventory.reassign(projectId, p.userId, countId, request)).unwrap();
+  }
+
   @Post(':countId/close')
   public async close(
     @CurrentPrincipal() p: AuthenticatedPrincipal,
