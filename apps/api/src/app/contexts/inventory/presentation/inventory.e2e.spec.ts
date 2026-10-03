@@ -348,6 +348,37 @@ describe('Inventarios (e2e)', () => {
       .set('authorization', owner.bearer())
       .expect(201);
     expect(Body.list(Body.get(recount.body, 'rounds'))[1]).toMatchObject({ number: 2, items: 2 });
+
+    // Paquete: se exporta y se importa como toma cerrada con los mismos resultados
+    const exported: Response = await request(app.server())
+      .get(api(`/${countId}/package`))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    const pkg: unknown = exported.body;
+    expect(pkg).toMatchObject({ format: 'asisteglt.inventory-count', version: 1 });
+    await request(app.server())
+      .post(api('/import'))
+      .set('authorization', owner.bearer())
+      .send({ format: 'otro', version: 1 })
+      .expect(400);
+    await request(app.server()).post(api('/import')).set('authorization', ana.bearer()).send(pkg).expect(403);
+    const imported: Response = await request(app.server())
+      .post(api('/import'))
+      .set('authorization', owner.bearer())
+      .send(pkg)
+      .expect(201);
+    expect(imported.body).toMatchObject({ name: 'Bodega norte (importada)', status: 'CLOSED', items: 4 });
+    const importedSupervision: Response = await request(app.server())
+      .get(api(`/${Body.text(imported.body, 'id')}/supervision`))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    expect(importedSupervision.body).toMatchObject({
+      counted: 4,
+      issues: 2,
+      expectedValue: '67.00',
+      countedValue: '57.00',
+      differenceValue: '-10.00',
+    });
   });
   it('carga los ítems desde datos cargados con el mapeo de encabezados por nombre', async (): Promise<void> => {
     const field = async (

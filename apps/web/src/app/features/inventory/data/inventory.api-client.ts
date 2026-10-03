@@ -80,6 +80,15 @@ export class InventoryApiClient extends ApiClient {
     );
   }
 
+  /** El paquete se descarga tal cual (JSON) para guardarlo como archivo. */
+  public exportPackage(projectId: string, countId: string): Promise<Result<Blob>> {
+    return this.getBlob(`${InventoryApiClient.base(projectId)}/${encodeURIComponent(countId)}/package`);
+  }
+
+  public importPackage(projectId: string, pkg: object): Promise<Result<CountView>> {
+    return this.post(`${InventoryApiClient.base(projectId)}/import`, pkg, this.count);
+  }
+
   public start(projectId: string, countId: string, request: StartCountRequest): Promise<Result<CountView>> {
     return this.post(
       `${InventoryApiClient.base(projectId)}/${encodeURIComponent(countId)}/start`,

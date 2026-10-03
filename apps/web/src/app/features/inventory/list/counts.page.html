@@ -3,7 +3,19 @@
     <div class="inventory__title">
       <span>Tomas físicas</span>
       @if (canConfigure()) {
-      <p-button label="Nueva toma" icon="pi pi-plus" size="small" (onClick)="creating.set(true)" />
+      <div class="inventory__toolbar">
+        <p-fileupload
+          #packageUploader
+          mode="basic"
+          accept=".json,application/json"
+          chooseLabel="Importar paquete"
+          chooseIcon="pi pi-file-import"
+          [auto]="false"
+          [customUpload]="true"
+          (onSelect)="importPackage($event, packageUploader)"
+        />
+        <p-button label="Nueva toma" icon="pi pi-plus" size="small" (onClick)="creating.set(true)" />
+      </div>
       }
     </div>
   </ng-template>

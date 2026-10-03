@@ -1,12 +1,14 @@
 import {
   AssignmentMode,
   CountEntryRequest,
+  CountPackageDto,
   CreateCountRequest,
   InventoryItemRequest,
   ItemCondition,
   ItemFieldMapping,
   ItemsFromDataRequest,
   LocationRangeDto,
+  PackageItemDto,
   ParticipantDto,
   ParticipantRole,
   ReassignRequest,
@@ -48,6 +50,42 @@ export class InventoryParsers {
                 to: r.string('to'),
               })),
             ),
+    })).decode(body);
+  }
+
+  public static countPackage(body: unknown): Result<CountPackageDto> {
+    return new FieldDecoder<CountPackageDto>((f: FieldReader): CountPackageDto => ({
+      format: f.oneOf('format', ['asisteglt.inventory-count']),
+      version: f.number('version'),
+      exportedAt: f.string('exportedAt'),
+      settings: f.nested(
+        'settings',
+        new FieldDecoder<CreateCountRequest>((s: FieldReader): CreateCountRequest => ({
+          name: s.string('name'),
+          warehouse: s.string('warehouse'),
+          toleranceKind: s.oneOf('toleranceKind', Object.values(ToleranceKind)),
+          toleranceValue: s.string('toleranceValue'),
+          maxRounds: s.number('maxRounds'),
+        })),
+      ),
+      items: f.list(
+        'items',
+        new FieldDecoder<PackageItemDto>((i: FieldReader): PackageItemDto => ({
+          sku: i.string('sku'),
+          description: i.string('description'),
+          unit: i.string('unit'),
+          location: i.string('location'),
+          expectedQuantity: i.string('expectedQuantity'),
+          unitCost: i.nullableString('unitCost'),
+          x: i.nullableString('x'),
+          y: i.nullableString('y'),
+          counted: i.nullableString('counted'),
+          condition: i.raw('condition') === null ? null : i.oneOf('condition', Object.values(ItemCondition)),
+          comment: i.string('comment'),
+          counter: i.string('counter'),
+          rounds: i.number('rounds'),
+        })),
+      ),
     })).decode(body);
   }
 

@@ -547,6 +547,25 @@ export class CountPage implements OnInit {
     this.reassignFrom.set(null);
   }
 
+  protected async exportPackage(): Promise<void> {
+    const count: Nullable<CountView> = this.count();
+    if (count === null) {
+      return;
+    }
+    const result: Result<Blob> = await this.api.exportPackage(this.context.id(), this.countId());
+    const error: Nullable<DomainError> = result.errorOrNull();
+    if (error !== null) {
+      this.notifier.error(error);
+      return;
+    }
+    const url: string = URL.createObjectURL(result.unwrap());
+    const link: HTMLAnchorElement = document.createElement('a');
+    link.href = url;
+    link.download = `${count.s.name.replace(/[^\p{L}\p{N}_-]+/gu, '_')}.toma.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   protected exportCsv(): void {
     const supervision: Nullable<Supervision> = this.supervision();
     const count: Nullable<CountView> = this.count();

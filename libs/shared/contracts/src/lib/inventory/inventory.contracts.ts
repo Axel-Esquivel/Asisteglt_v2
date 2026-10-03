@@ -221,3 +221,24 @@ export enum InventoryErrorCode {
   FIELD_NATURE_MISMATCH = 'FIELD_NATURE_MISMATCH',
   EVIDENCE_NOT_FOUND = 'EVIDENCE_NOT_FOUND',
 }
+
+/** Ítem de un paquete de toma: datos del ítem y su resultado final. */
+export interface PackageItemDto extends InventoryItemRequest {
+  readonly counted: string | null;
+  readonly condition: ItemCondition | null;
+  readonly comment: string;
+  readonly counter: string;
+  readonly rounds: number;
+}
+
+/**
+ * Paquete de toma para llevar resultados entre servidores (p. ej. de la laptop en bodega al
+ * servidor central). Al importarse crea una toma cerrada con esos resultados.
+ */
+export interface CountPackageDto {
+  readonly format: 'asisteglt.inventory-count';
+  readonly version: number;
+  readonly exportedAt: string;
+  readonly settings: CreateCountRequest;
+  readonly items: ReadonlyArray<PackageItemDto>;
+}

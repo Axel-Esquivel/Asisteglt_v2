@@ -113,6 +113,20 @@ test('toma física con conteo a ciegas y supervisión en vivo', async ({ browser
   expect(csv).toContain('P-002;Tuerca demo;40;0;-40;-10.00;No encontrado;Estante vacío');
   expect(csv).toContain('Diferencia valorizada;-12.50');
 
+  // Paquete de toma: exportar e importar como toma cerrada
+  const packageDownload = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Exportar paquete' }).click();
+  const packagePath: string = await (await packageDownload).path();
+  await page.getByRole('tab', { name: 'Tomas' }).click();
+  const { readFileSync: readPackage } = await import('node:fs');
+  await page.locator('p-fileupload input[type="file"]').setInputFiles({
+    name: 'bodega.toma.json',
+    mimeType: 'application/json',
+    buffer: readPackage(packagePath),
+  });
+  await expect(page.getByTestId('count-status')).toHaveText('Cerrada');
+  await expect(page.getByText('Bodega demo (importada)')).toBeVisible();
+
   await chief.context.close();
   await counter.context.close();
 });

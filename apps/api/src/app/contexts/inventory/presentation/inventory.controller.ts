@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
+  CountPackageDto,
   CountResponse,
   EvidenceResponse,
   MyWorkResponse,
@@ -21,6 +22,7 @@ import {
 } from '@asisteglt/shared-contracts';
 import { CurrentPrincipal } from '../../../common/auth/auth.decorators';
 import type { AuthenticatedPrincipal } from '../../iam/domain/ports';
+import { CountPackageService } from '../application/count-package.service';
 import { EvidenceFile, EvidenceService } from '../application/evidence.service';
 import { InventoryService } from '../application/inventory.service';
 
@@ -35,6 +37,7 @@ export class InventoryController {
   public constructor(
     private readonly inventory: InventoryService,
     private readonly evidence: EvidenceService,
+    private readonly packages: CountPackageService,
   ) {}
 
   @Get()
@@ -52,6 +55,25 @@ export class InventoryController {
     @Body() body: unknown,
   ): Promise<CountResponse> {
     return (await this.inventory.create(projectId, p.userId, InventoryParsers.count(body).unwrap())).unwrap();
+  }
+
+  @Post('import')
+  public async importPackage(
+    @CurrentPrincipal() p: AuthenticatedPrincipal,
+    @Param('projectId') projectId: string,
+    @Body() body: unknown,
+  ): Promise<CountResponse> {
+    const pkg = InventoryParsers.countPackage(body).unwrap();
+    return (await this.packages.import(projectId, p.userId, pkg)).unwrap();
+  }
+
+  @Get(':countId/package')
+  public async exportPackage(
+    @CurrentPrincipal() p: AuthenticatedPrincipal,
+    @Param('projectId') projectId: string,
+    @Param('countId') countId: string,
+  ): Promise<CountPackageDto> {
+    return (await this.packages.export(projectId, p.userId, countId)).unwrap();
   }
 
   @Get(':countId')

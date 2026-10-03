@@ -548,6 +548,11 @@ export class InventoryService {
     return counts;
   }
 
+  /** Nombres visibles de los participantes de la toma (para presentar y exportar resultados). */
+  public participantNames(count: InventoryCount): Promise<ReadonlyMap<string, string>> {
+    return this.names(count);
+  }
+
   private async names(count: InventoryCount): Promise<ReadonlyMap<string, string>> {
     const ids: EntityId[] = count
       .toSnapshot()
@@ -609,7 +614,7 @@ export class InventoryService {
     };
   }
 
-  private static parseItems(
+  public static parseItems(
     countId: string,
     requests: ReadonlyArray<InventoryItemRequest>,
   ): Result<InventoryItemSnapshot[]> {

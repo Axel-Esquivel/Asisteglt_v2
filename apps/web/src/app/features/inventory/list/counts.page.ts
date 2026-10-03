@@ -16,6 +16,7 @@ import { Notifier } from '@asisteglt/web-core';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { Dialog } from 'primeng/dialog';
+import { FileSelectEvent, FileUpload } from 'primeng/fileupload';
 import { FloatLabel } from 'primeng/floatlabel';
 import { InputNumber } from 'primeng/inputnumber';
 import { InputText } from 'primeng/inputtext';
@@ -31,6 +32,7 @@ import { CountView } from '../data/inventory.model';
   selector: 'app-counts-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    FileUpload,
     FormsModule,
     Button,
     Card,
@@ -79,6 +81,33 @@ export class CountsPage implements OnInit {
     this.router.navigate(['/app/projects', this.context.id(), 'inventory', count.id]).catch((): void => {
       // Navegación cancelada.
     });
+  }
+
+  /** Lee el paquete en el navegador y lo envía; la API lo valida completo. */
+  protected async importPackage(event: FileSelectEvent, uploader: FileUpload): Promise<void> {
+    const file: Nullable<File> = event.currentFiles[0] ?? null;
+    uploader.clear();
+    if (file === null) {
+      return;
+    }
+    let parsed: unknown = null;
+    try {
+      parsed = JSON.parse(await file.text());
+    } catch {
+      parsed = null;
+    }
+    if (typeof parsed !== 'object' || parsed === null) {
+      this.notifier.info('El archivo no es un paquete de toma válido');
+      return;
+    }
+    const result: Result<CountView> = await this.api.importPackage(this.context.id(), parsed);
+    const error: Nullable<DomainError> = result.errorOrNull();
+    if (error !== null) {
+      this.notifier.error(error);
+      return;
+    }
+    this.notifier.success('Paquete importado como toma cerrada');
+    this.open(result.unwrap());
   }
 
   protected async create(): Promise<void> {

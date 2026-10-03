@@ -92,6 +92,33 @@ export class InventoryCount extends AggregateRoot {
     );
   }
 
+  /** Toma importada de un paquete: queda cerrada, con una ronda a nombre de quien importa. */
+  public static imported(
+    projectId: EntityId,
+    settings: CountSettings,
+    itemIds: ReadonlyArray<string>,
+    importerId: string,
+    clock: Clock,
+  ): Result<InventoryCount> {
+    return InventoryCount.create(projectId, settings, clock).map((count: InventoryCount): InventoryCount => {
+      const now: Date = clock.now();
+      count.status = InventoryCountStatus.CLOSED;
+      count.itemCount = itemIds.length;
+      count.participants = [{ userId: importerId, role: ParticipantRole.SUPERVISOR }];
+      count.rounds = [
+        {
+          number: 1,
+          status: RoundStatus.CLOSED,
+          itemIds,
+          assignments: [{ userId: importerId, itemIds }],
+          openedAt: now,
+          closedAt: now,
+        },
+      ];
+      return count;
+    });
+  }
+
   public static restore(s: InventoryCountSnapshot): InventoryCount {
     return new InventoryCount(
       EntityId.fromString(s.id).unwrap(),

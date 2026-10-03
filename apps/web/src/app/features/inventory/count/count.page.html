@@ -372,6 +372,13 @@
           }
           <span class="inventory__toolbar">
             <p-button
+              label="Exportar paquete"
+              icon="pi pi-file-export"
+              size="small"
+              [outlined]="true"
+              (onClick)="exportPackage()"
+            />
+            <p-button
               label="Exportar resultados (CSV)"
               icon="pi pi-download"
               size="small"

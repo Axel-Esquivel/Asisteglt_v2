@@ -8,6 +8,7 @@ import {
   InventoryCountRepository,
   InventoryItemRepository,
 } from './domain/ports';
+import { CountPackageService } from './application/count-package.service';
 import { EvidenceService } from './application/evidence.service';
 import { InMemoryEvidenceRepository } from './infrastructure/memory/in-memory-evidence.repository';
 import { MongoEvidenceRepository } from './infrastructure/mongo/mongo-evidence.repository';
@@ -58,6 +59,7 @@ export class InventoryModule {
         ),
         InventoryService,
         EvidenceService,
+        CountPackageService,
       ],
       exports: [InventoryService],
     };
