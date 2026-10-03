@@ -1,16 +1,20 @@
 import 'reflect-metadata';
 import { Server } from 'node:http';
-import { INestApplication } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Clock } from '@asisteglt/shared-kernel';
 import request, { Response } from 'supertest';
 import { AppBootstrapper } from '../app/app-bootstrapper';
 import { AppModule } from '../app/app.module';
 import { AppConfig, AppConfigLoader } from '../app/config/app-config';
+import { RecordingSecurityAuditLog, SecurityAuditLog } from '../app/common/security/security-audit-log';
 
 /** Aplicación Nest completa en memoria (DATA_STORE=memory) para pruebas e2e. */
 export class TestApp {
-  private constructor(public readonly app: INestApplication<Server>) {}
+  private constructor(
+    public readonly app: NestExpressApplication<Server>,
+    public readonly audit: RecordingSecurityAuditLog,
+  ) {}
 
   public static start(clock: Clock | null): Promise<TestApp> {
     return TestApp.startWith(clock, {});
@@ -28,16 +32,20 @@ export class TestApp {
       REDIS_URL: 'redis://localhost:6379',
       APP_VERSION: '9.9.9',
       JWT_SECRET: 'secreto-de-pruebas-con-mas-de-32-caracteres',
+      AUTH_RATE_LIMIT_PER_MINUTE: '1000',
       ...extra,
     });
-    const builder = Test.createTestingModule({ imports: [AppModule.forRoot(config)] });
+    const audit: RecordingSecurityAuditLog = new RecordingSecurityAuditLog();
+    const builder = Test.createTestingModule({ imports: [AppModule.forRoot(config)] })
+      .overrideProvider(SecurityAuditLog)
+      .useValue(audit);
     const moduleRef: TestingModule = await (
       clock === null ? builder : builder.overrideProvider(Clock).useValue(clock)
     ).compile();
-    const app: INestApplication<Server> = moduleRef.createNestApplication<INestApplication<Server>>();
+    const app: NestExpressApplication<Server> = moduleRef.createNestApplication<NestExpressApplication<Server>>();
     AppBootstrapper.configure(app, config);
     await app.init();
-    return new TestApp(app);
+    return new TestApp(app, audit);
   }
 
   /** Escucha en un puerto libre (necesario para clientes Socket.IO) y devuelve la URL base. */

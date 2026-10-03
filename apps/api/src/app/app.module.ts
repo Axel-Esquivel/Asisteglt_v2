@@ -1,8 +1,16 @@
 import { DynamicModule, MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { Clock, SystemClock } from '@asisteglt/shared-kernel';
 import { ApiExceptionFilter } from './common/errors/api-exception.filter';
 import { CorrelationIdMiddleware } from './common/correlation/correlation-id.middleware';
+import { RateLimitGuard } from './common/security/rate-limit.guard';
+import {
+  InMemoryRateLimitStore,
+  RateLimitPolicies,
+  RateLimitStore,
+  RateLimiter,
+} from './common/security/rate-limit';
+import { LoggerSecurityAuditLog, SecurityAuditLog } from './common/security/security-audit-log';
 import { PersistenceModule } from './common/persistence/persistence.module';
 import { AppConfig } from './config/app-config';
 import { ChatModule } from './contexts/chat/chat.module';
@@ -34,10 +42,15 @@ export class AppModule implements NestModule {
         { provide: AppConfig, useValue: config },
         { provide: Clock, useClass: SystemClock },
         { provide: APP_FILTER, useClass: ApiExceptionFilter },
+        { provide: SecurityAuditLog, useClass: LoggerSecurityAuditLog },
+        { provide: RateLimitStore, useValue: new InMemoryRateLimitStore() },
+        { provide: RateLimitPolicies, useValue: RateLimitPolicies.forAuth(config.authRateLimitPerMinute) },
+        RateLimiter,
+        { provide: APP_GUARD, useClass: RateLimitGuard },
         HealthService,
         DemoSeeder,
       ],
-      exports: [AppConfig, Clock],
+      exports: [AppConfig, Clock, SecurityAuditLog],
     };
   }
 

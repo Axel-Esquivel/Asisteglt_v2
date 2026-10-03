@@ -1,8 +1,10 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { ApiErrorResponse, CommonErrorCode } from '@asisteglt/shared-contracts';
-import { Clock, DomainError } from '@asisteglt/shared-kernel';
-import { Response } from 'express';
+import { Clock, DomainError, TooManyRequestsError } from '@asisteglt/shared-kernel';
+import { Request, Response } from 'express';
 import { CorrelationContext } from '@asisteglt/api-platform';
+import { ClientInfo } from '../http/client-info';
+import { SecurityAuditEntry, SecurityAuditLog, SecurityEvent } from '../security/security-audit-log';
 
 /**
  * Filtro único de la API: traduce `DomainError` a su estado HTTP, respeta los errores HTTP del
@@ -12,11 +14,28 @@ import { CorrelationContext } from '@asisteglt/api-platform';
 export class ApiExceptionFilter implements ExceptionFilter<unknown> {
   private readonly logger: Logger = new Logger(ApiExceptionFilter.name);
 
-  public constructor(private readonly clock: Clock) {}
+  public constructor(
+    private readonly clock: Clock,
+    private readonly audit: SecurityAuditLog,
+  ) {}
 
   public catch(error: unknown, host: ArgumentsHost): void {
     const response: Response = host.switchToHttp().getResponse<Response>();
     const body: ApiErrorResponse = this.toResponse(error);
+    if (error instanceof TooManyRequestsError) {
+      response.setHeader('Retry-After', String(error.retryAfterSeconds));
+    }
+    if (body.statusCode === Number(HttpStatus.FORBIDDEN) && host.getType() === 'http') {
+      const request: Request = host.switchToHttp().getRequest<Request>();
+      this.audit.record(
+        SecurityAuditEntry.of(
+          SecurityEvent.ACCESS_DENIED,
+          null,
+          ClientInfo.ipAddress(request),
+          `${request.method} ${request.path} ${body.code}`,
+        ),
+      );
+    }
     response.status(body.statusCode).json(body);
   }
 

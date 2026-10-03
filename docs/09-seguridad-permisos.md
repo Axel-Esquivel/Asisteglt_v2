@@ -22,7 +22,7 @@
 | Auditoría | `audit_logs` para eventos de seguridad (login, 2FA, cambios de contraseña, sesiones) y de permisos (roles, miembros, vínculos, invitaciones, exportaciones). Retención configurable. |
 | Secretos | Nunca en el repositorio; `.env` solo para desarrollo; validación tipada de configuración al arrancar (`AppConfig` con class-validator). |
 | Dependencias | `npm audit` y Dependabot en CI; *lockfile* obligatorio. |
-| Referencia | OWASP ASVS 4.0 nivel 2 como lista de verificación de la fase de endurecimiento. |
+| Referencia | OWASP ASVS 4.0 nivel 2 como lista de verificación de la fase de endurecimiento. Estado real y diferencias con esta tabla: [15-revision-seguridad](15-revision-seguridad.md). |
 
 ## 2. Modelo de autorización
 

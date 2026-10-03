@@ -40,6 +40,8 @@ services:
       MONGODB_URI: mongodb://mongo:27017/asisteglt?replicaSet=rs0
       STORAGE_DIR: /data/storage
       SECURE_COOKIES: 'true'
+      # nginx (contenedor web) es el único proxy delante de la API: un salto de confianza.
+      TRUST_PROXY: '1'
     volumes:
       - storage:/data/storage
 

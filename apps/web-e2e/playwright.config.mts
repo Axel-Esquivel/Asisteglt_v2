@@ -19,6 +19,9 @@ export default defineConfig({
     baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    // Contra una compilación de producción (BASE_URL) el service worker atendería las peticiones y
+    // `page.route` no podría simularlas; las pruebas fuera de línea usan la cola local, no el SW.
+    serviceWorkers: 'block',
   },
   // API en memoria (sin MongoDB) + web con proxy /api → :3000.
   webServer: [
@@ -36,6 +39,7 @@ export default defineConfig({
         REDIS_URL: 'redis://localhost:6379',
         JWT_SECRET: 'secreto-e2e-con-al-menos-32-caracteres',
         LOG_LEVEL: 'warn',
+        AUTH_RATE_LIMIT_PER_MINUTE: '1000',
       },
     },
     {

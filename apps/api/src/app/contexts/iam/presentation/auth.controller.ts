@@ -4,6 +4,8 @@ import { AuthSessionResponse, UserResponse } from '@asisteglt/shared-contracts';
 import { Nullable, Result } from '@asisteglt/shared-kernel';
 import { CurrentPrincipal, Public } from '../../../common/auth/auth.decorators';
 import { ClientInfo } from '../../../common/http/client-info';
+import { RateLimitPolicies } from '../../../common/security/rate-limit';
+import { RateLimited } from '../../../common/security/rate-limit.guard';
 import { AccountService } from '../application/account.use-cases';
 import {
   LoginUseCase,
@@ -33,6 +35,7 @@ export class AuthController {
   ) {}
 
   @Public()
+  @RateLimited(RateLimitPolicies.REGISTER)
   @Post('register')
   public async register(
     @Body() body: RegisterRequestDto,
@@ -47,6 +50,7 @@ export class AuthController {
   }
 
   @Public()
+  @RateLimited(RateLimitPolicies.LOGIN)
   @Post('login')
   @HttpCode(HttpStatus.OK)
   public async signIn(
@@ -61,6 +65,7 @@ export class AuthController {
   }
 
   @Public()
+  @RateLimited(RateLimitPolicies.REFRESH)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   public async renew(
@@ -71,7 +76,7 @@ export class AuthController {
     if (token === null) {
       throw IamErrors.sessionExpired();
     }
-    const issued: Result<IssuedSession> = await this.refresh.execute(token);
+    const issued: Result<IssuedSession> = await this.refresh.execute(token, ClientInfo.ipAddress(request));
     if (!issued.isOk()) {
       RefreshCookie.clear(response, this.settings);
     }
@@ -87,7 +92,7 @@ export class AuthController {
   ): Promise<void> {
     const token: Nullable<string> = RefreshCookie.read(request);
     if (token !== null) {
-      await this.logout.execute(token);
+      await this.logout.execute(token, ClientInfo.ipAddress(request));
     }
     RefreshCookie.clear(response, this.settings);
   }

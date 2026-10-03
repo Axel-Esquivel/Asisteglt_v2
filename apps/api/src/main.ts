@@ -1,6 +1,7 @@
 import 'reflect-metadata';
-import { INestApplication } from '@nestjs/common';
+import { Server } from 'node:http';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppBootstrapper } from './app/app-bootstrapper';
 import { AppModule } from './app/app.module';
 import { JsonLogger } from '@asisteglt/api-platform';
@@ -8,7 +9,7 @@ import { AppConfig, AppConfigLoader } from './app/config/app-config';
 
 async function bootstrap(): Promise<void> {
   const config: AppConfig = AppConfigLoader.load(process.env);
-  const app: INestApplication = await NestFactory.create(AppModule.forRoot(config), {
+  const app: NestExpressApplication<Server> = await NestFactory.create<NestExpressApplication<Server>>(AppModule.forRoot(config), {
     logger: JsonLogger.toStdout(config.logLevel),
   });
   AppBootstrapper.configure(app, config);

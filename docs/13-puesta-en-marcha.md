@@ -46,6 +46,11 @@ npm run start:web               # Web en http://localhost:4200 (proxy /api y Web
   Son datos del cliente: no se versionan y conviene respaldarlos junto con la base.
 - `IMPORT_REJECT_THRESHOLD_PERCENT` (20 por defecto): por encima de ese porcentaje de líneas
   rechazadas, una carga queda «Con errores» y no se publica.
+- `AUTH_RATE_LIMIT_PER_MINUTE` (10 por defecto): intentos de inicio de sesión por IP y minuto; al
+  superarlos la API responde 429 con `Retry-After`. El registro admite los mismos por 10 minutos.
+- `TRUST_PROXY` (`none` por defecto): detrás de nginx u otro proxy indica cuántos saltos son de
+  confianza (`loopback`, `1`, `2`) para que el límite y la auditoría usen la IP real del cliente.
+  Nunca lo actives si la API está expuesta directamente: el cliente podría falsear la IP.
 - Para el **servidor local sin internet** basta un equipo con Node.js y MongoDB: la cola de
   importación y la presencia del chat funcionan en proceso (no requieren Redis). Con varias
   instancias de API se reemplazan por BullMQ/Redis sin cambiar el dominio.

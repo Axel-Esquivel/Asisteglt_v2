@@ -1,4 +1,5 @@
 import request, { Response } from 'supertest';
+import { SecurityAuditEntry, SecurityEvent } from '../../../common/security/security-audit-log';
 import { AuthenticatedClient, TestApp } from '../../../../testing/test-app';
 
 describe('Identidad (e2e)', () => {
@@ -72,6 +73,27 @@ describe('Identidad (e2e)', () => {
       .post('/api/v1/auth/login')
       .send({ email: 'bloqueo@demo.test', password: 'ClaveSegura2026' })
       .expect(401);
+    expect(app.audit.events()).toEqual(
+      expect.arrayContaining([
+        SecurityEvent.LOGIN_FAILED,
+        SecurityEvent.ACCOUNT_LOCKED,
+        SecurityEvent.LOGIN_WHILE_LOCKED,
+      ]),
+    );
+  });
+
+  it('audita intentos con cuentas inexistentes sin guardar el correo en claro', async (): Promise<void> => {
+    await request(app.server())
+      .post('/api/v1/auth/login')
+      .send({ email: 'Nadie@Demo.test', password: 'Incorrecta2026x' })
+      .expect(401);
+    const failed: SecurityAuditEntry[] = app.audit
+      .all()
+      .filter((entry: SecurityAuditEntry): boolean => entry.detail === 'unknown-account');
+    expect(failed.map((entry: SecurityAuditEntry): string | null => entry.subject)).toEqual([
+      SecurityAuditEntry.fingerprint('nadie@demo.test'),
+    ]);
+    expect(JSON.stringify(app.audit.all())).not.toContain('nadie@demo');
   });
 
   it('cambia la contraseña, cierra las otras sesiones y lista las activas', async (): Promise<void> => {
@@ -103,5 +125,40 @@ describe('Identidad (e2e)', () => {
     const client: AuthenticatedClient = await app.register('salida@demo.test', 'Salida');
     await request(app.server()).post('/api/v1/auth/logout').set('cookie', client.refreshCookie).expect(204);
     await request(app.server()).post('/api/v1/auth/refresh').set('cookie', client.refreshCookie).expect(401);
+  });
+});
+
+describe('Límite de intentos por IP (e2e)', () => {
+  let app: TestApp;
+
+  beforeAll(async (): Promise<void> => {
+    app = await TestApp.startWith(null, { AUTH_RATE_LIMIT_PER_MINUTE: '3' });
+  });
+
+  afterAll(async (): Promise<void> => {
+    await app.stop();
+  });
+
+  it('responde 429 con Retry-After al superar el límite de login y lo audita una vez', async (): Promise<void> => {
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      await request(app.server())
+        .post('/api/v1/auth/login')
+        .send({ email: `rafaga${String(attempt)}@demo.test`, password: 'Incorrecta2026x' })
+        .expect(401);
+    }
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      const limited: Response = await request(app.server())
+        .post('/api/v1/auth/login')
+        .send({ email: 'rafaga@demo.test', password: 'Incorrecta2026x' })
+        .expect(429);
+      const body: unknown = limited.body;
+      expect(body).toMatchObject({ code: 'TOO_MANY_REQUESTS' });
+      expect(Number(limited.headers['retry-after'])).toBeGreaterThan(0);
+    }
+    const limitedEvents: SecurityEvent[] = app.audit
+      .events()
+      .filter((event: SecurityEvent): boolean => event === SecurityEvent.RATE_LIMITED);
+    expect(limitedEvents).toHaveLength(1);
+    await request(app.server()).get('/api/v1/health').expect(200);
   });
 });

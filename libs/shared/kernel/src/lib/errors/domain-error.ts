@@ -60,3 +60,18 @@ export class ConflictError extends DomainError {
     return 409;
   }
 }
+
+/** Demasiadas peticiones en la ventana vigente; la capa HTTP añade `Retry-After`. */
+export class TooManyRequestsError extends DomainError {
+  public constructor(
+    code: string,
+    message: string,
+    public readonly retryAfterSeconds: number,
+  ) {
+    super(code, message);
+  }
+
+  public override httpStatus(): number {
+    return 429;
+  }
+}

@@ -1,9 +1,13 @@
 import { ApiErrorResponse } from '@asisteglt/shared-contracts';
 import { FixedClock, NotFoundError, ValidationError } from '@asisteglt/shared-kernel';
+import { RecordingSecurityAuditLog } from '../security/security-audit-log';
 import { ApiExceptionFilter } from './api-exception.filter';
 
 describe('ApiExceptionFilter', () => {
-  const filter: ApiExceptionFilter = new ApiExceptionFilter(new FixedClock(new Date('2026-10-01T00:00:00Z')));
+  const filter: ApiExceptionFilter = new ApiExceptionFilter(
+    new FixedClock(new Date('2026-10-01T00:00:00Z')),
+    new RecordingSecurityAuditLog(),
+  );
 
   it('traduce errores de dominio a su estado HTTP', () => {
     const body: ApiErrorResponse = filter.toResponse(

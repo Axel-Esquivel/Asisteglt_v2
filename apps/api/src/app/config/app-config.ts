@@ -1,6 +1,17 @@
 import { EnvironmentReader, EnvironmentSource, LogLevel, RuntimeEnvironment } from '@asisteglt/api-platform';
 import { DataStore } from '../common/persistence/data-store';
 
+/**
+ * Proxies de confianza para resolver la IP real del cliente (`X-Forwarded-For`). `none` en acceso
+ * directo; `loopback` cuando nginx corre en el mismo host; `1`/`2` saltos detrás de proxies en red.
+ */
+export enum TrustProxy {
+  NONE = 'none',
+  LOOPBACK = 'loopback',
+  ONE_HOP = '1',
+  TWO_HOPS = '2',
+}
+
 /** Configuración tipada de la API; se valida completa al arrancar. */
 export class AppConfig {
   public constructor(
@@ -19,6 +30,8 @@ export class AppConfig {
     public readonly storageDir: string,
     public readonly importRejectThreshold: number,
     public readonly demoSeed: boolean,
+    public readonly authRateLimitPerMinute: number,
+    public readonly trustProxy: TrustProxy,
   ) {}
 
   public isProduction(): boolean {
@@ -54,6 +67,8 @@ export class AppConfigLoader {
       env.text('STORAGE_DIR', 'var/storage'),
       env.positiveInteger('IMPORT_REJECT_THRESHOLD_PERCENT', 20) / 100,
       env.enumValue('DEMO_SEED', ['true', 'false'], 'false') === 'true',
+      env.positiveInteger('AUTH_RATE_LIMIT_PER_MINUTE', 10),
+      env.enumValue('TRUST_PROXY', Object.values(TrustProxy), TrustProxy.NONE),
     );
     env.assertValid();
     return config;
