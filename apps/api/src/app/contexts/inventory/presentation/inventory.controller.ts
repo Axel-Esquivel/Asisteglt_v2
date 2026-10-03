@@ -75,6 +75,17 @@ export class InventoryController {
     ).unwrap();
   }
 
+  @Post(':countId/items/from-data')
+  public async itemsFromData(
+    @CurrentPrincipal() p: AuthenticatedPrincipal,
+    @Param('projectId') projectId: string,
+    @Param('countId') countId: string,
+    @Body() body: unknown,
+  ): Promise<CountResponse> {
+    const request = InventoryParsers.fromData(body).unwrap();
+    return (await this.inventory.itemsFromData(projectId, p.userId, countId, request)).unwrap();
+  }
+
   @Put(':countId/participants')
   public async participants(
     @CurrentPrincipal() p: AuthenticatedPrincipal,

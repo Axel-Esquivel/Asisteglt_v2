@@ -8,6 +8,8 @@ export interface ItemMapping {
   location: Nullable<number>;
   quantity: Nullable<number>;
   cost: Nullable<number>;
+  x: Nullable<number>;
+  y: Nullable<number>;
 }
 
 /**
@@ -49,6 +51,8 @@ export class ItemSheet {
       location: find('ubic', 'locat'),
       quantity: find('cant', 'exist', 'qty'),
       cost: find('costo', 'cost'),
+      x: this.exact('x', 'coord x', 'coordenada x'),
+      y: this.exact('y', 'coord y', 'coordenada y'),
     };
   }
 
@@ -62,7 +66,17 @@ export class ItemSheet {
       location: cell(row, mapping.location),
       expectedQuantity: cell(row, mapping.quantity),
       unitCost: mapping.cost === null || cell(row, mapping.cost) === '' ? null : cell(row, mapping.cost),
+      x: mapping.x === null || cell(row, mapping.x) === '' ? null : cell(row, mapping.x),
+      y: mapping.y === null || cell(row, mapping.y) === '' ? null : cell(row, mapping.y),
     }));
+  }
+
+  /** Columna cuyo título es exactamente uno de los nombres (sin distinguir mayúsculas). */
+  private exact(...names: string[]): Nullable<number> {
+    const index: number = this.headers.findIndex((h: string): boolean =>
+      names.includes(h.trim().toLowerCase()),
+    );
+    return index < 0 ? null : index;
   }
 
   private static splitLine(line: string, delimiter: string): string[] {

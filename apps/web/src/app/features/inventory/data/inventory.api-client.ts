@@ -3,6 +3,7 @@ import {
   CountEntryRequest,
   CreateCountRequest,
   InventoryItemRequest,
+  ItemsFromDataRequest,
   ParticipantDto,
   ReassignRequest,
 } from '@asisteglt/shared-contracts';
@@ -73,6 +74,18 @@ export class InventoryApiClient extends ApiClient {
   public reassign(projectId: string, countId: string, request: ReassignRequest): Promise<Result<CountView>> {
     return this.post(
       `${InventoryApiClient.base(projectId)}/${encodeURIComponent(countId)}/reassign`,
+      request,
+      this.count,
+    );
+  }
+
+  public itemsFromData(
+    projectId: string,
+    countId: string,
+    request: ItemsFromDataRequest,
+  ): Promise<Result<CountView>> {
+    return this.post(
+      `${InventoryApiClient.base(projectId)}/${encodeURIComponent(countId)}/items/from-data`,
       request,
       this.count,
     );

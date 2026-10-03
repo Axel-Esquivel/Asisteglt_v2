@@ -296,6 +296,8 @@ export class DemoSeeder implements OnApplicationBootstrap {
           location,
           expectedQuantity: quantity,
           unitCost: cost,
+          x: null,
+          y: null,
         })),
       )
     ).unwrap();

@@ -1,5 +1,6 @@
 import request, { Response } from 'supertest';
 import { AuthenticatedClient, TestApp } from '../../../../testing/test-app';
+import { DataRecordRepository, DataRecordSnapshot } from '../../reports/domain/ports';
 
 class Body {
   public static get(body: unknown, key: string): unknown {
@@ -347,5 +348,135 @@ describe('Inventarios (e2e)', () => {
       .set('authorization', owner.bearer())
       .expect(201);
     expect(Body.list(Body.get(recount.body, 'rounds'))[1]).toMatchObject({ number: 2, items: 2 });
+  });
+  it('carga los ítems desde datos cargados con el mapeo de encabezados por nombre', async (): Promise<void> => {
+    const field = async (
+      label: string,
+      role: string,
+      dataType: string,
+      nature: string | null,
+    ): Promise<string> => {
+      const created: Response = await request(app.server())
+        .post(`/api/v1/projects/${projectId}/catalog/fields`)
+        .set('authorization', owner.bearer())
+        .send({
+          label,
+          origin: 'IMPORTED',
+          role,
+          dataType,
+          nature,
+          aggregation: null,
+          describes: null,
+          weightField: null,
+        })
+        .expect(201);
+      return Body.text(created.body, 'key');
+    };
+    const sku: string = await field('Código de producto', 'IDENTIFIER', 'TEXT', null);
+    const name: string = await field('Descripción del producto', 'DATA', 'TEXT', null);
+    const location: string = await field('Ubicación', 'DATA', 'TEXT', null);
+    const stock: string = await field('Existencia', 'DATA', 'INTEGER', 'QUANTITY');
+    const cost: string = await field('Costo unitario', 'DATA', 'DECIMAL', 'UNIT_PRICE');
+    const amount: string = await field('Valor en libros', 'DATA', 'DECIMAL', 'AMOUNT');
+    const x: string = await field('Pasillo X', 'DATA', 'DECIMAL', 'DESCRIPTIVE');
+    const record = (line: number, values: Record<string, string | null>): DataRecordSnapshot => ({
+      id: `rec-${String(line)}`,
+      projectId,
+      loadId: 'carga-ficticia',
+      profileId: 'perfil-ficticio',
+      period: '2026-09',
+      organizationId: 'org',
+      countryId: 'pais',
+      currency: 'GTQ',
+      companyId: 'cia',
+      enterpriseId: null,
+      branchId: null,
+      line,
+      values,
+    });
+    await app.app
+      .get(DataRecordRepository)
+      .insertMany([
+        record(1, {
+          [sku]: 'D-001',
+          [name]: 'Producto uno',
+          [location]: 'A-01',
+          [stock]: '12',
+          [cost]: '2.5',
+          [amount]: '30',
+          [x]: '1.5',
+        }),
+        record(2, {
+          [sku]: 'D-002',
+          [name]: 'Producto dos',
+          [location]: 'B-01',
+          [stock]: null,
+          [cost]: null,
+          [amount]: '0',
+          [x]: '8',
+        }),
+        record(3, {
+          [sku]: null,
+          [name]: 'Fila sin código',
+          [location]: 'C-01',
+          [stock]: '1',
+          [cost]: null,
+          [amount]: '0',
+          [x]: null,
+        }),
+      ]);
+    const created: Response = await request(app.server())
+      .post(api(''))
+      .set('authorization', owner.bearer())
+      .send({
+        name: 'Desde datos',
+        warehouse: 'Central',
+        toleranceKind: 'ABSOLUTE',
+        toleranceValue: '0',
+        maxRounds: 2,
+      })
+      .expect(201);
+    const countId: string = Body.text(created.body, 'id');
+    const mapping = {
+      sku,
+      description: name,
+      unit: null,
+      location,
+      expected: stock,
+      unitCost: cost,
+      x,
+      y: null,
+    };
+    const load = (body: Record<string, unknown>): request.Test =>
+      request(app.server())
+        .post(api(`/${countId}/items/from-data`))
+        .set('authorization', owner.bearer())
+        .send(body);
+    const mismatch: Response = await load({
+      profileId: null,
+      period: '2026-09',
+      companyId: null,
+      mapping: { ...mapping, expected: amount },
+    }).expect(400);
+    expect(mismatch.body).toMatchObject({ code: 'FIELD_NATURE_MISMATCH' });
+    await load({
+      profileId: null,
+      period: '2026-09',
+      companyId: null,
+      mapping: { ...mapping, sku: cost },
+    }).expect(400);
+    await load({ profileId: null, period: '2026-08', companyId: null, mapping }).expect(400);
+    const loaded: Response = await load({
+      profileId: null,
+      period: '2026-09',
+      companyId: null,
+      mapping,
+    }).expect(201);
+    expect(loaded.body).toMatchObject({ items: 2 });
+    await request(app.server())
+      .post(api(`/${countId}/items/from-data`))
+      .set('authorization', ana.bearer())
+      .send({ profileId: null, period: '2026-09', companyId: null, mapping })
+      .expect(403);
   });
 });

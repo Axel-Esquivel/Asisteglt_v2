@@ -3,6 +3,8 @@ import {
   CreateCountRequest,
   InventoryItemRequest,
   ItemCondition,
+  ItemFieldMapping,
+  ItemsFromDataRequest,
   ParticipantDto,
   ParticipantRole,
   ReassignRequest,
@@ -20,8 +22,31 @@ export class InventoryParsers {
       location: f.string('location'),
       expectedQuantity: f.string('expectedQuantity'),
       unitCost: f.nullableString('unitCost'),
+      x: f.nullableString('x'),
+      y: f.nullableString('y'),
     }),
   );
+
+  public static fromData(body: unknown): Result<ItemsFromDataRequest> {
+    return new FieldDecoder<ItemsFromDataRequest>((f: FieldReader): ItemsFromDataRequest => ({
+      profileId: f.nullableString('profileId'),
+      period: f.string('period'),
+      companyId: f.nullableString('companyId'),
+      mapping: f.nested(
+        'mapping',
+        new FieldDecoder<ItemFieldMapping>((m: FieldReader): ItemFieldMapping => ({
+          sku: m.string('sku'),
+          description: m.string('description'),
+          unit: m.nullableString('unit'),
+          location: m.string('location'),
+          expected: m.string('expected'),
+          unitCost: m.nullableString('unitCost'),
+          x: m.nullableString('x'),
+          y: m.nullableString('y'),
+        })),
+      ),
+    })).decode(body);
+  }
 
   private static readonly PARTICIPANT: FieldDecoder<ParticipantDto> = new FieldDecoder<ParticipantDto>(
     (f: FieldReader): ParticipantDto => ({

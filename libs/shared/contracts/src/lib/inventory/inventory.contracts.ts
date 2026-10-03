@@ -42,6 +42,29 @@ export interface InventoryItemRequest {
   readonly location: string;
   readonly expectedQuantity: string;
   readonly unitCost: string | null;
+  /** Coordenadas en metros dentro de la bodega (para asignar por cercanía); opcionales. */
+  readonly x: string | null;
+  readonly y: string | null;
+}
+
+/** Encabezados del catálogo (por clave) que se usan como campos de los ítems. */
+export interface ItemFieldMapping {
+  readonly sku: string;
+  readonly description: string;
+  readonly unit: string | null;
+  readonly location: string;
+  readonly expected: string;
+  readonly unitCost: string | null;
+  readonly x: string | null;
+  readonly y: string | null;
+}
+
+/** Carga los ítems desde datos ya cargados en el proyecto (motor de ingestión). */
+export interface ItemsFromDataRequest {
+  readonly profileId: string | null;
+  readonly period: string;
+  readonly companyId: string | null;
+  readonly mapping: ItemFieldMapping;
 }
 
 export interface ReplaceItemsRequest {
@@ -173,5 +196,7 @@ export enum InventoryErrorCode {
   INVALID_QUANTITY = 'INVALID_QUANTITY',
   INVALID_REASSIGNMENT = 'INVALID_REASSIGNMENT',
   INVALID_EVIDENCE = 'INVALID_EVIDENCE',
+  INVALID_MAPPING = 'INVALID_MAPPING',
+  FIELD_NATURE_MISMATCH = 'FIELD_NATURE_MISMATCH',
   EVIDENCE_NOT_FOUND = 'EVIDENCE_NOT_FOUND',
 }

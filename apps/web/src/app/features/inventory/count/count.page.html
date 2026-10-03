@@ -38,6 +38,17 @@
       <p-tabpanel value="config">
         <div class="inventory__stack">
           <h3>1. Ítems a contar</h3>
+          <p-selectbutton
+            [options]="itemSources"
+            optionLabel="label"
+            optionValue="value"
+            [allowEmpty]="false"
+            [ngModel]="itemSource()"
+            (ngModelChange)="itemSource.set($event)"
+            ariaLabelledBy="itemSourceLabel"
+          />
+          <span id="itemSourceLabel" class="inventory__hint">Origen de los ítems</span>
+          @if (itemSource() === 'file') {
           <p class="inventory__hint">
             Archivo delimitado (CSV, punto y coma o tabulador) con títulos en la primera fila. Se lee en tu
             navegador.
@@ -72,6 +83,12 @@
             [label]="'Cargar ' + sheetItems().length + ' ítems'"
             icon="pi pi-upload"
             (onClick)="uploadItems()"
+          />
+          } } @else {
+          <app-items-from-data-panel
+            [projectId]="projectId()"
+            [countId]="countId()"
+            (loaded)="onItemsLoaded($event)"
           />
           }
 

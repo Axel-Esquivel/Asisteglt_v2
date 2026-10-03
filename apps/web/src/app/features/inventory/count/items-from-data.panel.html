@@ -1,0 +1,80 @@
+<div class="inventory__stack" data-testid="items-from-data">
+  <p class="inventory__hint">
+    Usa los datos ya cargados en el proyecto (Preconfiguraciones → Cargar datos). Elige el encabezado de cada
+    campo por su nombre: la existencia debe ser una Cantidad y el costo un Precio unitario.
+  </p>
+  <div class="inventory__grid">
+    <p-floatlabel variant="on">
+      <p-datepicker
+        inputId="dataPeriod"
+        view="month"
+        dateFormat="mm/yy"
+        [ngModel]="month()"
+        (ngModelChange)="month.set($event)"
+        [readonlyInput]="true"
+        appendTo="body"
+        styleClass="full-width"
+      />
+      <label for="dataPeriod">Período</label>
+    </p-floatlabel>
+    <p-floatlabel variant="on">
+      <p-select
+        inputId="dataProfile"
+        ariaLabel="Preconfiguración (todas)"
+        [options]="profileOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="profileId()"
+        (ngModelChange)="profileId.set($event)"
+        [showClear]="true"
+        styleClass="full-width"
+        appendTo="body"
+      />
+      <label for="dataProfile">Preconfiguración (todas)</label>
+    </p-floatlabel>
+    <p-floatlabel variant="on">
+      <p-select
+        inputId="dataCompany"
+        ariaLabel="Compañía (todas)"
+        [options]="companyOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="companyId()"
+        (ngModelChange)="companyId.set($event)"
+        [showClear]="true"
+        styleClass="full-width"
+        appendTo="body"
+      />
+      <label for="dataCompany">Compañía (todas)</label>
+    </p-floatlabel>
+  </div>
+  <div class="inventory__grid">
+    @for (role of roles; track role.key) {
+    <p-floatlabel variant="on">
+      <p-select
+        [inputId]="'map-' + role.key"
+        [ariaLabel]="role.label"
+        [options]="optionsFor(role)"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="valueOf(role)"
+        (ngModelChange)="setRole(role, $event)"
+        [showClear]="!role.required"
+        [filter]="true"
+        styleClass="full-width"
+        appendTo="body"
+      />
+      <label [for]="'map-' + role.key">{{ role.label }}{{ role.required ? '' : ' (opcional)' }}</label>
+    </p-floatlabel>
+    }
+  </div>
+  <div>
+    <p-button
+      label="Cargar desde datos"
+      icon="pi pi-database"
+      [disabled]="!complete()"
+      [loading]="loading()"
+      (onClick)="submit()"
+    />
+  </div>
+</div>

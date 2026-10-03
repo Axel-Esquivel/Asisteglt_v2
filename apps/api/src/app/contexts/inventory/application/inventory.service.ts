@@ -8,6 +8,7 @@ import {
   InventoryItemRequest,
   ItemCondition,
   ItemStatusResponse,
+  ItemsFromDataRequest,
   MyWorkResponse,
   ParticipantDto,
   ProjectPermission,
@@ -40,7 +41,10 @@ import {
   InventoryCountRepository,
   InventoryItemRepository,
 } from '../domain/ports';
+import { CatalogService } from '../../reports/application/catalog.service';
+import { DataRecordRepository, RecordQuery } from '../../reports/domain/ports';
 import { CountLedger } from './count-ledger';
+import { ItemMappingRules } from './item-mapping';
 
 /** Tomas físicas: configuración, rondas, conteo a ciegas, supervisión en vivo y cierre. */
 @Injectable()
@@ -53,6 +57,8 @@ export class InventoryService {
     private readonly items: InventoryItemRepository,
     private readonly entries: CountEntryRepository,
     private readonly evidence: EvidenceRepository,
+    private readonly records: DataRecordRepository,
+    private readonly catalogs: CatalogService,
     private readonly access: ProjectAccess,
     private readonly directory: UserDirectory,
     private readonly publisher: RealtimeEventPublisher,
@@ -118,6 +124,55 @@ export class InventoryService {
         return this.persist(p, count);
       },
     );
+  }
+
+  /** Ítems desde datos ya cargados (motor de ingestión), con el mapeo de encabezados por nombre. */
+  public async itemsFromData(
+    projectId: string,
+    userId: EntityId,
+    countId: string,
+    request: ItemsFromDataRequest,
+  ): Promise<Result<CountResponse>> {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(request.period)) {
+      return Result.fail(InventoryService.invalidItems('El período debe tener el formato AAAA-MM'));
+    }
+    const project: Result<Project> = await this.access.require(
+      projectId,
+      userId,
+      ProjectPermission.INVENTORY_CONFIGURE,
+    );
+    if (!project.isOk()) {
+      return Result.fail(project.errorOrNull() ?? InventoryService.invalidItems('Sin acceso'));
+    }
+    const p: Project = project.unwrap();
+    const rules: Result<ItemMappingRules> = ItemMappingRules.validate(
+      request.mapping,
+      await this.catalogs.of(p.getId()),
+    );
+    if (!rules.isOk()) {
+      return Result.fail(rules.errorOrNull() ?? InventoryService.invalidItems('Mapeo inválido'));
+    }
+    const items: InventoryItemRequest[] = [];
+    const query: RecordQuery = new RecordQuery(
+      p.getId().toString(),
+      request.period,
+      request.profileId,
+      request.companyId,
+      [],
+      null,
+    );
+    for await (const record of this.records.stream(query)) {
+      const item: Nullable<InventoryItemRequest> = rules.unwrap().item(record.values);
+      if (item !== null) {
+        items.push(item);
+      }
+    }
+    if (items.length === 0) {
+      return Result.fail(
+        InventoryService.invalidItems('No hay registros con SKU para ese período y filtros'),
+      );
+    }
+    return this.replaceItems(projectId, userId, countId, items);
   }
 
   public async setParticipants(
@@ -549,11 +604,17 @@ export class InventoryService {
           ? null
           : Decimal.of(r.unitCost.trim().replace(',', '.'));
       const key: string = `${sku}|${r.location.trim().toUpperCase()}`;
+      const coordinate = (raw: Nullable<string>): Nullable<Result<Decimal>> =>
+        raw === null || raw.trim() === '' ? null : Decimal.of(raw.trim().replace(',', '.'));
+      const x: Nullable<Result<Decimal>> = coordinate(r.x);
+      const y: Nullable<Result<Decimal>> = coordinate(r.y);
       if (
         sku === '' ||
         r.location.trim() === '' ||
         !expected.isOk() ||
         (cost !== null && !cost.isOk()) ||
+        (x !== null && !x.isOk()) ||
+        (y !== null && !y.isOk()) ||
         skus.has(key)
       ) {
         return Result.fail(
@@ -572,6 +633,8 @@ export class InventoryService {
         location: r.location.trim().toUpperCase(),
         expectedQuantity: expected.unwrap().toString(),
         unitCost: cost === null ? null : cost.unwrap().toString(),
+        x: x === null ? null : x.unwrap().toString(),
+        y: y === null ? null : y.unwrap().toString(),
       });
     }
     return Result.ok(items);

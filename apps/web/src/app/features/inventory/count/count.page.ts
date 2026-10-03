@@ -50,6 +50,7 @@ import { ProjectsApiClient } from '../../projects/data/projects.api-client';
 import { InventoryApiClient } from '../data/inventory.api-client';
 import { CountView, EvidenceView, InventoryEventView, MyWork, Supervision } from '../data/inventory.model';
 import { AccessQr } from '../data/access-qr';
+import { ItemsFromDataPanel } from './items-from-data.panel';
 import { EntryDraft } from '../data/entry-draft';
 import { FlushOutcome, PendingEntries, PendingEntry } from '../data/pending-entries';
 import { ItemMapping, ItemSheet } from '../data/item-sheet';
@@ -96,6 +97,7 @@ class PhotoView {
     TableModule,
     Tag,
     ToggleSwitch,
+    ItemsFromDataPanel,
   ],
   templateUrl: './count.page.html',
   styleUrl: '../inventory.scss',
@@ -117,6 +119,8 @@ export class CountPage implements OnInit {
     location: null,
     quantity: null,
     cost: null,
+    x: null,
+    y: null,
   });
   protected readonly members: WritableSignal<MemberChoice[]> = signal<MemberChoice[]>([]);
   protected readonly conditions: Option<ItemCondition>[] = [
@@ -151,8 +155,16 @@ export class CountPage implements OnInit {
     { key: 'location', label: 'Ubicación' },
     { key: 'quantity', label: 'Existencia (sistema)' },
     { key: 'cost', label: 'Costo unitario' },
+    { key: 'x', label: 'Coordenada X (m)' },
+    { key: 'y', label: 'Coordenada Y (m)' },
   ];
 
+  protected readonly itemSources: Option<'file' | 'data'>[] = [
+    { label: 'Archivo', value: 'file' },
+    { label: 'Datos cargados', value: 'data' },
+  ];
+  protected readonly itemSource: WritableSignal<'file' | 'data'> = signal<'file' | 'data'>('file');
+  protected readonly projectId: Signal<string> = computed((): string => this.context.id());
   protected readonly photoItem: WritableSignal<Nullable<ItemStatusResponse>> =
     signal<Nullable<ItemStatusResponse>>(null);
   protected readonly photoViews: WritableSignal<PhotoView[]> = signal<PhotoView[]>([]);
@@ -404,6 +416,13 @@ export class CountPage implements OnInit {
     }
     this.photoViews.set([]);
     this.photoItem.set(null);
+  }
+
+  protected onItemsLoaded(count: CountView): void {
+    this.count.set(count);
+    this.refresh().catch((): void => {
+      // Informado en refresh.
+    });
   }
 
   protected isPending(item: WorkItemResponse): boolean {

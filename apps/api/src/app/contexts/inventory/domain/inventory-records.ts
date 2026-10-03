@@ -10,6 +10,8 @@ export interface InventoryItemSnapshot {
   readonly location: string;
   readonly expectedQuantity: string;
   readonly unitCost: Nullable<string>;
+  readonly x: Nullable<string>;
+  readonly y: Nullable<string>;
 }
 
 export interface CountEntrySnapshot {
