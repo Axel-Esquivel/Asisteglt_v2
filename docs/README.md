@@ -17,6 +17,9 @@
 | 13 | [Puesta en marcha](13-puesta-en-marcha.md) | Requisitos, modo demostración, arranque con MongoDB, comandos, estructura del código, licencia de PrimeNG |
 | 14 | [Guía de pruebas](14-guia-de-pruebas.md) | Recorridos de prueba por módulo con resultados esperados y pendientes |
 | 15 | [Revisión de seguridad](15-revision-seguridad.md) | Hallazgos ASVS L2, correcciones y diferencias con el diseño |
+| 16 | [Pruebas de carga](16-pruebas-de-carga.md) | Importación de un millón de líneas, informes, lecturas concurrentes y tiempo real |
+| 17 | [Manual de usuario](17-manual-de-usuario.md) | Uso de cuentas, proyectos, chat, reportes e inventarios |
+| 18 | [Manual de operación](18-manual-de-operacion.md) | Instalación, versiones, respaldos, monitoreo y seguridad del servidor |
 
 Los diagramas están escritos en **Mermaid** y GitHub los muestra directamente.
 

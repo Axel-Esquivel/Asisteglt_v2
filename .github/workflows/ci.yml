@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:
 
 jobs:
   verify:
@@ -15,7 +16,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          # La misma versión que las imágenes Docker (node:22-bookworm-slim): se prueba lo que se despliega.
+          node-version: 22
           cache: npm
       - run: npm ci
       - name: Lint (TypeScript, plantillas, SCSS y guardián de reglas)

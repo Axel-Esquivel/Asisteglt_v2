@@ -174,6 +174,18 @@ local con CA propia y exportar/importar paquete de toma.
 | Despliegue productivo (Kubernetes o Docker Compose) con TLS. | Despliegue repetible desde CI. |
 | Manuales de usuario y de operación. | Revisados por el cliente. |
 
+**Estado: completa** (pendiente la revisión de los manuales por el cliente). Revisión ASVS L2 sin
+hallazgos altos abiertos ([15](15-revision-seguridad.md)): límite de intentos por IP, auditoría de
+eventos de seguridad, CSP estricta validada con e2e, `TRUST_PROXY`, dependencias sin
+vulnerabilidades. Observabilidad con métricas Prometheus propias (`/metrics` con token),
+preparación con sondas de MongoDB y almacenamiento, y correlación por `X-Request-Id`/`traceparent`
+(en lugar de OpenTelemetry completo). Respaldo cifrado de base y archivos con restauración probada
+(0 diferencias). Importación por bloques para archivos de un millón de líneas y pruebas de carga
+([16](16-pruebas-de-carga.md)). Imágenes publicadas desde CI con SBOM y procedencia, despliegue con
+Docker Compose y TLS mediante `deploy.sh` con reversión automática, y manuales de usuario
+([17](17-manual-de-usuario.md)) y de operación ([18](18-manual-de-operacion.md)). Redis (colas y
+adaptador de Socket.IO) queda para cuando haga falta más de una instancia de API.
+
 ## 4. Definición de terminado (DoD)
 
 - Cumple las reglas de [08-convenciones](08-convenciones-tipado-poo.md) (lint y typecheck en verde).

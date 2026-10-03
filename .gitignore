@@ -28,3 +28,6 @@ var
 # certificados y secretos del servidor local
 docker/local-server/certs
 docker/local-server/.env
+docker/production/.env
+docker/production/certs
+docker/production/backups

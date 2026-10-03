@@ -1,0 +1,123 @@
+# Producción de AsisteGLT con imágenes publicadas por .github/workflows/release.yml.
+# Uso y operación: docs/18-manual-de-operacion.md. Variables: .env (copia de .env.example).
+name: asisteglt
+
+x-api-image: &api-image ghcr.io/${REGISTRY_OWNER:-axel-esquivel}/asisteglt-api:${ASISTEGLT_VERSION:?define ASISTEGLT_VERSION en .env}
+x-database: &database mongodb://asisteglt:${MONGO_APP_PASSWORD:?}@mongo:27017/asisteglt?authSource=asisteglt
+
+services:
+  mongo:
+    image: mongo:8.0
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?}
+      MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD:?}
+    volumes:
+      - mongo-data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  api:
+    image: *api-image
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      API_PORT: '3000'
+      DATA_STORE: mongo
+      MONGODB_URI: *database
+      # Requerida por la configuración; la cola y la presencia funcionan en proceso con una instancia.
+      REDIS_URL: redis://localhost:6379
+      API_CORS_ORIGINS: ${PUBLIC_URL:?}
+      JWT_SECRET: ${JWT_SECRET:?}
+      SECURE_COOKIES: 'true'
+      TRUST_PROXY: '1'
+      STORAGE_DIR: /data/storage
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
+      AUTH_RATE_LIMIT_PER_MINUTE: ${AUTH_RATE_LIMIT_PER_MINUTE:-10}
+      IMPORT_REJECT_THRESHOLD_PERCENT: ${IMPORT_REJECT_THRESHOLD_PERCENT:-20}
+    volumes:
+      - storage:/data/storage
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/api/v1/health/ready').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging: &logging
+      driver: json-file
+      options: { max-size: 20m, max-file: '10' }
+
+  web:
+    image: ghcr.io/${REGISTRY_OWNER:-axel-esquivel}/asisteglt-web:${ASISTEGLT_VERSION:?}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      # server.crt (cadena completa) y server.key del dominio; ver el manual de operación.
+      - ./certs:/etc/nginx/certs:ro
+    logging: *logging
+
+  # Respaldo diario cifrado de la base y los archivos en ./backups, con retención en días.
+  backup:
+    image: *api-image
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      MONGODB_URI: *database
+      STORAGE_DIR: /data/storage
+      BACKUP_PASSPHRASE: ${BACKUP_PASSPHRASE:?}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    volumes:
+      - storage:/data/storage:ro
+      - ./backups:/backups
+    entrypoint: ['sh', '-c']
+    command:
+      - >
+        while true; do
+          node backup.js crear "/backups/asisteglt-$$(date +%F-%H%M).agbk" &&
+          find /backups -name 'asisteglt-*.agbk' -mtime +"$$BACKUP_RETENTION_DAYS" -delete;
+          sleep 86400;
+        done
+    logging: *logging
+
+  # Solo a mano y con la API detenida: docker compose run --rm restore /backups/<archivo>.agbk [--reemplazar]
+  restore:
+    image: *api-image
+    profiles: [restore]
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      MONGODB_URI: *database
+      STORAGE_DIR: /data/storage
+      BACKUP_PASSPHRASE: ${BACKUP_PASSPHRASE:?}
+    volumes:
+      - storage:/data/storage
+      - ./backups:/backups:ro
+    entrypoint: ['node', 'backup.js', 'restaurar']
+
+volumes:
+  mongo-data:
+  storage:
