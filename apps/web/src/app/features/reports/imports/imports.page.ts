@@ -114,6 +114,14 @@ export class ImportsPage implements OnInit {
 
   public constructor() {
     const destroyRef: DestroyRef = inject(DestroyRef);
+    // Respaldo del tiempo real: si se perdió un aviso (reconexión, Wi-Fi), se consulta el historial
+    // mientras haya cargas en cola o en proceso.
+    const timer: ReturnType<typeof setInterval> = setInterval((): void => {
+      this.pollPending().catch((): void => {
+        // Se reintenta en el siguiente ciclo.
+      });
+    }, ImportsPage.POLL_MS);
+    destroyRef.onDestroy((): void => clearInterval(timer));
     inject(RealtimeClient)
       .events(RealtimeEvent.IMPORT_ITEM, ImportItemEventView.decoder())
       .pipe(takeUntilDestroyed(destroyRef))
@@ -127,6 +135,8 @@ export class ImportsPage implements OnInit {
         }
       });
   }
+
+  private static readonly POLL_MS: number = 4000;
 
   public ngOnInit(): void {
     this.load().catch((): void => {
@@ -250,6 +260,18 @@ export class ImportsPage implements OnInit {
     if (profile !== null) {
       await row.verify(profile, this.catalog());
     }
+  }
+
+  private async pollPending(): Promise<void> {
+    if (!this.items().some((i: ImportItemView): boolean => i.isRunning())) {
+      return;
+    }
+    (await this.api.importHistory(this.context.id())).match(
+      (batches: ImportBatchView[]): void => this.history.set(batches),
+      (): void => {
+        // Sin conexión: se reintenta en el siguiente ciclo.
+      },
+    );
   }
 
   private async load(): Promise<void> {

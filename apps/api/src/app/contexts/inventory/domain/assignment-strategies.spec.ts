@@ -99,7 +99,7 @@ describe('Estrategias de asignación', () => {
       (): CounterAssignment[] => [],
     );
     expect(sizes(plan)).toEqual([500, 1500, 0, 0]);
-    expect(new RangeAssignmentStrategy().plan(items, counters, [ranges[0]]).isOk()).toBe(false);
+    expect(new RangeAssignmentStrategy().plan(items, counters, ranges.slice(0, 1)).isOk()).toBe(false);
     expect(
       new RangeAssignmentStrategy()
         .plan(items, counters, [...ranges, { userId: 'u3', from: 'P05', to: 'P07' }])

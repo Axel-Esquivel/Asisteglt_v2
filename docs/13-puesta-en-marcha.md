@@ -75,6 +75,37 @@ npx nx serve web --host 0.0.0.0 --allowed-hosts
   despliegue (F8). La cola de conteos funciona también sin HTTPS. El *service worker* nunca guarda
   respuestas de la API: los datos del cliente no quedan en caché.
 
+### 3.2 Paquete de servidor local con HTTPS (Docker)
+
+En `docker/local-server/` está el paquete para una laptop servidor: MongoDB, la API y la web
+(nginx) con **HTTPS de una CA local**, necesario para instalar la PWA en los celulares.
+
+1. **Con internet** (una vez), construir y exportar las imágenes:
+   ```bash
+   docker compose -f docker/local-server/docker-compose.yml build
+   docker pull mongo:8.0
+   docker save asisteglt-api:local asisteglt-web:local mongo:8.0 -o asisteglt-local.tar
+   ```
+2. **En la laptop servidor** (sin internet):
+   ```bash
+   docker load -i asisteglt-local.tar
+   docker/local-server/generate-certs.sh 192.168.1.20     # IP de la laptop en el Wi-Fi
+   cp docker/local-server/.env.example docker/local-server/.env   # cambia JWT_SECRET y la IP
+   docker compose -f docker/local-server/docker-compose.yml up -d
+   ```
+3. En cada celular, instalar una vez `docker/local-server/certs/ca.crt` como certificado de
+   confianza y abrir `https://192.168.1.20` (o el QR de la toma).
+
+- Los certificados y `.env` no se versionan. La CA (`ca.key`) solo se usa en la laptop: si cambia
+  la IP, vuelve a ejecutar el script (la CA se reutiliza y no hay que reinstalarla).
+- Los datos (MongoDB y archivos cargados) quedan en volúmenes de Docker de la laptop.
+- **Llevar los resultados al servidor central:** en la toma, «Exportar paquete» descarga un
+  archivo `.toma.json`; en el servidor central, Tomas → «Importar paquete» crea una toma cerrada
+  con los mismos ítems, cantidades, novedades y comentarios (quién contó queda en el comentario).
+- Se verificó la configuración de Compose, el script de certificados (la CA valida el certificado
+  con la IP) y que la API compilada arranca con solo las dependencias de producción; la
+  construcción de las imágenes no se pudo probar en este entorno (sin servicio de Docker).
+
 ## 4. Comandos
 
 | Comando | Qué hace |

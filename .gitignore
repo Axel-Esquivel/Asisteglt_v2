@@ -25,3 +25,6 @@ var
 .idea
 *.swp
 .DS_Store
+# certificados y secretos del servidor local
+docker/local-server/certs
+docker/local-server/.env

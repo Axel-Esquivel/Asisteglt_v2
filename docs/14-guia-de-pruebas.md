@@ -99,12 +99,15 @@ Proyecto de demostración: **Demo · Bodega ficticia** (toma ya iniciada; entra 
 | 6.10 | Valor esperado · contado · sin contar y «Exportar resultados (CSV)» | Esperado − sin contar + diferencia = contado; el CSV abre en hojas de cálculo |
 | 6.11 | Como contador, apagar el Wi-Fi (o modo avión) y contar | Etiqueta «Pendiente de envío» y aviso de conteos guardados; al volver la red se envían solos |
 | 6.12 | `npm run start:demo:lan` y «Abrir en otro dispositivo» | El QR abre la toma en el celular conectado a la misma red (usar la IP, no `localhost`) |
+| 6.14 | Configuración → «Datos cargados»: período y mapeo por nombre (Existencia = un encabezado de Cantidad) | Elegir un Monto como existencia se rechaza con «no es una Cantidad»; con el mapeo correcto se cargan los ítems con SKU |
+| 6.15 | Iniciar con «Por rangos» (desde/hasta por contador) o «Por cercanía» (ítems con X/Y) | Rangos solapados o que dejan ítems fuera se rechazan; por cercanía cada contador recibe un bloque contiguo |
+| 6.16 | Como contador, «Agregar foto» a un ítem; como supervisor, «Ver fotos» | La foto se ve en la galería; un archivo que no es imagen se rechaza |
+| 6.17 | «Exportar paquete» y en otro proyecto o servidor «Importar paquete» | Se crea «… (importada)» cerrada con los mismos resultados y valorización |
 | 6.13 | Cerrar toma | Estado «Cerrada»; conteos definitivos |
 
 ## 7. Pendiente después de esta fase
 
 - Plantillas: tablas dinámicas, filas/columnas por filtros y fórmulas entre celdas, imágenes y formas, formato condicional, PDF generado en el servidor y caché Redis de cálculos (docs/04 §11).
 - Consolidación entre compañías con eliminaciones, importación de colecciones desde archivo y `COLECCION()` en fórmulas.
-- Otros tipos de fuente (delimitado, hoja de cálculo, BD), metadatos de archivo y validaciones de cuadre.
-- Inventarios: evidencias fotográficas, mapeo de campos desde el catálogo, estrategias manual por rangos y clúster espacial, paquete de servidor local con HTTPS (CA local) y exportar/importar paquete de toma.
+- Otros tipos de fuente (delimitado, hoja de cálculo, BD) y metadatos de archivo.
 - 2FA, invitación por correo, colas BullMQ/Redis para varias instancias y la decisión de licencia PrimeUI.

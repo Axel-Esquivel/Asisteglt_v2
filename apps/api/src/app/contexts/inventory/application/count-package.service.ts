@@ -31,7 +31,7 @@ import { InventoryService } from './inventory.service';
  */
 @Injectable()
 export class CountPackageService {
-  public static readonly FORMAT: 'asisteglt.inventory-count' = 'asisteglt.inventory-count';
+  public static readonly FORMAT = 'asisteglt.inventory-count' as const;
 
   public constructor(
     private readonly counts: InventoryCountRepository,

@@ -354,7 +354,11 @@ describe('Inventarios (e2e)', () => {
       .get(api(`/${countId}/package`))
       .set('authorization', owner.bearer())
       .expect(200);
-    const pkg: unknown = exported.body;
+    const exportedBody: unknown = exported.body;
+    if (typeof exportedBody !== 'object' || exportedBody === null) {
+      throw new Error('Se esperaba un paquete');
+    }
+    const pkg: object = exportedBody;
     expect(pkg).toMatchObject({ format: 'asisteglt.inventory-count', version: 1 });
     await request(app.server())
       .post(api('/import'))

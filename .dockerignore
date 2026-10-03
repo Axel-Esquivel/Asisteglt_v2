@@ -1,0 +1,13 @@
+# Nunca se copian al contexto de Docker: dependencias, compilados, datos y secretos locales.
+node_modules
+dist
+var
+tmp
+.git
+.nx
+.angular
+.env
+.env.*
+!.env.example
+docker/local-server/certs
+docker/local-server/.env
