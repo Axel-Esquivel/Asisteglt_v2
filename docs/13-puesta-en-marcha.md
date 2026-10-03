@@ -221,3 +221,37 @@ scrape_configs:
 Alertas sugeridas: tasa de `status=~"5.."` > 1 % en 5 min; p95 de
 `asisteglt_http_request_duration_seconds` > 1 s; `asisteglt_imports_total{outcome="FAILED"}` en
 aumento; `asisteglt_event_loop_delay_p99_seconds` > 0.2; `/health/ready` en 503 más de 1 min.
+
+## 10. Respaldos y restauración
+
+`backup.js` se compila junto a la API (`dist/apps/api/backup.js`) y viaja en su imagen Docker.
+Respalda **la base completa** (todas las colecciones, con sus índices) y **el directorio de
+archivos** (`STORAGE_DIR`: cargas y fotos) en un solo archivo:
+
+- Líneas EJSON canónicas (conserva `ObjectId`, fechas y `Decimal128`) comprimidas con gzip.
+- Cifrado AES-256-GCM con llave derivada de `BACKUP_PASSPHRASE` (scrypt). El respaldo contiene
+  datos confidenciales del cliente: sin frase de paso no se crea, salvo con `--sin-cifrar`
+  explícito.
+- Cierre con conteos y SHA-256 de todo el contenido: un archivo truncado, alterado o con la frase
+  incorrecta se rechaza **antes** de escribir nada.
+
+```bash
+# Paquete Docker local (el contenedor de la API ya tiene MONGODB_URI y STORAGE_DIR):
+docker compose exec -e BACKUP_PASSPHRASE='frase-larga-y-secreta' api node backup.js crear /tmp/respaldo.agbk
+docker compose cp api:/tmp/respaldo.agbk ./respaldos/respaldo-$(date +%F).agbk
+docker compose exec api rm /tmp/respaldo.agbk
+
+# Comprobar un respaldo sin restaurarlo:
+node dist/apps/api/backup.js verificar respaldo.agbk
+
+# Restaurar (con la API detenida). Se niega si el destino ya tiene datos; --reemplazar los sustituye.
+node dist/apps/api/backup.js restaurar respaldo.agbk [--reemplazar]
+```
+
+Recomendaciones de operación: respaldo diario con rotación (7 diarios, 4 semanales, 12 mensuales),
+copia fuera del servidor, la frase de paso guardada aparte del respaldo y una **restauración de
+prueba** mensual en un entorno separado (`verificar` + `restaurar` en otra base). Prueba realizada
+en F8c: respaldo cifrado de los datos de demostración y restauración en otra base con comparación
+documento por documento e índice por índice (0 diferencias) e inicio de sesión sobre la base
+restaurada.
+

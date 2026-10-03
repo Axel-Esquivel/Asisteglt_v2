@@ -1,10 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import {
-  DependencyCheckDto,
-  HealthResponse,
-  ReadinessResponse,
-  ServiceStatus,
-} from '@asisteglt/shared-contracts';
+import type { DependencyCheckDto, HealthResponse, ReadinessResponse } from '@asisteglt/shared-contracts';
+import { ServiceStatus } from '@asisteglt/shared-contracts';
 import { Clock, Nullable } from '@asisteglt/shared-kernel';
 import { AppConfig } from '../config/app-config';
 import { ReadinessProbe, ReadinessProbes } from './readiness-probes';

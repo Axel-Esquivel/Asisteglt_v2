@@ -260,6 +260,44 @@ describe('Reportes: importación (e2e)', () => {
     ]);
   });
 
+  it('procesa por bloques un archivo grande con caracteres de varios bytes partidos entre bloques', async (): Promise<void> => {
+    const lines: number = 30_000;
+    const header: string[] = balance('0.00').split('\n').slice(0, 3);
+    const rows: string[] = Array.from({ length: lines }, (_value: unknown, index: number): string => {
+      const code: string = `1.${String(Math.floor(index / 10_000) % 1000).padStart(3, '0')}.${String(Math.floor(index / 10) % 1000).padStart(3, '0')}.${String(index % 10_000).padStart(4, '0')}`;
+      return `${code.padEnd(17)}${`Año ñandú ficticio ${String(index)}`.padEnd(30)}${'1,234.50'.padStart(11)}${'10.00'.padStart(11)}${'5.00'.padStart(11)}`;
+    });
+    const content: Buffer = Buffer.from([...header, ...rows].join('\r\n'), 'utf8');
+    expect(content.byteLength).toBeGreaterThan(2 * 1024 * 1024);
+    const uploaded: Response = await request(app.server())
+      .post(api('/imports'))
+      .set('authorization', owner.bearer())
+      .field(
+        'manifest',
+        JSON.stringify({
+          items: [{ fileName: 'balance_grande.txt', profileId, period: '2026-10', ...scope }],
+        }),
+      )
+      .attach('files', content, 'balance_grande.txt')
+      .expect(201);
+    await app.app.get(ImportQueue).idle();
+    const batch: Response = await request(app.server())
+      .get(api(`/imports/${Body.text(uploaded.body, 'id')}`))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    const batchBody: unknown = batch.body;
+    expect(batchBody).toMatchObject({
+      items: [{ status: 'PUBLISHED', data: lines, ignored: 3, rejected: 0 }],
+    });
+    const last: Response = await request(app.server())
+      .get(api(`/records?period=2026-10&page=${String(Math.ceil(lines / 100) - 1)}&size=100`))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    const lastBody: unknown = last.body;
+    expect(lastBody).toMatchObject({ total: lines });
+    expect(JSON.stringify(lastBody)).toContain(`Año ñandú ficticio ${String(lines - 1)}`);
+  });
+
   it('clasifica por código de cuenta y calcula el informe con subtotales y filtro de detalle', async (): Promise<void> => {
     const catalog: Response = await request(app.server())
       .get(api('/catalog'))

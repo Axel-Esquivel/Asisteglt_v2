@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createReadStream } from 'node:fs';
 import { Injectable } from '@nestjs/common';
 import { ImportItemRequest, ImportManifest, IngestionErrorCode } from '@asisteglt/shared-contracts';
 import { Clock, EntityId, NotFoundError, Nullable, Result, ValidationError } from '@asisteglt/shared-kernel';
@@ -6,23 +6,64 @@ import { Project } from '../../projects/domain/project';
 import { DataSourceProfile } from '../domain/data-source-profile';
 import { ImportBatch, NewImportItem } from '../domain/import-batch';
 import { EntityScope, OrgStructure } from '../domain/org-structure';
-import { FileStorage, ImportBatchRepository, ImportQueue } from '../domain/ports';
+import { FileStorage, ImportBatchRepository, ImportQueue, StoredObject } from '../domain/ports';
 import { OrgStructureService } from './org-structure.service';
 import { ProfileService } from './profile.service';
 import { ReportsAccess } from './reports-access';
 
-/** Archivo recibido en la petición (independiente de multer). */
-export class UploadedContent {
-  public constructor(
+/** Archivo recibido en la petición (independiente de multer); se lee por bloques. */
+export abstract class UploadedContent {
+  protected constructor(
     public readonly fileName: string,
-    public readonly bytes: Uint8Array,
+    public readonly size: number,
   ) {}
+
+  /** Contenido ya en memoria (datos de demostración y pruebas). */
+  public static fromBytes(fileName: string, bytes: Uint8Array): UploadedContent {
+    return new BufferedUpload(fileName, bytes);
+  }
+
+  /** Archivo temporal en disco escrito por la subida (cargas grandes). */
+  public static fromFile(fileName: string, path: string, size: number): UploadedContent {
+    return new DiskUpload(fileName, path, size);
+  }
+
+  public abstract chunks(): AsyncIterable<Uint8Array>;
+}
+
+class BufferedUpload extends UploadedContent {
+  public constructor(
+    fileName: string,
+    private readonly bytes: Uint8Array,
+  ) {
+    super(fileName, bytes.byteLength);
+  }
+
+  public override async *chunks(): AsyncGenerator<Uint8Array> {
+    await Promise.resolve();
+    yield this.bytes;
+  }
+}
+
+class DiskUpload extends UploadedContent {
+  public constructor(
+    fileName: string,
+    private readonly path: string,
+    size: number,
+  ) {
+    super(fileName, size);
+  }
+
+  public override chunks(): AsyncIterable<Uint8Array> {
+    return createReadStream(this.path, { highWaterMark: 1024 * 1024 });
+  }
 }
 
 /** Recibe un lote de archivos con sus propiedades, lo valida por fila y lo encola (docs/12 §4). */
 @Injectable()
 export class ImportService {
-  public static readonly MAX_FILE_BYTES: number = 50 * 1024 * 1024;
+  /** Tamaño máximo por archivo: se recibe en disco y se procesa por bloques (RNF-06). */
+  public static readonly MAX_FILE_BYTES: number = 200 * 1024 * 1024;
   public static readonly MAX_FILES: number = 20;
 
   public constructor(
@@ -117,8 +158,10 @@ export class ImportService {
     file: UploadedContent,
     request: ImportItemRequest,
   ): Promise<Result<NewImportItem>> {
-    if (file.bytes.byteLength === 0 || file.bytes.byteLength > ImportService.MAX_FILE_BYTES) {
-      return ImportService.invalid(`«${file.fileName}» está vacío o supera los 50 MB`);
+    if (file.size === 0 || file.size > ImportService.MAX_FILE_BYTES) {
+      return ImportService.invalid(
+        `«${file.fileName}» está vacío o supera los ${String(ImportService.MAX_FILE_BYTES / 1024 / 1024)} MB`,
+      );
     }
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(request.period)) {
       return ImportService.invalid(`«${file.fileName}»: el período debe tener el formato AAAA-MM`);
@@ -146,11 +189,11 @@ export class ImportService {
       );
     }
     const storageKey: string = `${project.getId().toString()}/${EntityId.generate().toString()}`;
-    await this.storage.put(storageKey, file.bytes);
+    const stored: StoredObject = await this.storage.write(storageKey, file.chunks());
     return Result.ok({
       fileName: file.fileName,
-      size: file.bytes.byteLength,
-      hash: createHash('sha256').update(file.bytes).digest('hex'),
+      size: stored.size,
+      hash: stored.sha256,
       storageKey,
       profileId: profile.unwrap().getId().toString(),
       profileName: profile.unwrap().getName(),

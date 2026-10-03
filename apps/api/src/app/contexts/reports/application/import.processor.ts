@@ -6,8 +6,10 @@ import {
   LineClassification,
   ReadSummary,
   RejectedLine,
-  TextDocument,
   TextEncoding,
+  TextLine,
+  TextLineSplitter,
+  Utf8Probe,
 } from '@asisteglt/shared-ingestion-core';
 import { Counter, Histogram, MetricsRegistry } from '@asisteglt/api-platform';
 import { Clock, EntityId, Nullable, Result } from '@asisteglt/shared-kernel';
@@ -40,7 +42,7 @@ export class ImportProcessor {
   private readonly logger: Logger = new Logger(ImportProcessor.name);
   private readonly outcomes: Counter;
   private readonly durations: Histogram;
-  private readonly lines: Counter;
+  private readonly lineCounter: Counter;
 
   public constructor(
     private readonly batches: ImportBatchRepository,
@@ -60,7 +62,10 @@ export class ImportProcessor {
       'Duración del procesamiento de un archivo de carga',
       ImportProcessor.DURATION_BUCKETS,
     );
-    this.lines = metrics.counter('asisteglt_import_lines_total', 'Líneas leídas en cargas por clasificación');
+    this.lineCounter = metrics.counter(
+      'asisteglt_import_lines_total',
+      'Líneas leídas en cargas por clasificación',
+    );
   }
 
   public async process(batchId: string, itemId: string): Promise<void> {
@@ -98,17 +103,21 @@ export class ImportProcessor {
     this.outcomes.inc({ outcome });
     this.durations.observe({ outcome }, seconds);
     if (done !== null) {
-      this.lines.add({ kind: 'data' }, done.data);
-      this.lines.add({ kind: 'rejected' }, done.rejected);
+      this.lineCounter.add({ kind: 'data' }, done.data);
+      this.lineCounter.add({ kind: 'rejected' }, done.rejected);
     }
   }
 
+  /**
+   * Dos pasadas por bloques sobre el archivo guardado, sin tenerlo completo en memoria (RNF-06):
+   * la primera clasifica, cuenta y evalúa los cuadres; solo si el archivo es aceptable, la segunda
+   * reemplaza la carga anterior e inserta los registros por lotes.
+   */
   private async run(batch: ImportBatch, item: ImportItemSnapshot): Promise<void> {
     const profile: Nullable<DataSourceProfile> = (
       await this.profiles.findById(EntityId.fromString(item.profileId).unwrap())
     ).toNullable();
-    const bytes: Nullable<Uint8Array> = await this.storage.get(item.storageKey);
-    if (profile === null || bytes === null) {
+    if (profile === null || (await this.storage.read(item.storageKey)) === null) {
       batch.fail(
         item.id,
         new ReadCounts(0, 0, 0, 0),
@@ -120,20 +129,23 @@ export class ImportProcessor {
     }
     const spec: FixedWidthSpec = profile.getSpec();
     const catalog = await this.catalogs.of(batch.getProjectId());
-    const reader: Result<FixedWidthReader> = FixedWidthReader.create(spec, catalog.labels());
-    if (!reader.isOk()) {
+    const created: Result<FixedWidthReader> = FixedWidthReader.create(spec, catalog.labels());
+    if (!created.isOk()) {
       batch.fail(item.id, new ReadCounts(0, 0, 0, 0), [], 'La preconfiguración no es válida', this.clock);
       return;
     }
-    const encoding: TextEncoding = ImportProcessor.encoding(spec.encoding, bytes);
-    const document: TextDocument = TextDocument.decode(bytes, encoding, spec.tabSize);
-    const lines: LineClassification[] = reader.unwrap().classifyAll(document.all());
-    const summary: ReadSummary = FixedWidthReader.summarize(lines);
+    const reader: FixedWidthReader = created.unwrap();
+    const encoding: TextEncoding = await this.encoding(spec.encoding, item.storageKey);
+    const checks: BalanceChecks = new BalanceChecks(profile.getChecks(), CatalogResolver.of(catalog));
+    const scan: ImportScan = new ImportScan(checks);
+    for await (const lines of this.lines(item.storageKey, encoding, spec.tabSize)) {
+      for (const line of lines) {
+        scan.accept(reader.classify(line));
+      }
+    }
+    const summary: ReadSummary = scan.summary();
     const counts: ReadCounts = new ReadCounts(summary.total, summary.data, summary.ignored, summary.rejected);
-    const issues: ImportIssue[] = lines
-      .filter((l: LineClassification): l is RejectedLine => l instanceof RejectedLine)
-      .slice(0, ImportBatch.MAX_ISSUES)
-      .map((l: RejectedLine): ImportIssue => ({ line: l.lineNumber, messages: l.issues }));
+    const issues: ImportIssue[] = scan.issues();
     if (summary.data === 0) {
       batch.fail(
         item.id,
@@ -155,11 +167,6 @@ export class ImportProcessor {
       );
       return;
     }
-    const data: DataLine[] = lines.filter((l: LineClassification): l is DataLine => l instanceof DataLine);
-    const checks: BalanceChecks = new BalanceChecks(profile.getChecks(), CatalogResolver.of(catalog));
-    for (const line of data) {
-      checks.add(line.values);
-    }
     const results: CheckResultDto[] = checks.results();
     const blocking: Nullable<CheckResultDto> =
       results.find((r: CheckResultDto): boolean => r.blocking && !r.passed) ?? null;
@@ -175,14 +182,37 @@ export class ImportProcessor {
       return;
     }
     await this.replacePrevious(batch, item);
-    for (let start = 0; start < data.length; start += ImportProcessor.CHUNK) {
-      await this.records.insertMany(
-        data
-          .slice(start, start + ImportProcessor.CHUNK)
-          .map((line: DataLine): DataRecordSnapshot => ImportProcessor.record(batch, item, line)),
-      );
+    let pending: DataRecordSnapshot[] = [];
+    for await (const lines of this.lines(item.storageKey, encoding, spec.tabSize)) {
+      for (const line of lines) {
+        const classified: LineClassification = reader.classify(line);
+        if (classified instanceof DataLine) {
+          pending.push(ImportProcessor.record(batch, item, classified));
+        }
+      }
+      if (pending.length >= ImportProcessor.CHUNK) {
+        await this.records.insertMany(pending);
+        pending = [];
+      }
+    }
+    if (pending.length > 0) {
+      await this.records.insertMany(pending);
     }
     batch.publish(item.id, counts, issues, results, this.clock);
+  }
+
+  /** Líneas del archivo guardado, entregadas por bloque leído. */
+  private async *lines(key: string, encoding: TextEncoding, tabSize: number): AsyncGenerator<TextLine[]> {
+    const chunks: Nullable<AsyncIterable<Uint8Array>> = await this.storage.read(key);
+    if (chunks === null) {
+      throw new Error('El archivo de la carga ya no está disponible');
+    }
+    const decoder: TextDecoder = new TextDecoder(encoding);
+    const splitter: TextLineSplitter = new TextLineSplitter(tabSize);
+    for await (const chunk of chunks) {
+      yield splitter.push(decoder.decode(chunk, { stream: true }));
+    }
+    yield [...splitter.push(decoder.decode()), ...splitter.finish()];
   }
 
   /** Una sola versión vigente por preconfiguración, período y alcance: la anterior queda reemplazada. */
@@ -219,10 +249,21 @@ export class ImportProcessor {
     }
   }
 
-  private static encoding(configured: string, bytes: Uint8Array): TextEncoding {
+  /** La codificación configurada o, en `auto`, UTF-8 si todo el archivo lo es (si no, Windows-1252). */
+  private async encoding(configured: string, key: string): Promise<TextEncoding> {
     const known: Nullable<TextEncoding> =
       Object.values(TextEncoding).find((e: TextEncoding): boolean => e === configured) ?? null;
-    return known === null ? TextDocument.detectEncoding(bytes) : known;
+    if (known !== null) {
+      return known;
+    }
+    const chunks: Nullable<AsyncIterable<Uint8Array>> = await this.storage.read(key);
+    const probe: Utf8Probe = new Utf8Probe();
+    if (chunks !== null) {
+      for await (const chunk of chunks) {
+        probe.push(chunk);
+      }
+    }
+    return probe.isValid() ? TextEncoding.UTF8 : TextEncoding.WINDOWS_1252;
   }
 
   private static record(batch: ImportBatch, item: ImportItemSnapshot, line: DataLine): DataRecordSnapshot {
@@ -241,5 +282,41 @@ export class ImportProcessor {
       line: line.lineNumber,
       values: line.values,
     };
+  }
+}
+
+/** Resumen de la primera pasada: conteos, primeras incidencias y cuadres, sin guardar las líneas. */
+class ImportScan {
+  private total: number = 0;
+  private data: number = 0;
+  private ignored: number = 0;
+  private rejected: number = 0;
+  private readonly found: ImportIssue[] = [];
+
+  public constructor(private readonly checks: BalanceChecks) {}
+
+  public accept(line: LineClassification): void {
+    this.total += 1;
+    if (line instanceof DataLine) {
+      this.data += 1;
+      this.checks.add(line.values);
+      return;
+    }
+    if (line instanceof RejectedLine) {
+      this.rejected += 1;
+      if (this.found.length < ImportBatch.MAX_ISSUES) {
+        this.found.push({ line: line.lineNumber, messages: line.issues });
+      }
+      return;
+    }
+    this.ignored += 1;
+  }
+
+  public summary(): ReadSummary {
+    return new ReadSummary(this.total, this.data, this.ignored, this.rejected);
+  }
+
+  public issues(): ImportIssue[] {
+    return [...this.found];
   }
 }

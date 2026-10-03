@@ -1,4 +1,5 @@
 import { TextLine } from './text-line';
+import { TextLineSplitter } from './text-line-splitter';
 
 export enum TextEncoding {
   UTF8 = 'utf-8',
@@ -32,26 +33,8 @@ export class TextDocument {
   }
 
   public static fromText(text: string, encoding: TextEncoding, tabSize: number): TextDocument {
-    const raw: string[] = text.replace(/^\uFEFF/, '').split(/\r\n|\n|\r/);
-    if (raw.length > 0 && raw[raw.length - 1] === '') {
-      raw.pop();
-    }
-    const lines: TextLine[] = raw.map((line: string, index: number): TextLine => {
-      const pageBreak: boolean = line.includes('\f');
-      return new TextLine(index + 1, TextDocument.expandTabs(line.replace(/\f/g, ''), tabSize), pageBreak);
-    });
-    return new TextDocument(lines, encoding);
-  }
-
-  private static expandTabs(line: string, tabSize: number): string {
-    if (!line.includes('\t') || tabSize <= 0) {
-      return line;
-    }
-    let result: string = '';
-    for (const char of line) {
-      result += char === '\t' ? ' '.repeat(tabSize - (result.length % tabSize)) : char;
-    }
-    return result;
+    const splitter: TextLineSplitter = new TextLineSplitter(tabSize);
+    return new TextDocument([...splitter.push(text), ...splitter.finish()], encoding);
   }
 
   public all(): ReadonlyArray<TextLine> {

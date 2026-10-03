@@ -105,9 +105,21 @@ Proyecto de demostración: **Demo · Bodega ficticia** (toma ya iniciada; entra 
 | 6.17 | «Exportar paquete» y en otro proyecto o servidor «Importar paquete» | Se crea «… (importada)» cerrada con los mismos resultados y valorización |
 | 6.13 | Cerrar toma | Estado «Cerrada»; conteos definitivos |
 
-## 7. Pendiente después de esta fase
+## 7. Seguridad y operación
+
+| # | Paso | Resultado esperado |
+|---|---|---|
+| 7.1 | Más de 10 intentos de inicio de sesión en un minuto desde el mismo equipo | «Demasiados intentos; vuelve a intentarlo en N s» (HTTP 429) aunque cambie el correo |
+| 7.2 | Abrir la app en producción y revisar las cabeceras en las herramientas del navegador | `Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options`; la consola no muestra violaciones de CSP |
+| 7.3 | `GET /api/v1/health/ready` con la base detenida | 503 con `mongodb` en `DOWN` y el motivo; al volver la base, 200 |
+| 7.4 | `GET /api/v1/metrics` sin token y con `Authorization: Bearer <METRICS_TOKEN>` | 404 sin token; con token, texto Prometheus con rutas como `/api/v1/projects/:id` (sin ids) |
+| 7.5 | Cargar un archivo de 1 000 000 de líneas (`node tools/load/balance-generator.mjs`) | Se publica en minutos sin que la memoria de la API crezca con el tamaño del archivo |
+| 7.6 | `backup.js crear` → `verificar` → `restaurar` en otra base | Mismos documentos, índices y archivos; con otra frase de paso o un archivo alterado se rechaza sin escribir nada |
+| 7.7 | `docker/production/deploy.sh` con una versión inexistente y luego con una que no arranca | La inexistente no cambia nada; la que no arranca vuelve sola a la versión anterior y muestra el log de la API |
+
+## 8. Pendiente después de esta fase
 
 - Plantillas: tablas dinámicas, filas/columnas por filtros y fórmulas entre celdas, imágenes y formas, formato condicional, PDF generado en el servidor y caché Redis de cálculos (docs/04 §11).
 - Consolidación entre compañías con eliminaciones, importación de colecciones desde archivo y `COLECCION()` en fórmulas.
 - Otros tipos de fuente (delimitado, hoja de cálculo, BD) y metadatos de archivo.
-- 2FA, invitación por correo, colas BullMQ/Redis para varias instancias y la decisión de licencia PrimeUI.
+- 2FA, contraseñas filtradas, invitación por correo, colas BullMQ/Redis y límite de intentos compartido para varias instancias, y la decisión de licencia PrimeUI.

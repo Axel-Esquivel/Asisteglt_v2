@@ -1,4 +1,7 @@
 import { DynamicModule, Module, Provider } from '@nestjs/common';
+import { MulterModule, MulterModuleOptions } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { AppConfig } from '../../config/app-config';
 import { DataStore } from '../../common/persistence/data-store';
 import { RepositoryBinding } from '../../common/persistence/persistence.module';
 import { AnalysisService } from './application/analysis.service';
@@ -59,6 +62,7 @@ import {
   MongoProfileRepository,
 } from './infrastructure/mongo/mongo-reports.repositories';
 import { InMemoryFileStorage, LocalDiskFileStorage } from './infrastructure/storage/file-storages';
+import { ImportUploads } from './infrastructure/storage/import-uploads';
 import { AnalysisController } from './presentation/analysis.controller';
 import { ImportsController } from './presentation/imports.controller';
 import { ProfilesController } from './presentation/profiles.controller';
@@ -75,6 +79,15 @@ export class ReportsModule {
     return {
       module: ReportsModule,
       global: true,
+      imports: [
+        // Las cargas se reciben en disco (no en memoria) para admitir archivos grandes (RNF-06).
+        MulterModule.registerAsync({
+          useFactory: (config: AppConfig): MulterModuleOptions => ({
+            storage: diskStorage({ destination: ImportUploads.destination(config.storageDir) }),
+          }),
+          inject: [AppConfig],
+        }),
+      ],
       controllers: [
         ReportsConfigController,
         ProfilesController,
@@ -85,6 +98,7 @@ export class ReportsModule {
         TemplatesController,
       ],
       providers: [
+        ImportUploads,
         RepositoryBinding.bind(
           OrgStructureRepository,
           store,

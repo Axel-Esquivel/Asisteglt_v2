@@ -216,8 +216,14 @@ export class DemoSeeder implements OnApplicationBootstrap {
         admin,
         { items: [item('2026-07', 'balance_demo_2026_07.txt'), item('2026-08', 'balance_demo_2026_08.txt')] },
         [
-          new UploadedContent('balance_demo_2026_07.txt', encoder.encode(DemoData.balance('07', '4,350.00'))),
-          new UploadedContent('balance_demo_2026_08.txt', encoder.encode(DemoData.balance('08', '5,200.00'))),
+          UploadedContent.fromBytes(
+            'balance_demo_2026_07.txt',
+            encoder.encode(DemoData.balance('07', '4,350.00')),
+          ),
+          UploadedContent.fromBytes(
+            'balance_demo_2026_08.txt',
+            encoder.encode(DemoData.balance('08', '5,200.00')),
+          ),
         ],
       )
     ).unwrap();

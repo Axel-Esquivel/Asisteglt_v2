@@ -14,6 +14,8 @@ module.exports = {
       target: 'node',
       compiler: 'tsc',
       main: './src/main.ts',
+      // Herramienta de respaldo y restauración (docs/13-puesta-en-marcha.md §10).
+      additionalEntryPoints: [{ entryName: 'backup', entryPath: './src/ops/backup-cli.ts' }],
       tsConfig: './tsconfig.app.json',
       assets: ['./src/assets'],
       optimization: false,

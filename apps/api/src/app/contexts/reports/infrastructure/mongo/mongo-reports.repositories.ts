@@ -211,7 +211,9 @@ export class MongoDataRecordRepository extends DataRecordRepository {
           const { id, ...rest } = r;
           return { _id: id, ...rest };
         }),
-        { ordered: false },
+        // Sin hidratar ni validar con Mongoose: los registros ya son instantáneas tipadas del dominio
+        // y las cargas insertan cientos de miles por archivo.
+        { ordered: false, lean: true },
       );
     }
   }

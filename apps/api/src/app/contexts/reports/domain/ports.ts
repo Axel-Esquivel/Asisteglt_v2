@@ -88,9 +88,23 @@ export abstract class DataRecordRepository {
 }
 
 /** Almacén de archivos cargados (memoria o disco local; los datos nunca van al repositorio). */
+/** Resultado de guardar un archivo por bloques: tamaño y SHA-256 calculados al vuelo. */
+export class StoredObject {
+  public constructor(
+    public readonly size: number,
+    public readonly sha256: string,
+  ) {}
+}
+
+/**
+ * Archivos cargados por el cliente. `put`/`get` para archivos pequeños (fotos); `write`/`read` por
+ * bloques para las cargas de datos, que pueden tener millones de líneas.
+ */
 export abstract class FileStorage {
   public abstract put(key: string, content: Uint8Array): Promise<void>;
   public abstract get(key: string): Promise<Nullable<Uint8Array>>;
+  public abstract write(key: string, chunks: AsyncIterable<Uint8Array>): Promise<StoredObject>;
+  public abstract read(key: string): Promise<Nullable<AsyncIterable<Uint8Array>>>;
 }
 
 /** Cola de procesamiento de ítems de importación. */

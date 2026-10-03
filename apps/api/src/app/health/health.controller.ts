@@ -1,6 +1,7 @@
 import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
 import { Response } from 'express';
-import { HealthResponse, ReadinessResponse, ServiceStatus } from '@asisteglt/shared-contracts';
+import type { HealthResponse, ReadinessResponse } from '@asisteglt/shared-contracts';
+import { ServiceStatus } from '@asisteglt/shared-contracts';
 import { Public } from '../common/auth/auth.decorators';
 import { HealthService } from './health.service';
 

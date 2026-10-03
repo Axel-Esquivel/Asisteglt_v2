@@ -1,5 +1,6 @@
 export * from './lib/text/text-line';
 export * from './lib/text/text-document';
+export * from './lib/text/text-line-splitter';
 export * from './lib/layout/fixed-width-layout';
 export * from './lib/layout/boundary-suggester';
 export * from './lib/layout/crossing-detector';

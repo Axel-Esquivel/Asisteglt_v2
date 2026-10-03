@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Post, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
+import { ImportUploads } from '../infrastructure/storage/import-uploads';
 import { DataRecordPageResponse, ImportBatchResponse, ImportManifest } from '@asisteglt/shared-contracts';
 import { Nullable } from '@asisteglt/shared-kernel';
 import { CurrentPrincipal } from '../../../common/auth/auth.decorators';
@@ -17,9 +18,11 @@ interface MultipartBody {
 }
 
 /** Lo que entrega multer por cada archivo (solo los campos que se usan). */
+/** Archivo que multer dejó en el directorio temporal de cargas. */
 interface ReceivedFile {
   readonly originalname: string;
-  readonly buffer: Buffer;
+  readonly path: string;
+  readonly size: number;
 }
 
 /** Carga múltiple de archivos y consulta de los datos publicados. */
@@ -42,17 +45,22 @@ export class ImportsController {
     @UploadedFiles() files: ReceivedFile[],
     @Body() body: MultipartBody,
   ): Promise<ImportBatchResponse> {
-    const manifest: ImportManifest = ReportsRequestParser.manifest(body.manifest).unwrap();
-    const contents: UploadedContent[] = (Array.isArray(files) ? files : []).map(
-      (file: ReceivedFile): UploadedContent =>
-        new UploadedContent(
+    const received: ReceivedFile[] = Array.isArray(files) ? files : [];
+    try {
+      const manifest: ImportManifest = ReportsRequestParser.manifest(body.manifest).unwrap();
+      const contents: UploadedContent[] = received.map((file: ReceivedFile): UploadedContent =>
+        UploadedContent.fromFile(
           Buffer.from(file.originalname, 'latin1').toString('utf8'),
-          new Uint8Array(file.buffer),
+          file.path,
+          file.size,
         ),
-    );
-    return ImportPresenter.batch(
-      (await this.imports.submit(projectId, p.userId, manifest, contents)).unwrap(),
-    );
+      );
+      return ImportPresenter.batch(
+        (await this.imports.submit(projectId, p.userId, manifest, contents)).unwrap(),
+      );
+    } finally {
+      await ImportUploads.discard(received.map((file: ReceivedFile): string => file.path));
+    }
   }
 
   @Get('imports')
