@@ -93,6 +93,19 @@ export class EnvironmentReader {
     return value;
   }
 
+  /** Secreto opcional: cadena vacía si no está definido; si lo está, exige la longitud mínima. */
+  public optionalSecret(name: string, minLength: number): string {
+    const value: Nullable<string> = this.raw(name);
+    if (value === null) {
+      return '';
+    }
+    if (value.length < minLength) {
+      this.problems.push(`${name} debe tener al menos ${String(minLength)} caracteres`);
+      return '';
+    }
+    return value;
+  }
+
   public assertValid(): void {
     if (this.problems.length > 0) {
       throw new ConfigurationError(this.problems);

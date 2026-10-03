@@ -14,6 +14,15 @@ describe('AppConfigLoader', () => {
     expect(config.environment).toBe(RuntimeEnvironment.DEVELOPMENT);
     expect(config.logLevel).toBe(LogLevel.INFO);
     expect(config.corsOrigins).toEqual(['http://localhost:4200']);
+    expect(config.metricsToken).toBe('');
+    expect(config.authRateLimitPerMinute).toBe(10);
+  });
+
+  it('exige un token de métricas largo si se define', () => {
+    expect((): AppConfig => AppConfigLoader.load({ ...VALID, METRICS_TOKEN: 'corto' })).toThrow(
+      ConfigurationError,
+    );
+    expect(AppConfigLoader.load({ ...VALID, METRICS_TOKEN: 'x'.repeat(24) }).metricsToken).toHaveLength(24);
   });
 
   it('lee listas y enumeraciones', () => {

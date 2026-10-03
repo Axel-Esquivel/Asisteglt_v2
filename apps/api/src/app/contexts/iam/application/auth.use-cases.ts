@@ -79,7 +79,12 @@ export class LoginUseCase {
       : null;
     if (found === null || !found.isActive()) {
       await this.hasher.verify(PlainPassword.forVerification(command.password), await this.decoy());
-      this.record(SecurityEvent.LOGIN_FAILED, SecurityAuditEntry.fingerprint(command.email), ip, 'unknown-account');
+      this.record(
+        SecurityEvent.LOGIN_FAILED,
+        SecurityAuditEntry.fingerprint(command.email),
+        ip,
+        'unknown-account',
+      );
       return Result.fail(IamErrors.invalidCredentials());
     }
     const subject: string = found.getId().toString();

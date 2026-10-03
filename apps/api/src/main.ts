@@ -9,9 +9,12 @@ import { AppConfig, AppConfigLoader } from './app/config/app-config';
 
 async function bootstrap(): Promise<void> {
   const config: AppConfig = AppConfigLoader.load(process.env);
-  const app: NestExpressApplication<Server> = await NestFactory.create<NestExpressApplication<Server>>(AppModule.forRoot(config), {
-    logger: JsonLogger.toStdout(config.logLevel),
-  });
+  const app: NestExpressApplication<Server> = await NestFactory.create<NestExpressApplication<Server>>(
+    AppModule.forRoot(config),
+    {
+      logger: JsonLogger.toStdout(config.logLevel),
+    },
+  );
   AppBootstrapper.configure(app, config);
   await app.listen(config.port);
 }

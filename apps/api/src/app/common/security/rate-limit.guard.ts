@@ -24,7 +24,8 @@ export class RateLimitGuard implements CanActivate {
     if (context.getType() !== 'http') {
       return true;
     }
-    const name: Nullable<string> = this.reflector.get<string>(RATE_LIMIT_POLICY, context.getHandler()) ?? null;
+    const name: Nullable<string> =
+      this.reflector.get<string>(RATE_LIMIT_POLICY, context.getHandler()) ?? null;
     const policy: Nullable<RateLimitPolicy> = name === null ? null : this.policies.find(name);
     if (policy === null) {
       return true;

@@ -42,7 +42,11 @@ export class TestApp {
     const moduleRef: TestingModule = await (
       clock === null ? builder : builder.overrideProvider(Clock).useValue(clock)
     ).compile();
-    const app: NestExpressApplication<Server> = moduleRef.createNestApplication<NestExpressApplication<Server>>();
+    const app: NestExpressApplication<Server> = moduleRef.createNestApplication<
+      NestExpressApplication<Server>
+    >({
+      logger: ['error', 'warn'],
+    });
     AppBootstrapper.configure(app, config);
     await app.init();
     return new TestApp(app, audit);

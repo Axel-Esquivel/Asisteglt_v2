@@ -32,6 +32,8 @@ export class AppConfig {
     public readonly demoSeed: boolean,
     public readonly authRateLimitPerMinute: number,
     public readonly trustProxy: TrustProxy,
+    /** Token *bearer* de `GET /metrics`; vacío = métricas deshabilitadas (404). */
+    public readonly metricsToken: string,
   ) {}
 
   public isProduction(): boolean {
@@ -69,6 +71,7 @@ export class AppConfigLoader {
       env.enumValue('DEMO_SEED', ['true', 'false'], 'false') === 'true',
       env.positiveInteger('AUTH_RATE_LIMIT_PER_MINUTE', 10),
       env.enumValue('TRUST_PROXY', Object.values(TrustProxy), TrustProxy.NONE),
+      env.optionalSecret('METRICS_TOKEN', 24),
     );
     env.assertValid();
     return config;

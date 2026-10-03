@@ -27,7 +27,9 @@ describe('RateLimiter', () => {
     await limiter.consume(policy, '10.0.0.1');
     await limiter.consume(policy, '10.0.0.2');
     clock.set(new Date('2026-10-01T00:00:45Z'));
-    const error: unknown = await limiter.consume(policy, '10.0.0.1').catch((caught: unknown): unknown => caught);
+    const error: unknown = await limiter
+      .consume(policy, '10.0.0.1')
+      .catch((caught: unknown): unknown => caught);
     expect(error).toBeInstanceOf(TooManyRequestsError);
     expect(error instanceof TooManyRequestsError ? error.retryAfterSeconds : 0).toBe(15);
     expect(audit.events()).toEqual([SecurityEvent.RATE_LIMITED]);

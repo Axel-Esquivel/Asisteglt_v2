@@ -31,6 +31,11 @@ describe('JsonLogger', () => {
     });
     expect(lines).toHaveLength(1);
     const entry: unknown = JSON.parse(lines[0] ?? '{}');
-    expect(entry).toMatchObject({ level: 'info', message: 'visible', context: 'Contexto', correlationId: 'corr-123456' });
+    expect(entry).toMatchObject({
+      level: 'info',
+      message: 'visible',
+      context: 'Contexto',
+      correlationId: 'corr-123456',
+    });
   });
 });

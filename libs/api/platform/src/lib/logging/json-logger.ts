@@ -13,7 +13,12 @@ interface LogEntry {
 
 /** Logger estructurado en JSON (una línea por evento) con identificador de correlación. */
 export class JsonLogger implements LoggerService {
-  private static readonly ORDER: ReadonlyArray<LogLevel> = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR];
+  private static readonly ORDER: ReadonlyArray<LogLevel> = [
+    LogLevel.DEBUG,
+    LogLevel.INFO,
+    LogLevel.WARN,
+    LogLevel.ERROR,
+  ];
 
   public constructor(
     private readonly minimumLevel: LogLevel,

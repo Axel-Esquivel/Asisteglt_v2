@@ -9,6 +9,7 @@ import {
   TextDocument,
   TextEncoding,
 } from '@asisteglt/shared-ingestion-core';
+import { Counter, Histogram, MetricsRegistry } from '@asisteglt/api-platform';
 import { Clock, EntityId, Nullable, Result } from '@asisteglt/shared-kernel';
 import { RealtimeEventPublisher, UsersAudience } from '../../chat/domain/ports';
 import { Project, ProjectMember } from '../../projects/domain/project';
@@ -35,7 +36,11 @@ import { ImportPresenter } from './import.presenter';
 @Injectable()
 export class ImportProcessor {
   private static readonly CHUNK: number = 1000;
+  private static readonly DURATION_BUCKETS: ReadonlyArray<number> = [0.5, 1, 2.5, 5, 10, 30, 60, 120, 300];
   private readonly logger: Logger = new Logger(ImportProcessor.name);
+  private readonly outcomes: Counter;
+  private readonly durations: Histogram;
+  private readonly lines: Counter;
 
   public constructor(
     private readonly batches: ImportBatchRepository,
@@ -47,7 +52,16 @@ export class ImportProcessor {
     private readonly publisher: RealtimeEventPublisher,
     private readonly config: AppConfig,
     private readonly clock: Clock,
-  ) {}
+    metrics: MetricsRegistry,
+  ) {
+    this.outcomes = metrics.counter('asisteglt_imports_total', 'Archivos de carga procesados por resultado');
+    this.durations = metrics.histogram(
+      'asisteglt_import_duration_seconds',
+      'Duración del procesamiento de un archivo de carga',
+      ImportProcessor.DURATION_BUCKETS,
+    );
+    this.lines = metrics.counter('asisteglt_import_lines_total', 'Líneas leídas en cargas por clasificación');
+  }
 
   public async process(batchId: string, itemId: string): Promise<void> {
     const batch: Nullable<ImportBatch> = (
@@ -59,6 +73,7 @@ export class ImportProcessor {
     }
     batch.start(itemId);
     await this.save(batch, itemId);
+    const startedAt: number = performance.now();
     try {
       await this.run(batch, item);
     } catch (error: unknown) {
@@ -74,6 +89,18 @@ export class ImportProcessor {
       );
     }
     await this.save(batch, itemId);
+    this.measure(batch, itemId, (performance.now() - startedAt) / 1000);
+  }
+
+  private measure(batch: ImportBatch, itemId: string, seconds: number): void {
+    const done: Nullable<ImportItemSnapshot> = batch.item(itemId);
+    const outcome: string = done === null ? 'unknown' : done.status;
+    this.outcomes.inc({ outcome });
+    this.durations.observe({ outcome }, seconds);
+    if (done !== null) {
+      this.lines.add({ kind: 'data' }, done.data);
+      this.lines.add({ kind: 'rejected' }, done.rejected);
+    }
   }
 
   private async run(batch: ImportBatch, item: ImportItemSnapshot): Promise<void> {

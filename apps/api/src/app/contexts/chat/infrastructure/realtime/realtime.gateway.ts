@@ -6,6 +6,7 @@ import {
   WebSocketGateway,
 } from '@nestjs/websockets';
 import { ChatMessageResponse, PresenceChangedEvent, RealtimeEvent } from '@asisteglt/shared-contracts';
+import { Counter, MetricsRegistry } from '@asisteglt/api-platform';
 import { EntityId, Nullable, Result } from '@asisteglt/shared-kernel';
 import { Server, Socket } from 'socket.io';
 import { AccountService } from '../../../iam/application/account.use-cases';
@@ -33,13 +34,26 @@ export class RealtimeGateway
   private readonly logger: Logger = new Logger(RealtimeGateway.name);
   private readonly principals: Map<string, EntityId> = new Map<string, EntityId>();
   private server: Nullable<Server> = null;
+  private readonly emitted: Counter;
+  private readonly rejected: Counter;
 
   public constructor(
     private readonly tokens: AccessTokenIssuer,
     private readonly accounts: AccountService,
     private readonly presence: PresenceTracker,
+    metrics: MetricsRegistry,
   ) {
     super();
+    metrics.gauge(
+      'asisteglt_realtime_connections',
+      'Sockets autenticados conectados',
+      (): number => this.principals.size,
+    );
+    this.emitted = metrics.counter('asisteglt_realtime_events_total', 'Eventos en tiempo real emitidos');
+    this.rejected = metrics.counter(
+      'asisteglt_realtime_rejected_handshakes_total',
+      'Conexiones rechazadas por token inválido',
+    );
   }
 
   public afterInit(server: Server): void {
@@ -49,6 +63,7 @@ export class RealtimeGateway
   public async handleConnection(socket: Socket): Promise<void> {
     const principal: Nullable<AuthenticatedPrincipal> = await this.authenticate(socket);
     if (principal === null) {
+      this.rejected.inc({});
       socket.emit('auth:error', { code: 'UNAUTHENTICATED' });
       socket.disconnect(true);
       return;
@@ -75,15 +90,16 @@ export class RealtimeGateway
   ): void {
     const rooms: string[] = audience.rooms();
     if (this.server !== null && rooms.length > 0) {
-      this.server
-        .to(rooms)
-        .emit(updated ? RealtimeEvent.CHAT_MESSAGE_UPDATED : RealtimeEvent.CHAT_MESSAGE, message);
+      const event: RealtimeEvent = updated ? RealtimeEvent.CHAT_MESSAGE_UPDATED : RealtimeEvent.CHAT_MESSAGE;
+      this.server.to(rooms).emit(event, message);
+      this.emitted.inc({ event });
     }
   }
 
   public override presenceChanged(event: PresenceChangedEvent): void {
     if (this.server !== null) {
       this.server.to(EveryoneAudience.ROOM).emit(RealtimeEvent.PRESENCE_CHANGED, event);
+      this.emitted.inc({ event: RealtimeEvent.PRESENCE_CHANGED });
     }
   }
 
@@ -91,6 +107,7 @@ export class RealtimeGateway
     const rooms: string[] = audience.rooms();
     if (this.server !== null && rooms.length > 0) {
       this.server.to(rooms).emit(event, payload);
+      this.emitted.inc({ event });
     }
   }
 

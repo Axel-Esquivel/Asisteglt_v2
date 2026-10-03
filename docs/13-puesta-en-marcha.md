@@ -179,3 +179,45 @@ Los archivos de muestra del asistente se leen en el navegador y nunca se envían
 la preconfiguración guarda solo la configuración. Los archivos cargados se guardan en
 `STORAGE_DIR` del servidor. Ningún dato real del cliente está en el repositorio: pruebas y
 demostración usan datos ficticios.
+
+## 9. Observabilidad
+
+| Endpoint | Uso |
+|---|---|
+| `GET /api/v1/health` | Vida: el proceso responde (versión, entorno, tiempo activo). |
+| `GET /api/v1/health/ready` | Preparación: 200 si MongoDB responde a `ping` y el directorio de archivos admite escritura; 503 con el detalle de cada dependencia si no. Lo usa el *healthcheck* del paquete Docker. |
+| `GET /api/v1/metrics` | Métricas Prometheus. Requiere `Authorization: Bearer <METRICS_TOKEN>` (mínimo 24 caracteres); sin token configurado o con uno incorrecto responde 404. |
+
+**Logs.** Una línea JSON por evento con `timestamp`, `level`, `context`, `correlationId` y `message`.
+El identificador de correlación se toma de `X-Correlation-Id`, de `X-Request-Id` (nginx lo agrega
+con `$request_id` y lo escribe también en su log de acceso JSON) o del *trace-id* de `traceparent`,
+y se devuelve en ambas cabeceras y en cada respuesta de error. Contextos útiles para filtrar:
+`HttpAccess` (método, ruta-plantilla, estado y duración de cada petición), `SecurityAudit`
+(eventos de [15-revision-seguridad](15-revision-seguridad.md)) e `ImportProcessor`.
+
+**Métricas principales.**
+
+| Métrica | Tipo | Etiquetas |
+|---|---|---|
+| `asisteglt_http_requests_total` | contador | `method`, `route` (plantilla, p. ej. `/api/v1/projects/:id`), `status` |
+| `asisteglt_http_request_duration_seconds` | histograma | `method`, `route` |
+| `asisteglt_realtime_connections` | indicador | — |
+| `asisteglt_realtime_events_total` / `asisteglt_realtime_rejected_handshakes_total` | contador | `event` / — |
+| `asisteglt_imports_total`, `asisteglt_import_duration_seconds` | contador / histograma | `outcome` (`PUBLISHED`, `FAILED`) |
+| `asisteglt_import_lines_total` | contador | `kind` (`data`, `rejected`) |
+| `asisteglt_process_resident_memory_bytes`, `asisteglt_process_heap_used_bytes`, `asisteglt_event_loop_delay_p99_seconds`, `asisteglt_process_uptime_seconds` | indicador | — |
+| `asisteglt_build_info` | indicador (1) | `version`, `environment` |
+
+Ninguna etiqueta lleva ids, correos ni datos importados. Configuración de Prometheus:
+
+```yaml
+scrape_configs:
+  - job_name: asisteglt-api
+    metrics_path: /api/v1/metrics
+    authorization: { credentials_file: /etc/prometheus/asisteglt-token }
+    static_configs: [{ targets: ['api:3000'] }]
+```
+
+Alertas sugeridas: tasa de `status=~"5.."` > 1 % en 5 min; p95 de
+`asisteglt_http_request_duration_seconds` > 1 s; `asisteglt_imports_total{outcome="FAILED"}` en
+aumento; `asisteglt_event_loop_delay_p99_seconds` > 0.2; `/health/ready` en 503 más de 1 min.

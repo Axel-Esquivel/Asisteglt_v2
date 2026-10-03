@@ -311,6 +311,8 @@ export class DemoSeeder implements OnApplicationBootstrap {
         { userId: admin.toString(), role: ParticipantRole.SUPERVISOR },
       ])
     ).unwrap();
-    (await this.inventory.start(projectId, admin, count.id, { mode: AssignmentMode.ZONES, ranges: [] })).unwrap();
+    (
+      await this.inventory.start(projectId, admin, count.id, { mode: AssignmentMode.ZONES, ranges: [] })
+    ).unwrap();
   }
 }
