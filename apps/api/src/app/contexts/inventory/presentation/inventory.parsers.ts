@@ -1,13 +1,16 @@
 import {
+  AssignmentMode,
   CountEntryRequest,
   CreateCountRequest,
   InventoryItemRequest,
   ItemCondition,
   ItemFieldMapping,
   ItemsFromDataRequest,
+  LocationRangeDto,
   ParticipantDto,
   ParticipantRole,
   ReassignRequest,
+  StartCountRequest,
   ToleranceKind,
 } from '@asisteglt/shared-contracts';
 import { FieldDecoder, FieldReader, Result } from '@asisteglt/shared-kernel';
@@ -26,6 +29,27 @@ export class InventoryParsers {
       y: f.nullableString('y'),
     }),
   );
+
+  /** Sin cuerpo (o sin modo) se asigna por zonas, como antes. */
+  public static start(body: unknown): Result<StartCountRequest> {
+    if (typeof body !== 'object' || body === null || !('mode' in body)) {
+      return Result.ok({ mode: AssignmentMode.ZONES, ranges: [] });
+    }
+    return new FieldDecoder<StartCountRequest>((f: FieldReader): StartCountRequest => ({
+      mode: f.oneOf('mode', Object.values(AssignmentMode)),
+      ranges:
+        f.raw('ranges') === null
+          ? []
+          : f.list(
+              'ranges',
+              new FieldDecoder<LocationRangeDto>((r: FieldReader): LocationRangeDto => ({
+                userId: r.string('userId'),
+                from: r.string('from'),
+                to: r.string('to'),
+              })),
+            ),
+    })).decode(body);
+  }
 
   public static fromData(body: unknown): Result<ItemsFromDataRequest> {
     return new FieldDecoder<ItemsFromDataRequest>((f: FieldReader): ItemsFromDataRequest => ({

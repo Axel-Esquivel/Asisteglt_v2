@@ -124,16 +124,59 @@
           </div>
 
           <h3>3. Iniciar</h3>
-          <p class="inventory__hint">
-            Se asignan zonas completas a cada contador equilibrando la cantidad de ítems; cada uno recorre su
-            ruta por ubicación.
-          </p>
+          <p-selectbutton
+            [options]="modes"
+            optionLabel="label"
+            optionValue="value"
+            [allowEmpty]="false"
+            [ngModel]="mode()"
+            (ngModelChange)="mode.set($event)"
+            ariaLabelledBy="modeLabel"
+          />
+          <span id="modeLabel" class="inventory__hint">{{ modeHint() }}</span>
+          @if (mode() === 'RANGES') {
+          <p-table [value]="ranges()" [tableStyle]="{ 'min-width': '28rem' }" data-testid="ranges-table">
+            <ng-template #header>
+              <tr>
+                <th>Contador</th>
+                <th>Desde la ubicación</th>
+                <th>Hasta la ubicación</th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-range>
+              <tr>
+                <td>{{ range.name }}</td>
+                <td>
+                  <input
+                    pInputText
+                    [(ngModel)]="range.from"
+                    [attr.aria-label]="'Desde (' + range.name + ')'"
+                    placeholder="p. ej. A-01"
+                  />
+                </td>
+                <td>
+                  <input
+                    pInputText
+                    [(ngModel)]="range.to"
+                    [attr.aria-label]="'Hasta (' + range.name + ')'"
+                    placeholder="p. ej. A-99"
+                  />
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template #emptymessage>
+              <tr>
+                <td colspan="3">Guarda primero los participantes con papel de contador.</td>
+              </tr>
+            </ng-template>
+          </p-table>
+          }
           <div>
             <p-button
               label="Iniciar toma"
               icon="pi pi-play"
               [disabled]="current.s.items === 0"
-              (onClick)="act('start', 'Toma iniciada: ronda 1 asignada', '¿Iniciar la toma y asignar las zonas?')"
+              (onClick)="startCount()"
             />
           </div>
         </div>

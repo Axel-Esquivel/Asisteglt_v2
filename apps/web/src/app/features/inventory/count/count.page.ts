@@ -15,16 +15,19 @@ import { DOCUMENT } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import {
+  AssignmentMode,
   AssignmentResponse,
   CountEntryRequest,
   InventoryItemRequest,
   ItemCondition,
   ItemStatusResponse,
+  LocationRangeDto,
   ParticipantDto,
   ParticipantRole,
   ProjectPermission,
   ProjectRole,
   RealtimeEvent,
+  StartCountRequest,
   WorkItemResponse,
 } from '@asisteglt/shared-contracts';
 import { DomainError, Nullable, Result } from '@asisteglt/shared-kernel';
@@ -63,6 +66,17 @@ interface MemberChoice {
 interface Option<T> {
   readonly label: string;
   readonly value: T;
+}
+
+/** Rango de ubicaciones editable de un contador. */
+class RangeDraft {
+  public from: string = '';
+  public to: string = '';
+
+  public constructor(
+    public readonly userId: string,
+    public readonly name: string,
+  ) {}
 }
 
 /** Foto lista para mostrar: datos y una URL local (`blob:`) que se libera al cerrar. */
@@ -159,6 +173,34 @@ export class CountPage implements OnInit {
     { key: 'y', label: 'Coordenada Y (m)' },
   ];
 
+  protected readonly modes: Option<AssignmentMode>[] = [
+    { label: 'Por zonas', value: AssignmentMode.ZONES },
+    { label: 'Por rangos', value: AssignmentMode.RANGES },
+    { label: 'Por cercanía', value: AssignmentMode.CLUSTER },
+  ];
+  protected readonly mode: WritableSignal<AssignmentMode> = signal<AssignmentMode>(AssignmentMode.ZONES);
+  protected readonly modeHint: Signal<string> = computed((): string => {
+    switch (this.mode()) {
+      case AssignmentMode.ZONES:
+        return 'Zonas completas (primer tramo de la ubicación) repartidas equilibrando la cantidad de ítems.';
+      case AssignmentMode.RANGES:
+        return 'Indica el rango de ubicaciones de cada contador; los rangos no se solapan y cubren todos los ítems.';
+      case AssignmentMode.CLUSTER:
+        return 'Bloques contiguos según las coordenadas X/Y de los ítems, con cargas equilibradas.';
+    }
+  });
+  /** Un rango editable por cada contador guardado en la toma. */
+  protected readonly ranges: Signal<RangeDraft[]> = computed((): RangeDraft[] => {
+    const count: Nullable<CountView> = this.count();
+    const names: Map<string, string> = new Map<string, string>(
+      this.members().map((m: MemberChoice): [string, string] => [m.member.userId, m.member.displayName]),
+    );
+    return count === null
+      ? []
+      : count.s.participants
+          .filter((p: ParticipantDto): boolean => p.role === ParticipantRole.COUNTER)
+          .map((p: ParticipantDto): RangeDraft => new RangeDraft(p.userId, names.get(p.userId) ?? p.userId));
+  });
   protected readonly itemSources: Option<'file' | 'data'>[] = [
     { label: 'Archivo', value: 'file' },
     { label: 'Datos cargados', value: 'data' },
@@ -314,6 +356,38 @@ export class CountPage implements OnInit {
       rejectLabel: 'Cancelar',
       accept: (): void => {
         this.apply(this.api.action(this.context.id(), this.countId(), action), message)
+          .then((): void => this.tab.set(this.defaultTab()))
+          .catch((): void => {
+            // Informado en apply.
+          });
+      },
+    });
+  }
+
+  protected startCount(): void {
+    const request: StartCountRequest = {
+      mode: this.mode(),
+      ranges:
+        this.mode() === AssignmentMode.RANGES
+          ? this.ranges()
+              .filter((r: RangeDraft): boolean => r.from.trim() !== '' || r.to.trim() !== '')
+              .map((r: RangeDraft): LocationRangeDto => ({
+                userId: r.userId,
+                from: r.from.trim(),
+                to: r.to.trim(),
+              }))
+          : [],
+    };
+    this.confirmation.confirm({
+      header: 'Confirmar',
+      message: '¿Iniciar la toma y asignar los ítems de la primera ronda?',
+      acceptLabel: 'Continuar',
+      rejectLabel: 'Cancelar',
+      accept: (): void => {
+        this.apply(
+          this.api.start(this.context.id(), this.countId(), request),
+          'Toma iniciada: ronda 1 asignada',
+        )
           .then((): void => this.tab.set(this.defaultTab()))
           .catch((): void => {
             // Informado en apply.

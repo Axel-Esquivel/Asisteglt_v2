@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import {
+  AssignmentMode,
   CatalogTemplate,
   DataType,
   DerivedAttributeKind,
@@ -310,6 +311,6 @@ export class DemoSeeder implements OnApplicationBootstrap {
         { userId: admin.toString(), role: ParticipantRole.SUPERVISOR },
       ])
     ).unwrap();
-    (await this.inventory.start(projectId, admin, count.id)).unwrap();
+    (await this.inventory.start(projectId, admin, count.id, { mode: AssignmentMode.ZONES, ranges: [] })).unwrap();
   }
 }

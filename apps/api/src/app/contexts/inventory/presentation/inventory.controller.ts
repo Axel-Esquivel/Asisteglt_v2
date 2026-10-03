@@ -108,8 +108,10 @@ export class InventoryController {
     @CurrentPrincipal() p: AuthenticatedPrincipal,
     @Param('projectId') projectId: string,
     @Param('countId') countId: string,
+    @Body() body: unknown,
   ): Promise<CountResponse> {
-    return (await this.inventory.start(projectId, p.userId, countId)).unwrap();
+    const request = InventoryParsers.start(body).unwrap();
+    return (await this.inventory.start(projectId, p.userId, countId, request)).unwrap();
   }
 
   @Get(':countId/my-work')

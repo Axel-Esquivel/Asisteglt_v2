@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  AssignmentMode,
   AssignmentResponse,
   CountEntryRequest,
   CountResponse,
@@ -15,6 +16,7 @@ import {
   RealtimeEvent,
   ReassignRequest,
   RoundResponse,
+  StartCountRequest,
   SupervisionResponse,
   WorkItemResponse,
 } from '@asisteglt/shared-contracts';
@@ -43,6 +45,7 @@ import {
 } from '../domain/ports';
 import { CatalogService } from '../../reports/application/catalog.service';
 import { DataRecordRepository, RecordQuery } from '../../reports/domain/ports';
+import { ClusterAssignmentStrategy, RangeAssignmentStrategy } from '../domain/assignment-strategies';
 import { CountLedger } from './count-ledger';
 import { ItemMappingRules } from './item-mapping';
 
@@ -204,18 +207,23 @@ export class InventoryService {
     );
   }
 
-  public async start(projectId: string, userId: EntityId, countId: string): Promise<Result<CountResponse>> {
+  public async start(
+    projectId: string,
+    userId: EntityId,
+    countId: string,
+    request: StartCountRequest,
+  ): Promise<Result<CountResponse>> {
     return this.configure(
       projectId,
       userId,
       countId,
       async (p: Project, count: InventoryCount): Promise<Result<CountResponse>> => {
         const items: InventoryItemSnapshot[] = await this.items.findByCount(count.getId().toString());
-        const plan: CounterAssignment[] = this.strategy.plan(
-          items,
-          count.counters(),
-          new Map<string, string>(),
-        );
+        const planned: Result<CounterAssignment[]> = this.firstPlan(items, count.counters(), request);
+        if (!planned.isOk()) {
+          return Result.fail(planned.errorOrNull() ?? InventoryService.invalidItems('No se pudo asignar'));
+        }
+        const plan: CounterAssignment[] = planned.unwrap();
         return count
           .start(
             plan,
@@ -455,6 +463,22 @@ export class InventoryService {
           change(p, c),
         ),
     );
+  }
+
+  /** Primera ronda según la estrategia elegida; los reconteos siempre van por zonas con otro contador. */
+  private firstPlan(
+    items: ReadonlyArray<InventoryItemSnapshot>,
+    counters: ReadonlyArray<string>,
+    request: StartCountRequest,
+  ): Result<CounterAssignment[]> {
+    switch (request.mode) {
+      case AssignmentMode.ZONES:
+        return Result.ok(this.strategy.plan(items, counters, new Map<string, string>()));
+      case AssignmentMode.RANGES:
+        return new RangeAssignmentStrategy().plan(items, counters, request.ranges);
+      case AssignmentMode.CLUSTER:
+        return new ClusterAssignmentStrategy().plan(items, counters);
+    }
   }
 
   private async supervise(

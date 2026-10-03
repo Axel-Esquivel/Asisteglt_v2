@@ -394,37 +394,35 @@ describe('Inventarios (e2e)', () => {
       line,
       values,
     });
-    await app.app
-      .get(DataRecordRepository)
-      .insertMany([
-        record(1, {
-          [sku]: 'D-001',
-          [name]: 'Producto uno',
-          [location]: 'A-01',
-          [stock]: '12',
-          [cost]: '2.5',
-          [amount]: '30',
-          [x]: '1.5',
-        }),
-        record(2, {
-          [sku]: 'D-002',
-          [name]: 'Producto dos',
-          [location]: 'B-01',
-          [stock]: null,
-          [cost]: null,
-          [amount]: '0',
-          [x]: '8',
-        }),
-        record(3, {
-          [sku]: null,
-          [name]: 'Fila sin código',
-          [location]: 'C-01',
-          [stock]: '1',
-          [cost]: null,
-          [amount]: '0',
-          [x]: null,
-        }),
-      ]);
+    await app.app.get(DataRecordRepository).insertMany([
+      record(1, {
+        [sku]: 'D-001',
+        [name]: 'Producto uno',
+        [location]: 'A-01',
+        [stock]: '12',
+        [cost]: '2.5',
+        [amount]: '30',
+        [x]: '1.5',
+      }),
+      record(2, {
+        [sku]: 'D-002',
+        [name]: 'Producto dos',
+        [location]: 'B-01',
+        [stock]: null,
+        [cost]: null,
+        [amount]: '0',
+        [x]: '8',
+      }),
+      record(3, {
+        [sku]: null,
+        [name]: 'Fila sin código',
+        [location]: 'C-01',
+        [stock]: '1',
+        [cost]: null,
+        [amount]: '0',
+        [x]: null,
+      }),
+    ]);
     const created: Response = await request(app.server())
       .post(api(''))
       .set('authorization', owner.bearer())

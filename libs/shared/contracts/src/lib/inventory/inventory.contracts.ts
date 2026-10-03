@@ -27,6 +27,27 @@ export enum ItemCondition {
   DAMAGED = 'DAMAGED',
 }
 
+/** Cómo se reparten los ítems de la primera ronda entre los contadores. */
+export enum AssignmentMode {
+  /** Zonas completas (primer segmento de la ubicación), equilibrando la cantidad de ítems. */
+  ZONES = 'ZONES',
+  /** Rangos de ubicación elegidos por el supervisor para cada contador. */
+  RANGES = 'RANGES',
+  /** Por cercanía según las coordenadas X/Y, con cargas equilibradas. */
+  CLUSTER = 'CLUSTER',
+}
+
+export interface LocationRangeDto {
+  readonly userId: string;
+  readonly from: string;
+  readonly to: string;
+}
+
+export interface StartCountRequest {
+  readonly mode: AssignmentMode;
+  readonly ranges: ReadonlyArray<LocationRangeDto>;
+}
+
 export interface CreateCountRequest {
   readonly name: string;
   readonly warehouse: string;
