@@ -14,8 +14,10 @@ import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
 import { FloatLabel } from 'primeng/floatlabel';
 import { InputText } from 'primeng/inputtext';
+import { Message } from 'primeng/message';
 import { Textarea } from 'primeng/textarea';
 import { ProjectContext } from '../data/project-context';
+import { ProjectFormErrors } from '../data/project-form-errors';
 import { ProjectSummary } from '../data/project.model';
 import { ProjectsApiClient } from '../data/projects.api-client';
 
@@ -28,7 +30,7 @@ interface ProjectControls {
 @Component({
   selector: 'app-project-overview-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, DatePipe, Button, Card, FloatLabel, InputText, Textarea],
+  imports: [ReactiveFormsModule, DatePipe, Button, Card, FloatLabel, InputText, Message, Textarea],
   templateUrl: './project-overview.page.html',
   styleUrl: './project-overview.page.scss',
 })
@@ -42,8 +44,15 @@ export class ProjectOverviewPage {
   private readonly fb: NonNullableFormBuilder = inject(NonNullableFormBuilder);
 
   protected readonly form: FormGroup<ProjectControls> = this.fb.group({
-    name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(120)]],
-    description: ['', [Validators.maxLength(1000)]],
+    name: [
+      '',
+      [
+        Validators.required,
+        Validators.minLength(ProjectFormErrors.NAME_MIN),
+        Validators.maxLength(ProjectFormErrors.NAME_MAX),
+      ],
+    ],
+    description: ['', [Validators.maxLength(ProjectFormErrors.DESCRIPTION_MAX)]],
   });
 
   public constructor() {
@@ -54,6 +63,14 @@ export class ProjectOverviewPage {
         this.canManage.set(project.can(ProjectPermission.PROJECT_MANAGE));
       }
     });
+  }
+
+  protected nameError(): Nullable<string> {
+    return ProjectFormErrors.nameError(this.form.controls.name);
+  }
+
+  protected descriptionError(): Nullable<string> {
+    return ProjectFormErrors.descriptionError(this.form.controls.description);
   }
 
   protected async save(): Promise<void> {
