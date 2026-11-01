@@ -65,9 +65,21 @@
     />
     <span id="module-label" class="projects__hint">Módulo del proyecto (no se puede cambiar después)</span>
     <p-floatlabel variant="on">
-      <input pInputText id="projectName" formControlName="name" class="full-width" />
+      <input
+        pInputText
+        id="projectName"
+        formControlName="name"
+        class="full-width"
+        [invalid]="nameError() !== null"
+        [attr.aria-describedby]="nameError() === null ? null : 'projectNameError'"
+      />
       <label for="projectName">Nombre</label>
     </p-floatlabel>
+    @if (nameError(); as message) {
+    <p-message id="projectNameError" severity="error" size="small" variant="simple" class="field-error"
+      >{{ message }}</p-message
+    >
+    }
     <p-floatlabel variant="on">
       <textarea
         pTextarea
@@ -75,9 +87,15 @@
         formControlName="description"
         rows="3"
         class="full-width"
+        [invalid]="descriptionError() !== null"
       ></textarea>
       <label for="projectDescription">Descripción</label>
     </p-floatlabel>
+    @if (descriptionError(); as message) {
+    <p-message id="projectDescriptionError" severity="error" size="small" variant="simple" class="field-error"
+      >{{ message }}</p-message
+    >
+    }
     <div class="projects__actions">
       <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="closeDialog()" />
       <p-button type="submit" label="Crear proyecto" icon="pi pi-check" [loading]="saving()" />

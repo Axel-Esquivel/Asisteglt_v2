@@ -29,6 +29,12 @@ body {
   width: 100%;
 }
 
+// Mensaje de validación bajo un campo de formulario: se acerca al campo dentro de los formularios
+// en columna (gap de 1.25rem).
+.field-error {
+  margin-block-start: -0.75rem;
+}
+
 .page-title {
   margin: 0 0 1rem;
   font-size: 1.5rem;

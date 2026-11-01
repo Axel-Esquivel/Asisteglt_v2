@@ -8,7 +8,7 @@ import {
 } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ModuleType } from '@asisteglt/shared-contracts';
-import { Result } from '@asisteglt/shared-kernel';
+import { Nullable, Result } from '@asisteglt/shared-kernel';
 import { LoadStatus, Notifier } from '@asisteglt/web-core';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
@@ -20,6 +20,7 @@ import { SelectButton } from 'primeng/selectbutton';
 import { Skeleton } from 'primeng/skeleton';
 import { Tag } from 'primeng/tag';
 import { Textarea } from 'primeng/textarea';
+import { ProjectFormErrors } from '../data/project-form-errors';
 import { ModuleOption, ProjectLabels } from '../data/project-labels';
 import { ProjectSummary } from '../data/project.model';
 import { ProjectsApiClient } from '../data/projects.api-client';
@@ -64,8 +65,15 @@ export class ProjectsListPage implements OnInit {
   private readonly fb: NonNullableFormBuilder = inject(NonNullableFormBuilder);
 
   protected readonly form: FormGroup<CreateProjectControls> = this.fb.group({
-    name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(120)]],
-    description: ['', [Validators.maxLength(1000)]],
+    name: [
+      '',
+      [
+        Validators.required,
+        Validators.minLength(ProjectFormErrors.NAME_MIN),
+        Validators.maxLength(ProjectFormErrors.NAME_MAX),
+      ],
+    ],
+    description: ['', [Validators.maxLength(ProjectFormErrors.DESCRIPTION_MAX)]],
     moduleType: [ModuleType.REPORTS, [Validators.required]],
   });
 
@@ -82,6 +90,14 @@ export class ProjectsListPage implements OnInit {
 
   protected closeDialog(): void {
     this.dialogOpen.set(false);
+  }
+
+  protected nameError(): Nullable<string> {
+    return ProjectFormErrors.nameError(this.form.controls.name);
+  }
+
+  protected descriptionError(): Nullable<string> {
+    return ProjectFormErrors.descriptionError(this.form.controls.description);
   }
 
   protected async create(): Promise<void> {
