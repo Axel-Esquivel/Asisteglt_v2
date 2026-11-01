@@ -4,6 +4,8 @@
   "license": "MIT",
   "private": true,
   "scripts": {
+    "dev": "npm run services:up && npm run dev:check && npm run start:dev",
+    "start": "npm run start:dev",
     "start:web": "nx serve web",
     "start:api": "nx serve api",
     "start:dev": "nx run-many -t serve -p api web",

@@ -187,6 +187,8 @@ En `docker/local-server/` está el paquete para una laptop servidor: MongoDB, la
 |---|---|
 | `npm run verify` | lint + guardián de reglas + typecheck + pruebas + build (lo que exige el CI) |
 | `npm run e2e` | Playwright en escritorio y móvil; levanta API en memoria y web automáticamente. Antes, una vez por equipo: `npx playwright install chromium`; y detén `start:api`/`start:dev`/`start:demo` (la API de e2e necesita el puerto 3000) |
+| `npm run dev` | `services:up` + `dev:check` + `start:dev`: levanta los servicios de Docker, valida el entorno y arranca API y web |
+| `npm start` | Igual que `npm run start:dev` |
 | `npm run dev:check` | Diagnóstico del entorno de desarrollo (variables en uso, MongoDB y puertos) |
 | `npm run lint:guard` | Demuestra que cada regla normativa detecta su violación |
 | `npm run start:demo` | Demostración en memoria con datos ficticios |
