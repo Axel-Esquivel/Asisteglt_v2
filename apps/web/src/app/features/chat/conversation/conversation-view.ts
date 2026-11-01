@@ -41,6 +41,8 @@ import { ChatStore } from '../data/chat-store';
 export class ConversationView {
   public readonly conversationId: InputSignal<string> = input.required<string>();
   public readonly title: InputSignal<string> = input.required<string>();
+  /** La ventana flotante ya muestra el título en su propia cabecera. */
+  public readonly showHeader: InputSignal<boolean> = input<boolean>(true);
 
   protected readonly messages: WritableSignal<ChatMessage[]> = signal<ChatMessage[]>([]);
   protected readonly draft: WritableSignal<string> = signal<string>('');

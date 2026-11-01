@@ -57,3 +57,20 @@ test('chat general y edición de un mensaje propio', async ({ page }): Promise<v
   await expect(page.getByTestId('chat-messages')).toContainText('Mensaje corregido');
   await expect(page.getByTestId('chat-messages')).toContainText('(editado)');
 });
+
+test('chat flotante: se abre desde cualquier pantalla y se minimiza', async ({ page }): Promise<void> => {
+  await TestUser.unique('Flotante').register(page);
+  await page.getByRole('button', { name: /^Abrir chat/ }).click();
+  await page.getByRole('button', { name: /^Chat general/ }).click();
+  await send(page, 'Desde la ventana flotante');
+  await expect(page.getByTestId('chat-messages')).toContainText('Desde la ventana flotante');
+
+  await page.getByRole('button', { name: 'Minimizar chat' }).click();
+  await expect(page.getByTestId('chat-messages')).toBeHidden();
+  await page.getByRole('button', { name: /^Abrir chat/ }).click();
+  await expect(page.getByTestId('chat-messages')).toContainText('Desde la ventana flotante');
+
+  await page.getByRole('button', { name: 'Abrir en pantalla completa' }).click();
+  await expect(page).toHaveURL(/\/app\/chat\/[^/]+$/);
+  await expect(page.getByRole('button', { name: /^Abrir chat/ })).toHaveCount(0);
+});

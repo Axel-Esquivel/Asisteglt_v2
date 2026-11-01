@@ -49,3 +49,21 @@ body {
 .p-steppanel-content {
   min-width: 0;
 }
+
+// Chat flotante: la ventana (p-dialog no modal) y cada conversación de su lista (p-button).
+.p-dialog.floating-chat__window {
+  margin: 1.25rem;
+}
+
+.p-button.floating-chat__item {
+  gap: 0.75rem;
+  justify-content: flex-start;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+}
+
+// El borde de la conversación sobra dentro de la ventana flotante.
+.floating-chat__window .conversation {
+  border: none;
+  border-radius: 0;
+}

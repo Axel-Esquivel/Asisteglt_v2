@@ -1,0 +1,125 @@
+@if (!open()) {
+<div class="floating-chat__bubble">
+  <p-button
+    icon="pi pi-comments"
+    [rounded]="true"
+    size="large"
+    [badge]="store.totalUnread() > 0 ? unreadLabel() : ''"
+    badgeSeverity="danger"
+    [ariaLabel]="store.totalUnread() > 0 ? 'Abrir chat, ' + store.totalUnread() + ' sin leer' : 'Abrir chat'"
+    (onClick)="restore()"
+  />
+</div>
+}
+
+<p-dialog
+  [visible]="open()"
+  (visibleChange)="onVisibleChange($event)"
+  (onDragEnd)="onDragEnd()"
+  (onShow)="onShow()"
+  [modal]="false"
+  [draggable]="true"
+  [resizable]="false"
+  [keepInViewport]="true"
+  [closeOnEscape]="false"
+  position="bottomright"
+  closeIcon="pi pi-minus"
+  closeAriaLabel="Minimizar chat"
+  styleClass="floating-chat__window"
+  [style]="{ width: 'min(24rem, calc(100vw - 2rem))' }"
+  [contentStyle]="{ display: 'flex', flexDirection: 'column', padding: '0', height: 'min(32rem, calc(100dvh - 8rem))' }"
+>
+  <ng-template #header>
+    <div class="floating-chat__header">
+      @if (active(); as conversation) {
+      <p-button
+        icon="pi pi-arrow-left"
+        [text]="true"
+        [rounded]="true"
+        size="small"
+        ariaLabel="Volver a las conversaciones"
+        (onClick)="back()"
+      />
+      <span class="floating-chat__title">{{ conversation.title }}</span>
+      } @else {
+      <span class="floating-chat__title">Chat</span>
+      <p-button
+        icon="pi pi-pen-to-square"
+        [text]="true"
+        [rounded]="true"
+        size="small"
+        ariaLabel="Nueva conversación"
+        (onClick)="toggleSearch()"
+      />
+      }
+      <p-button
+        icon="pi pi-window-maximize"
+        [text]="true"
+        [rounded]="true"
+        size="small"
+        ariaLabel="Abrir en pantalla completa"
+        (onClick)="expand()"
+      />
+    </div>
+  </ng-template>
+
+  @if (active(); as conversation) {
+  <app-conversation-view
+    class="floating-chat__conversation"
+    [conversationId]="conversation.id"
+    [title]="conversation.title"
+    [showHeader]="false"
+  />
+  } @else {
+  @if (searching()) {
+  <div class="floating-chat__search">
+    <label for="floatingChatUser" class="floating-chat__label">Busca a una persona por nombre o correo</label>
+    <p-autocomplete
+      inputId="floatingChatUser"
+      [suggestions]="suggestions()"
+      optionLabel="displayName"
+      [minQueryLength]="2"
+      [delay]="250"
+      [ngModel]="selectedUser()"
+      (ngModelChange)="selectedUser.set($event)"
+      (completeMethod)="search($event)"
+      (onSelect)="startDirect($event)"
+      styleClass="full-width"
+      inputStyleClass="full-width"
+      appendTo="body"
+    >
+      <ng-template #item let-user>
+        <span>{{ user.label() }}</span>
+      </ng-template>
+    </p-autocomplete>
+  </div>
+  }
+  <nav class="floating-chat__list" aria-label="Conversaciones">
+    @for (conversation of store.conversations(); track conversation.id) {
+    <p-button
+      [text]="true"
+      severity="secondary"
+      styleClass="floating-chat__item"
+      [ariaLabel]="conversation.title + (conversation.unread > 0 ? ', ' + conversation.unread + ' sin leer' : '')"
+      (onClick)="select(conversation)"
+    >
+      <span class="floating-chat__icon">
+        <i [class]="conversation.icon()" aria-hidden="true"></i>
+        @if (store.isOnline(conversation.counterpartId)) {
+        <span class="floating-chat__online" title="En línea"></span>
+        }
+      </span>
+      <span class="floating-chat__item-text">
+        <span class="floating-chat__item-title">{{ conversation.title }}</span>
+        <span class="floating-chat__item-subtitle">{{ conversation.subtitle() }}</span>
+      </span>
+      @if (conversation.unread > 0) {
+      <p-badge [value]="conversation.unread" severity="danger" />
+      }
+    </p-button>
+    } @empty {
+    <p class="floating-chat__empty">Aún no tienes conversaciones.</p>
+    }
+  </nav>
+  }
+</p-dialog>

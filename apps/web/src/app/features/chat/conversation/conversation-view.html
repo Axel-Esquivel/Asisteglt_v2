@@ -1,7 +1,9 @@
 <section class="conversation" [attr.aria-label]="'Conversación ' + title()">
+  @if (showHeader()) {
   <header class="conversation__header">
     <h2 class="conversation__title">{{ title() }}</h2>
   </header>
+  }
 
   <div #scroller class="conversation__messages" data-testid="chat-messages" (scroll)="onScroll()">
     @if (hasMore()) {
