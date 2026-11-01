@@ -1,6 +1,9 @@
+// Separación inferior para no quedar bajo el aviso fijo de licencia de PrimeNG (abajo a la derecha).
+$bottom-gap: 4.5rem;
+
 .floating-chat__bubble {
   position: fixed;
-  inset-block-end: 1.25rem;
+  inset-block-end: $bottom-gap;
   inset-inline-end: 1.25rem;
   z-index: 1000;
 }

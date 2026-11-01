@@ -60,8 +60,7 @@ test('mensajes directos en tiempo real con contador de no leídos', async ({ bro
 test('chat general y edición de un mensaje propio', async ({ page }): Promise<void> => {
   await TestUser.unique('General').register(page);
   await page.getByRole('button', { name: 'Ir a proyectos' }).click();
-  await page.getByRole('button', { name: 'Abrir menú' }).click();
-  await page.getByRole('button', { name: 'Chat', exact: true }).click();
+  await openChat(page);
   await expect(page).toHaveURL(/\/app\/projects/);
   await page.getByRole('button', { name: /^Chat general/ }).click();
   await send(page, 'Mensaje original');
@@ -75,7 +74,7 @@ test('chat general y edición de un mensaje propio', async ({ page }): Promise<v
 
 test('chat flotante: se superpone a la pantalla actual y se minimiza', async ({ page }): Promise<void> => {
   await TestUser.unique('Flotante').register(page);
-  await page.locator('app-home-page').getByRole('button', { name: 'Abrir chat' }).click();
+  await openChat(page);
   await expect(page).toHaveURL(/\/app$/);
   await page.getByRole('button', { name: /^Chat general/ }).click();
   await send(page, 'Desde la ventana flotante');

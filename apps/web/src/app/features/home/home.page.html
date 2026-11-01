@@ -16,13 +16,6 @@
       </ng-template>
     </p-card>
 
-    <p-card header="Chat" subheader="Global y entre usuarios">
-      <p class="home__text">Conversa con tu equipo en tiempo real.</p>
-      <ng-template #footer>
-        <p-button label="Abrir chat" icon="pi pi-comments" [outlined]="true" (onClick)="chat.show()" />
-      </ng-template>
-    </p-card>
-
     <p-card header="Estado del sistema" subheader="Servicio API">
       @switch (status()) { @case (LoadStatus.LOADING) {
       <div class="home__skeleton" data-testid="health-loading">

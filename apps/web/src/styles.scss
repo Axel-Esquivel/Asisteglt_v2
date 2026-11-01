@@ -51,8 +51,10 @@ body {
 }
 
 // Chat flotante: la ventana (p-dialog no modal) y cada conversación de su lista (p-button).
-.p-dialog.floating-chat__window {
+// Más específico que la regla de PrimeNG para `position="bottomright"` (`margin: 1rem`).
+.p-dialog-mask .p-dialog.floating-chat__window {
   margin: 1.25rem;
+  margin-block-end: 4.5rem; // libre del aviso fijo de licencia de PrimeNG (abajo a la derecha)
 }
 
 .p-button.floating-chat__item {

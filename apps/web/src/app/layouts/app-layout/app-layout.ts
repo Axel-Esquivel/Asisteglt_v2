@@ -39,7 +39,7 @@ export class AppLayout {
   private readonly session: AuthSession = inject(AuthSession);
   private readonly chat: FloatingChatControl = inject(FloatingChatControl);
 
-  protected readonly menu: MenuItem[] = Navigation.items(this.chat);
+  protected readonly menu: MenuItem[] = Navigation.items();
   protected readonly navigationOpen: WritableSignal<boolean> = signal<boolean>(false);
   protected readonly isDark: Signal<boolean> = this.theme.isDark;
   protected readonly user: Signal<Nullable<CurrentUser>> = this.session.currentUser;
