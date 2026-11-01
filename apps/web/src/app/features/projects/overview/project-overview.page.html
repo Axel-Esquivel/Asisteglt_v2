@@ -4,9 +4,21 @@
     @if (canManage()) {
     <form class="overview__form" [formGroup]="form" (ngSubmit)="save()">
       <p-floatlabel variant="on">
-        <input pInputText id="overviewName" formControlName="name" class="full-width" />
+        <input
+          pInputText
+          id="overviewName"
+          formControlName="name"
+          class="full-width"
+          [invalid]="nameError() !== null"
+          [attr.aria-describedby]="nameError() === null ? null : 'overviewNameError'"
+        />
         <label for="overviewName">Nombre</label>
       </p-floatlabel>
+      @if (nameError(); as message) {
+      <p-message id="overviewNameError" severity="error" size="small" variant="simple" class="field-error"
+        >{{ message }}</p-message
+      >
+      }
       <p-floatlabel variant="on">
         <textarea
           pTextarea
@@ -14,9 +26,20 @@
           formControlName="description"
           rows="4"
           class="full-width"
+          [invalid]="descriptionError() !== null"
         ></textarea>
         <label for="overviewDescription">Descripción</label>
       </p-floatlabel>
+      @if (descriptionError(); as message) {
+      <p-message
+        id="overviewDescriptionError"
+        severity="error"
+        size="small"
+        variant="simple"
+        class="field-error"
+        >{{ message }}</p-message
+      >
+      }
       <p-button type="submit" label="Guardar cambios" icon="pi pi-check" [loading]="saving()" />
     </form>
     } @else {

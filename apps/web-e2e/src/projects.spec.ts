@@ -36,6 +36,22 @@ test('crea un proyecto, lo edita y lo ve en la lista', async ({ page }): Promise
   await expect(page.getByTestId('projects-grid')).toContainText('Descripción actualizada');
 });
 
+test('explica por qué no crea un proyecto con un nombre demasiado corto', async ({ page }): Promise<void> => {
+  const user: TestUser = TestUser.unique('NombreCorto');
+  await user.register(page);
+  await page.goto('/app/projects');
+  await page.getByRole('button', { name: 'Nuevo proyecto' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Nuevo proyecto' });
+  await dialog.getByLabel('Nombre').fill('PF');
+  await dialog.getByLabel('Descripción').fill('Proyecto ficticio de prueba');
+  await dialog.getByRole('button', { name: 'Crear proyecto' }).click();
+  await expect(dialog.getByText('El nombre debe tener al menos 3 caracteres.')).toBeVisible();
+  await dialog.getByLabel('Nombre').fill('PF ficticio');
+  await expect(dialog.getByText('El nombre debe tener al menos 3 caracteres.')).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Crear proyecto' }).click();
+  await expect(page.getByRole('heading', { name: 'PF ficticio' })).toBeVisible();
+});
+
 test('invita con un vínculo y el invitado se une con el rol indicado', async ({ browser }): Promise<void> => {
   const owner = await newUserPage(browser, 'Duena');
   await createProject(owner.page, 'Toma física ficticia', 'Inventarios');
