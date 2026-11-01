@@ -51,6 +51,9 @@
         },
         "demo-lan": {
           "buildTarget": "api:build:development"
+        },
+        "e2e": {
+          "buildTarget": "api:build:development"
         }
       }
     },

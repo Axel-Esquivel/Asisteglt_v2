@@ -19,8 +19,14 @@ var
 .env
 .env.*
 !.env.example
-!apps/api/.env.serve.demo
-!apps/api/.env.serve.demo-lan
+# configuración de desarrollo con valores de prueba: solo la de la raíz se versiona; las
+# personales van en .env.development.local (Nx también lee *.local.env: tampoco se versionan)
+!/.env.development
+!/apps/api/.env.serve.demo
+!/apps/api/.env.serve.demo-lan
+!/apps/api/.env.serve.e2e
+.local.env
+*.local.env
 # editors / os
 .idea
 *.swp

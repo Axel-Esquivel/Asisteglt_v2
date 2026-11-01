@@ -8,10 +8,11 @@ e informes) e Inventarios (tomas con rondas) funcionando de punta a punta. Guía
 
 | Herramienta | Versión |
 |---|---|
-| Node.js | 24 LTS (mínimo 22) |
+| Git | 2.40 o superior (en Windows, Git para Windows) |
+| Node.js | 22 LTS (la misma de CI y de las imágenes Docker) |
 | npm | 10 o superior |
-| MongoDB 8 (replica set) | Solo para el modo persistente (`DATA_STORE=mongo`); `docker/docker-compose.yml` lo levanta |
-| Navegador | Chromium/Chrome; para las pruebas e2e, Playwright |
+| Docker | Docker Desktop (Windows/macOS) o Docker Engine con Compose v2; solo para el modo persistente (MongoDB 8 en replica set, Redis y Mailpit con `npm run services:up`) |
+| Navegador | Chromium/Chrome; para las pruebas e2e, el Chromium de Playwright |
 
 ## 2. Arranque rápido de demostración (sin base de datos)
 
@@ -33,40 +34,109 @@ con una toma en curso. **Todo es ficticio** y se pierde al detener la API.
 
 Contraseña de todos: `DemoAsiste2026`.
 
-## 3. Arranque persistente (MongoDB)
+## 3. Desarrollo con MongoDB (configuración por variables de entorno)
+
+La configuración de desarrollo está en **`.env.development`**, versionado en la raíz con
+**valores de prueba** (secretos que dicen `solo-desarrollo`, base `asisteglt_dev`, archivos en
+`var/storage-dev`, datos ficticios al arrancar). Nx lo carga solo en la configuración
+`development`, así que no hay que copiar nada:
 
 ```bash
-cp .env.example .env            # Nx carga .env en cada tarea; cambia JWT_SECRET
-npm run services:up             # MongoDB (replica set rs0), Redis y Mailpit (Docker)
-npm run start:api               # API en http://localhost:3000/api/v1
-npm run start:web               # Web en http://localhost:4200 (proxy /api y WebSocket → :3000)
+npm ci
+npm run services:up      # MongoDB 8 (replica set rs0), Redis y Mailpit en Docker
+npm run dev:check        # qué .env se cargan, valores en uso (secretos enmascarados), MongoDB y puertos
+npm run start:dev        # API http://localhost:3000/api/v1 + web http://localhost:4200 (proxy /api y WebSocket)
 ```
 
-- `STORAGE_DIR` (por defecto `var/storage`, fuera del repositorio) guarda los archivos cargados.
-  Son datos del cliente: no se versionan y conviene respaldarlos junto con la base.
+La primera vez se crean los usuarios de demostración de la tabla de §2 (contraseña
+`DemoAsiste2026`) con sus proyectos; al reiniciar no se duplican. `npm run start:api`,
+`start:web` y `start:worker` arrancan cada aplicación por separado.
+
+**Cambiar valores solo en tu equipo.** Crea `.env.development.local` (no se versiona) con las
+líneas a reemplazar, por ejemplo `DATA_STORE=memory` para trabajar sin Docker o `LOG_LEVEL=info`.
+Orden de prioridad (el primero que define una variable gana):
+
+| Prioridad | Origen |
+|---|---|
+| 1 | Variables del sistema o de la terminal |
+| 2 | `apps/api/.env.serve.development.local`, `apps/api/.env.serve.development`, `apps/api/.env.development(.local)`, … (por proyecto) |
+| 3 | `.env.serve.development(.local)`, **`.env.development.local`**, **`.env.development`** (raíz) |
+| 4 | `.env.serve`, `.env.local`, `.env` (raíz) |
+
+Por eso un `.env` antiguo en la raíz ya no cambia nada que defina `.env.development`: pasa esos
+valores a `.env.development.local` y borra o renombra el `.env` (`npm run dev:check` lo avisa).
+Dos detalles de Nx: si una variable de la terminal tiene el mismo valor que en ese `.env` antiguo,
+Nx la descarta; y una variable de la terminal **vacía** no anula el valor de los archivos. Los valores de prueba **no sirven en producción**: con
+`NODE_ENV=production` la API no arranca si `JWT_SECRET` o `METRICS_TOKEN` son valores publicados
+en el repositorio o si `DEMO_SEED=true`, y `backup.js` rechaza una `BACKUP_PASSPHRASE` de prueba
+(ver `.env.example` y [18-manual-de-operacion](18-manual-de-operacion.md)). Las pruebas e2e usan
+su propia configuración (`apps/api/.env.serve.e2e`) y no leen `.env.development`.
+
+Otras variables: la referencia completa con comentarios está en `.env.example`.
+
+- `STORAGE_DIR` guarda los archivos cargados (fuera del repositorio: `var/` no se versiona). En
+  producción son datos del cliente y se respaldan junto con la base.
 - `IMPORT_REJECT_THRESHOLD_PERCENT` (20 por defecto): por encima de ese porcentaje de líneas
   rechazadas, una carga queda «Con errores» y no se publica.
-- `AUTH_RATE_LIMIT_PER_MINUTE` (10 por defecto): intentos de inicio de sesión por IP y minuto; al
-  superarlos la API responde 429 con `Retry-After`. El registro admite los mismos por 10 minutos.
+- `AUTH_RATE_LIMIT_PER_MINUTE` (10 por defecto, 30 en desarrollo): intentos de inicio de sesión
+  por IP y minuto; al superarlos la API responde 429 con `Retry-After`. El registro admite los
+  mismos por 10 minutos.
 - `TRUST_PROXY` (`none` por defecto): detrás de nginx u otro proxy indica cuántos saltos son de
   confianza (`loopback`, `1`, `2`) para que el límite y la auditoría usen la IP real del cliente.
   Nunca lo actives si la API está expuesta directamente: el cliente podría falsear la IP.
 - Para el **servidor local sin internet** basta un equipo con Node.js y MongoDB: la cola de
   importación y la presencia del chat funcionan en proceso (no requieren Redis). Con varias
   instancias de API se reemplazan por BullMQ/Redis sin cambiar el dominio.
+- `backup.js` no pasa por Nx: con los valores de desarrollo,
+  `node --env-file=.env.development dist/apps/api/backup.js crear var/respaldo-dev.agbk`
+  (después de `npx nx build api`).
 
-Comprobación: `curl http://localhost:3000/api/v1/health` → `{"status":"UP",...}`.
+Comprobación: `curl http://localhost:3000/api/v1/health/ready` → `{"status":"UP",...}` (en Windows
+`curl.exe …` o `Invoke-RestMethod http://localhost:3000/api/v1/health/ready`).
+
+### 3.0 En Windows (PowerShell)
+
+Con Git para Windows, Node.js 22 y Docker Desktop abiertos. En Windows PowerShell 5.1 (la de
+Win+X) los comandos `npm`/`npx` están bloqueados por la directiva de ejecución hasta permitirlos
+una vez para tu usuario (PowerShell 7 y cmd no lo necesitan):
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned   # una sola vez por usuario
+git clone https://github.com/Axel-Esquivel/Asisteglt_v2.git D:\Proyectos\GLT\AsisteGLTV2
+cd D:\Proyectos\GLT\AsisteGLTV2
+npm ci
+npm run services:up
+npm run dev:check
+npm run start:dev
+```
+
+- `.gitattributes` fija finales de línea LF: los scripts `.sh` y las configuraciones de nginx
+  funcionan aunque Git para Windows convierta a CRLF por defecto. Vale para clones nuevos; en un
+  clon anterior a este cambio, con todo confirmado, rehaz la copia de trabajo una vez:
+  `git rm --cached -r . ; git reset --hard`.
+- Variables desde la terminal: PowerShell `$env:DATA_STORE='memory'; npm run start:api` o cmd
+  `set "DATA_STORE=memory" && npm run start:api`. En ambos casos **quedan definidas en esa
+  ventana** y ganan a los archivos hasta quitarlas (`Remove-Item Env:DATA_STORE` en PowerShell,
+  `set DATA_STORE=` en cmd). Para algo permanente usa `.env.development.local`.
+- `curl` en Windows PowerShell 5.1 es otro comando (`Invoke-WebRequest`): escribe `curl.exe`.
+- Copiar archivos: PowerShell `Copy-Item origen destino` (cmd: `copy origen destino`).
+- Los scripts `.sh` (certificados del servidor local) se ejecutan desde Git Bash o WSL:
+  `bash docker/local-server/generate-certs.sh 192.168.1.20`.
+- Si `npm run dev:check` dice que MongoDB no responde: abre Docker Desktop, espera a que
+  `docker compose -f docker/docker-compose.yml ps` muestre `mongo` como *healthy* y repite.
 
 ### 3.1 Servidor local para tomas de inventario (Wi-Fi sin internet)
 
 Una laptop hace de servidor y los celulares de los contadores se conectan a la misma red Wi-Fi:
 
 ```bash
-npm run start:demo:lan     # demostración en memoria, accesible desde la red (0.0.0.0:4200)
-# o, con datos persistentes:
-npm run start:api          # API (MongoDB local)
-npx nx serve web --host 0.0.0.0 --allowed-hosts
+npm run start:demo:lan     # demostración en memoria con datos ficticios, accesible desde la red (0.0.0.0:4200)
 ```
+
+Para una toma **con datos reales** usa el paquete Docker de §3.2: corre en modo producción, exige
+secretos propios y sirve HTTPS. No expongas en la red la configuración de desarrollo
+(`npm run start:api` / `start:dev`): `.env.development` usa un `JWT_SECRET` publicado en el
+repositorio y crea usuarios de demostración, así que cualquiera en la Wi-Fi podría entrar.
 
 - El supervisor abre la toma y usa el botón **«Abrir en otro dispositivo»** (código QR). Si la
   dirección dice `localhost`, cámbiala por la IP de la laptop en la red (p. ej.
@@ -116,12 +186,14 @@ En `docker/local-server/` está el paquete para una laptop servidor: MongoDB, la
 | Comando | Qué hace |
 |---|---|
 | `npm run verify` | lint + guardián de reglas + typecheck + pruebas + build (lo que exige el CI) |
-| `npm run e2e` | Playwright en escritorio y móvil; levanta API en memoria y web automáticamente |
+| `npm run e2e` | Playwright en escritorio y móvil; levanta API en memoria y web automáticamente. Antes, una vez por equipo: `npx playwright install chromium`; y detén `start:api`/`start:dev`/`start:demo` (la API de e2e necesita el puerto 3000) |
+| `npm run dev:check` | Diagnóstico del entorno de desarrollo (variables en uso, MongoDB y puertos) |
 | `npm run lint:guard` | Demuestra que cada regla normativa detecta su violación |
 | `npm run start:demo` | Demostración en memoria con datos ficticios |
-| `MONGO_SMOKE_URI=mongodb://… npx nx run api:test` | Además ejecuta la prueba de humo de persistencia contra un MongoDB real |
+| `MONGO_SMOKE_URI=mongodb://… npx nx run api:test` | Además ejecuta la prueba de humo de persistencia contra un MongoDB real (PowerShell: `$env:MONGO_SMOKE_URI='mongodb://…'; npx nx run api:test`) |
 
-Con un Chromium ya instalado: `CHROMIUM_PATH=/ruta/a/chromium npm run e2e`.
+Con un Chromium ya instalado: `CHROMIUM_PATH=/ruta/a/chromium npm run e2e` (PowerShell:
+`$env:CHROMIUM_PATH='C:\ruta\chrome.exe'; npm run e2e`).
 
 ## 5. Estructura
 

@@ -1,0 +1,18 @@
+# Finales de línea LF en todos los equipos (Git para Windows convierte a CRLF por defecto): los
+# scripts .sh y las configuraciones de nginx/Docker se ejecutan en Linux y fallan con CRLF.
+* text=auto eol=lf
+*.sh text eol=lf
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Binarios
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.xlsx binary
+*.pdf binary

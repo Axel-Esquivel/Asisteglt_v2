@@ -106,6 +106,11 @@ export class EnvironmentReader {
     return value;
   }
 
+  /** Registra un problema que depende de varias variables (lo detecta quien arma la configuración). */
+  public reject(problem: string): void {
+    this.problems.push(problem);
+  }
+
   public assertValid(): void {
     if (this.problems.length > 0) {
       throw new ConfigurationError(this.problems);

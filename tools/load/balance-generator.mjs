@@ -3,6 +3,7 @@
 // Uso: node tools/load/balance-generator.mjs <archivo> <líneas> [mes]
 import { createWriteStream } from 'node:fs';
 import { once } from 'node:events';
+import { pathToFileURL } from 'node:url';
 
 const LINES_PER_PAGE = 60;
 
@@ -80,7 +81,8 @@ export async function generateBalance(path, lines, month) {
   return written;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// pathToFileURL: en Windows argv[1] es «D:\\…\\balance-generator.mjs» y la URL «file:///D:/…».
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const [path, count, month = '09'] = process.argv.slice(2);
   if (path === undefined || count === undefined) {
     process.stderr.write('Uso: node tools/load/balance-generator.mjs <archivo> <líneas> [mes]\n');

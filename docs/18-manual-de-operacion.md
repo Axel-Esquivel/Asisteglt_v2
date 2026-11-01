@@ -28,7 +28,10 @@ Referencia de consumo medida en [16-pruebas-de-carga](16-pruebas-de-carga.md).
 
 ## 3. Instalación inicial
 
-1. Copiar `docker/production/` al servidor (p. ej. `/opt/asisteglt`) y entrar a esa carpeta.
+1. Copiar `docker/production/` al servidor (p. ej. `/opt/asisteglt`) y entrar a esa carpeta. Desde
+   Windows, cópiala de un clon reciente (`.gitattributes` mantiene `deploy.sh` con finales LF), no
+   la edites con un editor que guarde CRLF y, ya en el servidor, devuélvele el permiso de ejecución
+   (`chmod +x deploy.sh`; Windows no lo conserva al copiar).
 2. `cp .env.example .env` y completar los secretos (ver §5). Con `openssl rand -hex 24` las
    contraseñas no necesitan escaparse en la URL de MongoDB.
 3. Certificado TLS del dominio en `certs/server.crt` (cadena completa) y `certs/server.key`. Con

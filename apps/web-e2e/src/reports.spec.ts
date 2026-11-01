@@ -1,5 +1,15 @@
-import { Page, expect, test } from '@playwright/test';
+import { Locator, Page, expect, test } from '@playwright/test';
 import { TestUser } from './support/session';
+
+/**
+ * Cierra la lista de un selector múltiple tocando fuera de ella (como en el celular, donde no hay
+ * tecla Escape; además, tras elegir opciones el foco queda fuera del control y Escape no llega) y
+ * espera a que desaparezca para que no tape el siguiente botón.
+ */
+async function closeMultiSelect(page: Page, outside: Locator): Promise<void> {
+  await outside.click();
+  await expect(page.getByRole('listbox')).toBeHidden();
+}
 
 /** Balance de saldos FICTICIO con encabezado de página repetido (solo para pruebas). */
 const SAMPLE: string = [
@@ -205,7 +215,7 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
   for (const measure of ['Saldo anterior', 'Debe', 'Haber']) {
     await page.getByRole('option', { name: measure, exact: true }).click();
   }
-  await page.keyboard.press('Escape');
+  await closeMultiSelect(page, design.getByText('Diseño del informe', { exact: true }));
   await design.getByRole('button', { name: 'Agregar columna calculada' }).click();
   await design.getByLabel('Título de la columna 1').fill('Movimiento neto');
   await design.getByLabel('Fórmula de la columna 1').fill('=SUMA([Debe]) - SUMA([Haber])');
@@ -261,7 +271,7 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
   await page.getByRole('option', { name: 'Saldos por clasificación' }).click();
   await page.locator('p-multiselect:has(#elColumns)').click();
   await page.getByRole('option', { name: 'Debe', exact: true }).click();
-  await page.keyboard.press('Escape');
+  await closeMultiSelect(page, page.getByLabel('Nombre de la plantilla'));
   await page.getByLabel('Y', { exact: true }).fill('120');
   await page.getByLabel('Y', { exact: true }).press('Tab');
   await page.getByRole('button', { name: 'Guardar' }).click();

@@ -1,7 +1,7 @@
-import { EnvironmentReader } from '@asisteglt/api-platform';
 import { Nullable, SystemClock } from '@asisteglt/shared-kernel';
 import { ArchiveSummary, BackupError } from './backup-archive';
 import { BackupService, RestoreMode } from './backup.service';
+import { BackupSettings } from './backup-settings';
 import { DiskBackupStorage } from './disk-backup-storage';
 import { MongoBackupDatabase } from './mongo-backup-database';
 
@@ -43,21 +43,18 @@ class BackupCommand {
 class BackupCli {
   public static async run(argv: ReadonlyArray<string>, env: NodeJS.ProcessEnv): Promise<void> {
     const command: BackupCommand = BackupCommand.parse(argv);
-    const reader: EnvironmentReader = new EnvironmentReader(env);
-    const uri: string = reader.requiredUrl('MONGODB_URI', ['mongodb:', 'mongodb+srv:']);
-    const storageDir: string = reader.text('STORAGE_DIR', 'var/storage');
-    const passphrase: string = reader.text('BACKUP_PASSPHRASE', '');
-    reader.assertValid();
+    const settings: BackupSettings = BackupSettings.load(env);
+    const passphrase: string = settings.passphrase;
     if (command.action === 'crear' && passphrase === '' && !command.unencrypted) {
       throw new BackupError(
         'El respaldo contiene datos confidenciales: define BACKUP_PASSPHRASE o usa --sin-cifrar a sabiendas.',
       );
     }
-    const database: MongoBackupDatabase = await MongoBackupDatabase.connect(uri);
+    const database: MongoBackupDatabase = await MongoBackupDatabase.connect(settings.mongoUri);
     try {
       const service: BackupService = new BackupService(
         database,
-        new DiskBackupStorage(storageDir),
+        new DiskBackupStorage(settings.storageDir),
         new SystemClock(),
       );
       const secret: Nullable<string> = passphrase === '' || command.unencrypted ? null : passphrase;

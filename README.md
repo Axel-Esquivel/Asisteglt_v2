@@ -26,8 +26,12 @@ TypeScript 6 (estricto: sin `any`, sin `undefined`, POO).
 - Cómo levantarlo: [`docs/13-puesta-en-marcha.md`](docs/13-puesta-en-marcha.md).
 
 ```bash
-npm install
+npm ci
 npm run start:demo     # demostración en memoria con datos ficticios → http://localhost:4200
+npm run services:up    # o con MongoDB (Docker): servicios de desarrollo…
+npm run start:dev      # …y API + web con .env.development (valores de prueba)
+npm run dev:check      # diagnóstico: variables en uso, MongoDB y puertos
 npm run verify         # lint + typecheck + pruebas + build
+npx playwright install chromium   # una vez por equipo: navegador para e2e
 npm run e2e            # Playwright (escritorio y móvil)
 ```

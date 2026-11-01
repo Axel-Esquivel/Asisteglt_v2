@@ -1,4 +1,10 @@
-import { EnvironmentReader, EnvironmentSource, LogLevel, RuntimeEnvironment } from '@asisteglt/api-platform';
+import {
+  EnvironmentReader,
+  EnvironmentSource,
+  LogLevel,
+  PublicTestSecrets,
+  RuntimeEnvironment,
+} from '@asisteglt/api-platform';
 import { DataStore } from '../common/persistence/data-store';
 
 /**
@@ -73,6 +79,20 @@ export class AppConfigLoader {
       env.enumValue('TRUST_PROXY', Object.values(TrustProxy), TrustProxy.NONE),
       env.optionalSecret('METRICS_TOKEN', 24),
     );
+    if (config.isProduction()) {
+      const secrets: ReadonlyArray<readonly [string, string]> = [
+        ['JWT_SECRET', config.jwtSecret],
+        ['METRICS_TOKEN', config.metricsToken],
+      ];
+      for (const [name, value] of secrets) {
+        if (PublicTestSecrets.isPublic(value)) {
+          env.reject(`${name} usa un valor de prueba del repositorio; genera uno propio para producción`);
+        }
+      }
+      if (config.demoSeed) {
+        env.reject('DEMO_SEED=true crea usuarios con una contraseña pública; no se permite en producción');
+      }
+    }
     env.assertValid();
     return config;
   }

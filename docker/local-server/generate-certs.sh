@@ -2,7 +2,10 @@
 # Crea una CA local y el certificado HTTPS del servidor para una IP de la red.
 # Uso: ./generate-certs.sh 192.168.1.20 [asisteglt.local]
 # Instala certs/ca.crt en cada celular (una vez) para que confíe en el servidor.
+# En Windows ejecutarlo desde Git Bash o WSL: bash docker/local-server/generate-certs.sh 192.168.1.20
 set -eu
+# Git Bash/MSYS: no convertir los argumentos "/CN=..." en rutas de Windows (Linux y macOS lo ignoran).
+export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'
 
 IP="${1:?Indica la IP de la laptop servidor, p. ej. 192.168.1.20}"
 NAME="${2:-asisteglt.local}"
@@ -10,8 +13,11 @@ DIR="$(cd "$(dirname "$0")" && pwd)/certs"
 mkdir -p "$DIR"
 cd "$DIR"
 
+# La CA se reutiliza: nunca se regenera su llave si ya existe (los celulares confían en ella).
 if [ ! -f ca.key ]; then
   openssl genrsa -out ca.key 4096
+fi
+if [ ! -f ca.crt ]; then
   openssl req -x509 -new -key ca.key -sha256 -days 1825 -out ca.crt -subj "/CN=AsisteGLT CA local"
 fi
 

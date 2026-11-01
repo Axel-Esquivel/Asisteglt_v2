@@ -6,9 +6,11 @@
   "scripts": {
     "start:web": "nx serve web",
     "start:api": "nx serve api",
+    "start:dev": "nx run-many -t serve -p api web",
     "start:demo": "nx run-many -t serve -p api web -c demo",
     "start:demo:lan": "nx run-many -t serve -p api web -c demo-lan",
     "start:worker": "nx serve worker",
+    "dev:check": "node tools/dev/check-env.mjs",
     "build": "nx run-many -t build",
     "test": "nx run-many -t test",
     "lint": "nx run-many -t lint && npm run lint:styles && npm run lint:guard",

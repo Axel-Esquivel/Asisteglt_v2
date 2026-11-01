@@ -28,8 +28,10 @@ desarrollo no tiene acceso a los binarios de MongoDB, así que se usó:
 - **Almacén en memoria** (`DATA_STORE=memory`) para medir el costo propio de la aplicación
   (motor de informes, HTTP, tiempo real) sin la base de datos.
 
-Las cifras de MongoDB real deben ser iguales o mejores; conviene repetirlas en el servidor del
-cliente con los scripts de §1.
+Las cifras de MongoDB real deben ser iguales o mejores; conviene repetirlas en un equipo como el
+del cliente con los scripts de §1, **en una instancia aparte de prueba** (no en producción): los
+scripts usan los datos de demostración (`DEMO_SEED=true`), que la API no admite con
+`NODE_ENV=production`, y escriben datos ficticios en la base.
 
 ## 3. Resultados
 
