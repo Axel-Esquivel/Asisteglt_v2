@@ -1,4 +1,4 @@
-@if (!open()) {
+@if (!control.isOpen()) {
 <div class="floating-chat__bubble">
   <p-button
     icon="pi pi-comments"
@@ -7,13 +7,13 @@
     [badge]="store.totalUnread() > 0 ? unreadLabel() : ''"
     badgeSeverity="danger"
     [ariaLabel]="store.totalUnread() > 0 ? 'Abrir chat, ' + store.totalUnread() + ' sin leer' : 'Abrir chat'"
-    (onClick)="restore()"
+    (onClick)="control.show()"
   />
 </div>
 }
 
 <p-dialog
-  [visible]="open()"
+  [visible]="control.isOpen()"
   (visibleChange)="onVisibleChange($event)"
   (onDragEnd)="onDragEnd()"
   (onShow)="onShow()"
@@ -52,14 +52,6 @@
         (onClick)="toggleSearch()"
       />
       }
-      <p-button
-        icon="pi pi-window-maximize"
-        [text]="true"
-        [rounded]="true"
-        size="small"
-        ariaLabel="Abrir en pantalla completa"
-        (onClick)="expand()"
-      />
     </div>
   </ng-template>
 
@@ -70,8 +62,7 @@
     [title]="conversation.title"
     [showHeader]="false"
   />
-  } @else {
-  @if (searching()) {
+  } @else { @if (searching()) {
   <div class="floating-chat__search">
     <label for="floatingChatUser" class="floating-chat__label">Busca a una persona por nombre o correo</label>
     <p-autocomplete

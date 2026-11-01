@@ -40,7 +40,11 @@ Las pestañas visibles de un proyecto dependen del rol.
 
 ## 3. Chat
 
-- **Chat → Nueva conversación** con otra persona, o la conversación general.
+- El chat es una ventana flotante que se superpone a cualquier pantalla de la aplicación. Ábrela
+  con la burbuja de la esquina inferior derecha (muestra los no leídos), con **Chat** en el menú o
+  desde el inicio. Se arrastra por su cabecera y el botón **–** la minimiza sin perder la conversación.
+- En la ventana, el lápiz inicia una **nueva conversación** con otra persona; también está la
+  conversación general.
 - La pestaña **Chat** de un proyecto es solo para sus miembros.
 - Los mensajes llegan en vivo; la lista muestra los no leídos. Un mensaje propio se puede editar
   («(editado)») o eliminar («Mensaje eliminado»).

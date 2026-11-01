@@ -7,6 +7,7 @@ import { Card } from 'primeng/card';
 import { Message } from 'primeng/message';
 import { Skeleton } from 'primeng/skeleton';
 import { Tag } from 'primeng/tag';
+import { FloatingChatControl } from '../chat/floating/floating-chat-control';
 
 @Component({
   selector: 'app-home-page',
@@ -18,6 +19,7 @@ import { Tag } from 'primeng/tag';
 export class HomePage implements OnInit {
   private readonly store: SystemStatusStore = inject(SystemStatusStore);
 
+  protected readonly chat: FloatingChatControl = inject(FloatingChatControl);
   protected readonly LoadStatus: typeof LoadStatus = LoadStatus;
   protected readonly user: Signal<Nullable<CurrentUser>> = inject(AuthSession).currentUser;
   protected readonly status: Signal<LoadStatus> = this.store.status;

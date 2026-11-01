@@ -5,12 +5,13 @@ import {
   Signal,
   WritableSignal,
   computed,
+  effect,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { Nullable, Result } from '@asisteglt/shared-kernel';
 import { Notifier } from '@asisteglt/web-core';
 import { AutoComplete, AutoCompleteCompleteEvent, AutoCompleteSelectEvent } from 'primeng/autocomplete';
@@ -21,6 +22,7 @@ import { ConversationView } from '../conversation/conversation-view';
 import { ChatApiClient } from '../data/chat.api-client';
 import { ConversationSummary, UserMatch } from '../data/chat.model';
 import { ChatStore } from '../data/chat-store';
+import { FloatingChatControl } from './floating-chat-control';
 
 /** Esquina superior izquierda de la ventana tras arrastrarla, en píxeles del viewport. */
 class WindowOffset {
@@ -61,7 +63,7 @@ class WindowOffset {
 })
 export class FloatingChat implements OnInit {
   protected readonly store: ChatStore = inject(ChatStore);
-  protected readonly open: WritableSignal<boolean> = signal<boolean>(false);
+  protected readonly control: FloatingChatControl = inject(FloatingChatControl);
   protected readonly searching: WritableSignal<boolean> = signal<boolean>(false);
   protected readonly suggestions: WritableSignal<UserMatch[]> = signal<UserMatch[]>([]);
   protected readonly selectedUser: WritableSignal<Nullable<UserMatch>> = signal<Nullable<UserMatch>>(null);
@@ -80,10 +82,23 @@ export class FloatingChat implements OnInit {
 
   private readonly api: ChatApiClient = inject(ChatApiClient);
   private readonly notifier: Notifier = inject(Notifier);
-  private readonly router: Router = inject(Router);
   private readonly dialog: Signal<Dialog> = viewChild.required<Dialog>(Dialog);
   /** Posición elegida por la persona; se conserva al minimizar y restaurar. */
   private offset: Nullable<WindowOffset> = null;
+
+  public constructor() {
+    effect((): void => {
+      if (this.control.requested() !== null) {
+        untracked((): void => {
+          const id: Nullable<string> = this.control.takeRequested();
+          if (id !== null) {
+            this.searching.set(false);
+            this.activeId.set(id);
+          }
+        });
+      }
+    });
+  }
 
   public ngOnInit(): void {
     this.store
@@ -99,12 +114,12 @@ export class FloatingChat implements OnInit {
       });
   }
 
-  protected restore(): void {
-    this.open.set(true);
-  }
-
   protected onVisibleChange(visible: boolean): void {
-    this.open.set(visible);
+    if (visible) {
+      this.control.show();
+    } else {
+      this.control.minimize();
+    }
   }
 
   protected onDragEnd(): void {
@@ -135,12 +150,6 @@ export class FloatingChat implements OnInit {
     this.selectedUser.set(null);
     this.suggestions.set([]);
     this.searching.update((current: boolean): boolean => !current);
-  }
-
-  protected async expand(): Promise<void> {
-    const id: Nullable<string> = this.activeId();
-    this.open.set(false);
-    await this.router.navigate(id === null ? ['/app/chat'] : ['/app/chat', id]);
   }
 
   protected async search(event: AutoCompleteCompleteEvent): Promise<void> {

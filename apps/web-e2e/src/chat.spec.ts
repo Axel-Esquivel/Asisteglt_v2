@@ -20,21 +20,33 @@ const send = async (page: Page, text: string): Promise<void> => {
   await page.getByRole('button', { name: 'Enviar' }).click();
 };
 
+const openChat = async (page: Page): Promise<void> => {
+  await page
+    .locator('app-floating-chat')
+    .getByRole('button', { name: /^Abrir chat/ })
+    .click();
+};
+
 test('mensajes directos en tiempo real con contador de no leídos', async ({ browser }): Promise<void> => {
   const ana: Participant = await join(browser, 'Anachat');
   const beto: Participant = await join(browser, 'Betochat');
-  await beto.page.goto('/app/chat');
-  await expect(beto.page.getByTestId('conversation-list')).toContainText('Chat general');
+  await openChat(beto.page);
+  await expect(beto.page.getByRole('navigation', { name: 'Conversaciones' })).toContainText('Chat general');
+  await beto.page.getByRole('button', { name: 'Minimizar chat' }).click();
 
-  await ana.page.goto('/app/chat');
+  await openChat(ana.page);
   await ana.page.getByRole('button', { name: 'Nueva conversación' }).click();
   await ana.page.getByLabel('Busca a una persona por nombre o correo').fill(beto.user.email);
   await ana.page.getByRole('option', { name: new RegExp(beto.user.displayName) }).click();
-  await expect(ana.page.getByRole('heading', { name: beto.user.displayName })).toBeVisible();
+  await expect(ana.page.getByRole('dialog')).toContainText(beto.user.displayName);
   await send(ana.page, 'Hola, ¿empezamos el conteo?');
   await expect(ana.page.getByTestId('chat-messages')).toContainText('Hola, ¿empezamos el conteo?');
 
-  const item = beto.page.getByRole('link', { name: `${ana.user.displayName}, 1 sin leer` });
+  await expect(
+    beto.page.locator('app-floating-chat').getByRole('button', { name: 'Abrir chat, 1 sin leer' }),
+  ).toBeVisible();
+  await openChat(beto.page);
+  const item = beto.page.getByRole('button', { name: `${ana.user.displayName}, 1 sin leer` });
   await expect(item).toBeVisible();
   await item.click();
   await expect(beto.page.getByTestId('chat-messages')).toContainText('Hola, ¿empezamos el conteo?');
@@ -47,8 +59,11 @@ test('mensajes directos en tiempo real con contador de no leídos', async ({ bro
 
 test('chat general y edición de un mensaje propio', async ({ page }): Promise<void> => {
   await TestUser.unique('General').register(page);
-  await page.goto('/app/chat');
-  await page.getByRole('link', { name: /^Chat general/ }).click();
+  await page.getByRole('button', { name: 'Ir a proyectos' }).click();
+  await page.getByRole('button', { name: 'Abrir menú' }).click();
+  await page.getByRole('button', { name: 'Chat', exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/projects/);
+  await page.getByRole('button', { name: /^Chat general/ }).click();
   await send(page, 'Mensaje original');
   await expect(page.getByTestId('chat-messages')).toContainText('Mensaje original');
   await page.getByRole('button', { name: 'Editar mensaje' }).last().click();
@@ -58,19 +73,21 @@ test('chat general y edición de un mensaje propio', async ({ page }): Promise<v
   await expect(page.getByTestId('chat-messages')).toContainText('(editado)');
 });
 
-test('chat flotante: se abre desde cualquier pantalla y se minimiza', async ({ page }): Promise<void> => {
+test('chat flotante: se superpone a la pantalla actual y se minimiza', async ({ page }): Promise<void> => {
   await TestUser.unique('Flotante').register(page);
-  await page.getByRole('button', { name: /^Abrir chat/ }).click();
+  await page.locator('app-home-page').getByRole('button', { name: 'Abrir chat' }).click();
+  await expect(page).toHaveURL(/\/app$/);
   await page.getByRole('button', { name: /^Chat general/ }).click();
   await send(page, 'Desde la ventana flotante');
   await expect(page.getByTestId('chat-messages')).toContainText('Desde la ventana flotante');
 
   await page.getByRole('button', { name: 'Minimizar chat' }).click();
   await expect(page.getByTestId('chat-messages')).toBeHidden();
-  await page.getByRole('button', { name: /^Abrir chat/ }).click();
+  await openChat(page);
   await expect(page.getByTestId('chat-messages')).toContainText('Desde la ventana flotante');
 
-  await page.getByRole('button', { name: 'Abrir en pantalla completa' }).click();
-  await expect(page).toHaveURL(/\/app\/chat\/[^/]+$/);
-  await expect(page.getByRole('button', { name: /^Abrir chat/ })).toHaveCount(0);
+  // Los enlaces antiguos a /app/chat abren la ventana en lugar de una pantalla propia.
+  await page.goto('/app/chat');
+  await expect(page).toHaveURL(/\/app$/);
+  await expect(page.getByRole('navigation', { name: 'Conversaciones' })).toBeVisible();
 });
