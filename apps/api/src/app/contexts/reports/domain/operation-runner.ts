@@ -176,7 +176,14 @@ export class OperationRunner {
 
   private group(record: DataRecordSnapshot): string {
     const ids: string[] = this.groupKeys.map((k: string): string => String(record.values[k] ?? ''));
-    return JSON.stringify([record.profileId, record.companyId, record.currency, ...ids]);
+    return JSON.stringify([
+      record.profileId,
+      record.companyId,
+      record.enterpriseId,
+      record.branchId,
+      record.currency,
+      ...ids,
+    ]);
   }
 
   private static decimal(raw: CellValue): Nullable<Decimal> {
