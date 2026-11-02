@@ -206,21 +206,23 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
   await expect(page.getByTestId('classification-list')).toContainText('Balance general');
   await expect(page.getByTestId('classification-pending')).toContainText('Cuentas sin clasificar');
 
-  await page.getByRole('tab', { name: 'Informes' }).click();
-  await page.getByRole('button', { name: 'Nuevo informe' }).click();
-  const design = page.getByRole('dialog', { name: 'Diseño del informe' });
+  await page.getByRole('tab', { name: 'Tablas de datos' }).click();
+  await page.getByRole('button', { name: 'Nueva tabla de datos' }).click();
+  const design = page.getByRole('dialog', { name: 'Diseño de la tabla de datos' });
   await design.getByLabel('Nombre').fill('Saldos por clasificación');
+  await design.getByText('Por clasificación', { exact: true }).click();
   await design.getByRole('combobox', { name: 'Clasificación' }).click();
   await page.getByRole('option', { name: 'Balance general' }).click();
-  await design.locator('p-multiselect').click();
-  for (const measure of ['Saldo anterior', 'Debe', 'Haber']) {
+  const measures: string[] = ['Saldo anterior', 'Debe', 'Haber'];
+  for (const [index, measure] of measures.entries()) {
+    await design.getByRole('button', { name: 'Agregar dato' }).click();
+    await design.getByRole('combobox', { name: `Dato de la columna ${String(index + 1)}` }).click();
     await page.getByRole('option', { name: measure, exact: true }).click();
   }
-  await closeMultiSelect(page, design.getByText('Diseño del informe', { exact: true }));
   await design.getByRole('button', { name: 'Agregar columna calculada' }).click();
-  await design.getByLabel('Título de la columna 1').fill('Movimiento neto');
-  await design.getByLabel('Fórmula de la columna 1').fill('=SUMA([Debe]) - SUMA([Haber])');
-  await expect(design.getByTestId('column-check-0')).toContainText('Resultado: Monto');
+  await design.getByLabel('Título de la columna 4').fill('Movimiento neto');
+  await design.getByLabel('Fórmula de la columna 4').fill('=SUMA([Debe]) - SUMA([Haber])');
+  await expect(design.getByTestId('column-check-3')).toContainText('Resultado: Monto');
   await design.getByRole('button', { name: 'Guardar' }).click();
   await expect(page.getByTestId('report-table')).toContainText('Activo');
   await expect(page.getByTestId('report-table')).toContainText('15,600.00');
@@ -250,7 +252,7 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
   });
   await expect(page.getByTestId('checks-balance_demo_2026_09.txt')).toHaveText('No cuadra');
 
-  // Plantilla con texto, tabla de un informe e indicador; vista previa del período 08/2026
+  // Plantilla con texto, tabla de datos e indicador; vista previa del período 08/2026
   await page.getByRole('tab', { name: 'Plantillas' }).click();
   await page.getByRole('button', { name: 'Nueva plantilla' }).click();
   await page.getByRole('dialog', { name: 'Nueva plantilla' }).getByLabel('Nombre').fill('Balance mensual');
@@ -259,7 +261,7 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
   const palette = page.getByTestId('designer-palette');
   await palette.getByRole('button', { name: 'Texto' }).click();
   await palette.getByRole('button', { name: 'Tabla' }).click();
-  await page.getByRole('combobox', { name: 'Informe', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Tabla de datos', exact: true }).click();
   await page.getByRole('option', { name: 'Saldos por clasificación' }).click();
   await page.getByTestId('element-Tabla').press('ArrowDown');
   await palette.getByRole('button', { name: 'Indicador' }).click();
@@ -268,7 +270,7 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
   await page.getByLabel('Y', { exact: true }).fill('200');
   await page.getByLabel('Y', { exact: true }).press('Tab');
   await palette.getByRole('button', { name: 'Gráfico' }).click();
-  await page.getByRole('combobox', { name: 'Informe', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Tabla de datos', exact: true }).click();
   await page.getByRole('option', { name: 'Saldos por clasificación' }).click();
   await page.locator('p-multiselect:has(#elColumns)').click();
   await page.getByRole('option', { name: 'Debe', exact: true }).click();

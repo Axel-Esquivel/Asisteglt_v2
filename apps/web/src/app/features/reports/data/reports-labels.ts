@@ -6,6 +6,8 @@ import {
   ImportItemStatus,
   NumericNature,
   OrgLevel,
+  PeriodGrouping,
+  PeriodValue,
   ProfileStatus,
 } from '@asisteglt/shared-contracts';
 
@@ -54,6 +56,20 @@ export class ReportsLabels {
   public static readonly ORIGINS: Option<FieldOrigin>[] = [
     { label: 'Importado', value: FieldOrigin.IMPORTED },
     { label: 'Derivado', value: FieldOrigin.DERIVED },
+  ];
+
+  public static readonly PERIOD_GROUPINGS: Option<PeriodGrouping>[] = [
+    { label: 'Mensual', value: PeriodGrouping.MONTH },
+    { label: 'Bimestral', value: PeriodGrouping.BIMESTER },
+    { label: 'Trimestral', value: PeriodGrouping.QUARTER },
+    { label: 'Semestral', value: PeriodGrouping.SEMESTER },
+    { label: 'Anual', value: PeriodGrouping.YEAR },
+  ];
+
+  public static readonly PERIOD_VALUES: Option<PeriodValue>[] = [
+    { label: 'Valor del mes de cierre', value: PeriodValue.CLOSING },
+    { label: 'Valor del mes inicial', value: PeriodValue.OPENING },
+    { label: 'Acumulado (suma de los meses)', value: PeriodValue.ACCUMULATED },
   ];
 
   public static readonly LEVELS: Option<OrgLevel>[] = [

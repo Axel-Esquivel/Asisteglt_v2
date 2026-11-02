@@ -124,16 +124,33 @@ montos en varias monedas». Convierte a una moneda común con una operación.
     aplican al **Guardar**. Las cuentas que aparecen por primera vez en el último período cargado
     se marcan como **Nueva**, se avisa en la clasificación y en la lista de clasificaciones, y el
     informe muestra una advertencia mientras haya valores sin clasificar.
-- **Informes**: filas por clasificación y columnas con encabezados o **columnas calculadas**
-  (`=SUMA([Debe]) - SUMA([Haber])`). Muestran subtotales, «Sin clasificar» y total. Con «Solo
-  registros donde… *Es cuenta de detalle*» se evita duplicar las cuentas de mayor.
+- **Tablas de datos** (antes «Informes»): arman los datos que después usan las plantillas. El
+  diseño tiene cinco partes:
+  1. **Origen**: preconfiguración (o todas) y «Solo registros donde… *Es cuenta de detalle*» para
+     no duplicar las cuentas de mayor.
+  2. **Alcance**: organizaciones, países, monedas, compañías, empresas y sucursales (selección
+     múltiple; vacío = todas). **Abrir columnas por** (p. ej. *Organización* y *Compañía*) repite
+     cada dato por compañía; con **Subtotales** agrega el total de cada organización o país y el
+     **Total consolidado**. Sin abrir columnas, todo el alcance se suma en una sola columna.
+  3. **Período**: mensual, bimestral, trimestral, semestral o anual. Al consultar se elige el mes
+     de cierre y se toman los meses de su bloque hasta ese mes (marzo trimestral = enero a marzo).
+  4. **Filas**: por identificador (p. ej. número de cuenta, con su nombre y, si se eligen,
+     **columnas de clasificación** con el grupo de cada cuenta) o por clasificación (árbol con
+     subtotales, «Sin clasificar» y total).
+  5. **Columnas de datos**, en el orden que se elija (flechas para moverlas): datos cargados u
+     operados y **columnas calculadas** (`=SUMA([Debe]) - SUMA([Haber])`). Cada columna indica
+     **Al agrupar meses**: *valor del mes de cierre* (saldos), *valor del mes inicial* (saldo
+     anterior) o *acumulado* (movimientos, ventas); y puede tomar el **período anterior** (en
+     enero, diciembre del año anterior).
+- Nunca se suman montos de monedas distintas: la tabla avisa y deja la celda vacía. Conviértelos
+  con una operación de conversión de moneda, filtra por moneda o abre las columnas por compañía.
 - Elige el período y **Exportar CSV** (separador `;`, UTF-8; abre en hojas de cálculo).
 
 ### 4.7 Plantillas e impresión en PDF
 
 1. **Plantillas → Nueva plantilla**: página Carta vertical con encabezado `{proyecto}` y pie
    `Página {pagina} de {paginas}` (también `{periodo}`, `{mes}`, `{año}`, `{fecha}`).
-2. Agrega **Texto**, **Tabla** (un informe), **Indicador** (fórmula agregada) y **Gráfico**. Se
+2. Agrega **Texto**, **Tabla** (una tabla de datos), **Indicador** (fórmula agregada) y **Gráfico**. Se
    arrastran y redimensionan con el ratón o el dedo, o se mueven con las flechas (1 mm; con Mayús,
    10 mm).
 3. Cambia tamaño (Carta, Oficio, Legal, A4 o personalizado), orientación y formato numérico.

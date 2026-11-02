@@ -2,6 +2,8 @@ import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import {
   AssignmentMode,
   CatalogTemplate,
+  DataColumnDto,
+  DataColumnKind,
   DataType,
   DerivedAttributeKind,
   FieldRole,
@@ -13,6 +15,8 @@ import {
   OrgLevel,
   ParticipantDto,
   ParticipantRole,
+  PeriodGrouping,
+  PeriodValue,
   ProjectRole,
   RowSource,
   ToleranceKind,
@@ -43,6 +47,7 @@ import { ProfileService } from '../contexts/reports/application/profile.service'
 import { CatalogField, FieldCatalog } from '../contexts/reports/domain/field-catalog';
 import { DataSourceProfile } from '../contexts/reports/domain/data-source-profile';
 import { OrgUnitSnapshot } from '../contexts/reports/domain/org-structure';
+import { DataScope } from '../contexts/reports/domain/data-scope';
 import { ImportQueue } from '../contexts/reports/domain/ports';
 import { DemoData } from './demo-data';
 
@@ -246,14 +251,25 @@ export class DemoSeeder implements OnApplicationBootstrap {
         rowSource: RowSource.CLASSIFICATION,
         classificationId: classification.getId().toString(),
         rowFieldKey: null,
-        measures: [key('Saldo anterior'), key('Debe'), key('Haber')],
+        classificationColumns: [],
+        columns: [
+          DemoSeeder.measure(key('Saldo anterior'), PeriodValue.OPENING),
+          DemoSeeder.measure(key('Debe'), PeriodValue.ACCUMULATED),
+          DemoSeeder.measure(key('Haber'), PeriodValue.ACCUMULATED),
+        ],
         profileId: null,
-        companyId: null,
+        scope: DataScope.all(),
+        periodGrouping: PeriodGrouping.MONTH,
+        columnSplit: [],
+        subtotals: true,
         onlyWhenFieldKey: key('Es cuenta de detalle'),
         includeUnclassified: true,
-        formulaColumns: [],
       })
     ).unwrap();
+  }
+
+  private static measure(fieldKey: string, periodValue: PeriodValue): DataColumnDto {
+    return { kind: DataColumnKind.MEASURE, label: '', fieldKey, formula: null, periodValue, periodOffset: 0 };
   }
 
   private async seedInventory(admin: EntityId): Promise<void> {

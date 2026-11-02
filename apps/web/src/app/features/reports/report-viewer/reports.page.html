@@ -1,5 +1,5 @@
 <div class="reports__split">
-  <p-card header="Informes">
+  <p-card header="Tablas de datos">
     <div class="reports__stack">
       <p-table
         [value]="definitions()"
@@ -7,7 +7,7 @@
         selectionMode="single"
         [selection]="selectedItem()"
         (selectionChange)="select($event === null ? null : $event.id)"
-        [attr.aria-label]="'Informes'"
+        [attr.aria-label]="'Tablas de datos'"
         data-testid="report-list"
       >
         <ng-template #body let-item>
@@ -17,13 +17,13 @@
         </ng-template>
         <ng-template #emptymessage>
           <tr>
-            <td>Aún no hay informes</td>
+            <td>Aún no hay tablas de datos</td>
           </tr>
         </ng-template>
       </p-table>
       @if (canDesign()) {
       <p-button
-        label="Nuevo informe"
+        label="Nueva tabla de datos"
         icon="pi pi-plus"
         size="small"
         [outlined]="true"
@@ -44,11 +44,16 @@
             [ngModel]="period()"
             (ngModelChange)="changePeriod($event)"
             [readonlyInput]="true"
-            ariaLabel="Período del informe"
+            ariaLabel="Período (mes de cierre)"
             appendTo="body"
           />
           @if (canDesign() && selectedId() !== null) {
-          <p-button icon="pi pi-pencil" [text]="true" ariaLabel="Editar informe" (onClick)="openEdit()" />
+          <p-button
+            icon="pi pi-pencil"
+            [text]="true"
+            ariaLabel="Editar tabla de datos"
+            (onClick)="openEdit()"
+          />
           }
           <p-button
             label="CSV"
@@ -62,7 +67,7 @@
       </div>
     </ng-template>
     @if (report(); as current) {
-    <p class="reports__hint">{{ current.records }} registros del período {{ current.period }}</p>
+    <p class="reports__hint">{{ current.records }} registros · período {{ current.periodLabel }}</p>
     @for (warning of current.warnings; track warning) {
     <p-message severity="warn" data-testid="report-warning">{{ warning }}</p-message>
     }
@@ -71,38 +76,58 @@
         [value]="current.rows"
         [loading]="running()"
         [tableStyle]="{ 'min-width': '32rem' }"
+        size="small"
+        [showGridlines]="current.depth() > 0"
         data-testid="report-table"
       >
         <ng-template #header>
+          @for (cells of headerRows(current); track $index; let first = $first) {
           <tr>
-            <th>Fila</th>
-            @for (column of current.columns; track column.fieldKey) {
-            <th class="reports__number">{{ column.label }}</th>
+            @if (first) { @for (attribute of current.attributeColumns; track attribute.key) {
+            <th [attr.rowspan]="current.depth() + 1">{{ attribute.label }}</th>
+            } } @for (cell of cells; track $index) {
+            <th [attr.colspan]="cell.span" class="reports__group" [class.reports__subtotal]="cell.subtotal">
+              {{ cell.label }}
+            </th>
+            }
+          </tr>
+          }
+          <tr>
+            @if (current.depth() === 0) { @for (attribute of current.attributeColumns; track attribute.key) {
+            <th>{{ attribute.label }}</th>
+            } } @for (column of current.columns; track column.fieldKey) {
+            <th class="reports__number" [class.reports__subtotal]="column.subtotal">{{ column.label }}</th>
             }
           </tr>
         </ng-template>
         <ng-template #body let-row>
           <tr [class.reports__total]="row.total">
+            @for (attribute of current.attributeColumns; track attribute.key; let i = $index) { @if (i === 0)
+            {
             <td [style.padding-inline-start]="indent(row)">{{ row.label }}</td>
-            @for (value of row.values; track $index) {
-            <td class="reports__number">{{ format(value) }}</td>
+            } @else {
+            <td>{{ row.attributes[i] ?? '' }}</td>
+            } } @for (value of row.values; track $index) {
+            <td class="reports__number" [class.reports__subtotal]="isSubtotal(current, $index)">
+              {{ format(value) }}
+            </td>
             }
           </tr>
         </ng-template>
       </p-table>
     </div>
     } @else {
-    <p-message severity="secondary">Elige un informe de la lista para calcularlo.</p-message>
+    <p-message severity="secondary">Elige una tabla de datos de la lista para calcularla.</p-message>
     }
   </p-card>
 </div>
 
 <p-dialog
-  header="Diseño del informe"
+  header="Diseño de la tabla de datos"
   [modal]="true"
   [visible]="draft() !== null"
   (visibleChange)="$event ? null : draft.set(null)"
-  [style]="{ width: 'min(36rem, 95vw)' }"
+  [style]="{ width: 'min(60rem, 95vw)' }"
 >
   @if (draft(); as d) {
   <form class="reports__form" (ngSubmit)="saveDraft()">
@@ -110,180 +135,415 @@
       <input pInputText id="reportName" name="name" [(ngModel)]="d.name" class="full-width" />
       <label for="reportName">Nombre</label>
     </p-floatlabel>
-    <p-selectbutton
-      name="rowSource"
-      [options]="sourceOptions"
-      optionLabel="label"
-      optionValue="value"
-      [(ngModel)]="d.rowSource"
-      (ngModelChange)="touch()"
-      [allowEmpty]="false"
-      ariaLabelledBy="rowsLabel"
-    />
-    <span id="rowsLabel" class="reports__hint">Filas del informe</span>
-    @if (d.rowSource === RowSource.CLASSIFICATION) {
-    <p-floatlabel variant="on">
-      <p-select
-        inputId="reportClassification"
-        ariaLabel="Clasificación"
-        name="classification"
-        [options]="classificationOptions()"
-        optionLabel="label"
-        optionValue="value"
-        [(ngModel)]="d.classificationId"
-        styleClass="full-width"
-        appendTo="body"
-      />
-      <label for="reportClassification">Clasificación</label>
-    </p-floatlabel>
-    <span class="reports__toolbar">
-      <p-checkbox
-        inputId="reportUnclassified"
-        name="unclassified"
-        [binary]="true"
-        [(ngModel)]="d.includeUnclassified"
-      />
-      <label for="reportUnclassified">Mostrar la fila «Sin clasificar»</label>
-    </span>
-    } @else {
-    <p-floatlabel variant="on">
-      <p-select
-        inputId="reportRowField"
-        ariaLabel="Agrupar por"
-        name="rowField"
-        [options]="groupOptions()"
-        optionLabel="label"
-        optionValue="value"
-        [(ngModel)]="d.rowFieldKey"
-        styleClass="full-width"
-        appendTo="body"
-      />
-      <label for="reportRowField">Agrupar por</label>
-    </p-floatlabel>
-    }
-    <p-floatlabel variant="on">
-      <p-multiselect
-        inputId="reportMeasures"
-        ariaLabel="Columnas (medidas)"
-        name="measures"
-        [options]="measureOptions()"
-        optionLabel="label"
-        optionValue="value"
-        [(ngModel)]="d.measures"
-        display="chip"
-        styleClass="full-width"
-        appendTo="body"
-      />
-      <label for="reportMeasures">Columnas (medidas)</label>
-    </p-floatlabel>
-    <div class="reports__title">
-      <strong>Columnas calculadas</strong>
-      <p-button
-        label="Agregar columna calculada"
-        icon="pi pi-plus"
-        size="small"
-        [text]="true"
-        (onClick)="addFormulaColumn(d)"
-      />
-    </div>
-    @for (column of d.formulaColumns; track $index) {
-    <div class="reports__grid">
-      <p-floatlabel variant="on">
-        <input
-          pInputText
-          [id]="'colLabel' + $index"
-          [name]="'colLabel' + $index"
-          class="full-width"
-          [(ngModel)]="column.label"
-        />
-        <label [for]="'colLabel' + $index">Título de la columna {{ $index + 1 }}</label>
-      </p-floatlabel>
-      <div class="reports__toolbar">
-        <p-floatlabel variant="on" class="reports__grow">
-          <input
-            pInputText
-            [id]="'colFormula' + $index"
-            [name]="'colFormula' + $index"
-            class="full-width reports__mono"
-            autocomplete="off"
-            [(ngModel)]="column.formula"
+
+    <p-fieldset legend="1. Origen de los datos">
+      <div class="reports__grid">
+        <p-floatlabel variant="on">
+          <p-select
+            inputId="reportProfile"
+            ariaLabel="Preconfiguración (todas)"
+            name="profile"
+            [options]="profileOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [(ngModel)]="d.profileId"
+            [showClear]="true"
+            styleClass="full-width"
+            appendTo="body"
           />
-          <label [for]="'colFormula' + $index">Fórmula de la columna {{ $index + 1 }}</label>
+          <label for="reportProfile">Preconfiguración (todas)</label>
         </p-floatlabel>
-        <p-button
-          icon="pi pi-trash"
-          [text]="true"
-          size="small"
-          severity="danger"
-          [ariaLabel]="'Quitar columna calculada ' + ($index + 1)"
-          (onClick)="removeFormulaColumn(d, $index)"
-        />
+        <p-floatlabel variant="on">
+          <p-select
+            inputId="reportOnly"
+            ariaLabel="Solo registros donde… (sí)"
+            name="only"
+            [options]="flagOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [(ngModel)]="d.onlyWhenFieldKey"
+            [showClear]="true"
+            styleClass="full-width"
+            appendTo="body"
+          />
+          <label for="reportOnly">Solo registros donde… (sí)</label>
+        </p-floatlabel>
       </div>
-    </div>
-    @if (columnCheck(column); as check) {
-    <p-message
-      [severity]="check.ok ? 'success' : 'error'"
-      size="small"
-      [attr.data-testid]="'column-check-' + $index"
-      >{{ check.message }}</p-message
-    >
-    } }
-    <p class="reports__hint">
-      En las columnas calculadas cada encabezado se agrega con los filtros de la fila:
-      <code>=SUMA([Debe]) - SUMA([Haber])</code>,
-      <code>=DIVIDIR(SUMA([Monto de venta]); SUMA([Unidades vendidas]))</code>.
-    </p>
-    <div class="reports__grid">
-      <p-floatlabel variant="on">
-        <p-select
-          inputId="reportProfile"
-          ariaLabel="Preconfiguración (todas)"
-          name="profile"
-          [options]="profileOptions()"
-          optionLabel="label"
-          optionValue="value"
-          [(ngModel)]="d.profileId"
-          [showClear]="true"
-          styleClass="full-width"
-          appendTo="body"
-        />
-        <label for="reportProfile">Preconfiguración (todas)</label>
-      </p-floatlabel>
-      <p-floatlabel variant="on">
-        <p-select
-          inputId="reportCompany"
-          ariaLabel="Compañía (todas)"
-          name="company"
-          [options]="companyOptions()"
-          optionLabel="label"
-          optionValue="value"
-          [(ngModel)]="d.companyId"
-          [showClear]="true"
-          styleClass="full-width"
-          appendTo="body"
-        />
-        <label for="reportCompany">Compañía (todas)</label>
-      </p-floatlabel>
-      <p-floatlabel variant="on">
-        <p-select
-          inputId="reportOnly"
-          ariaLabel="Solo registros donde… (sí)"
-          name="only"
-          [options]="flagOptions()"
-          optionLabel="label"
-          optionValue="value"
-          [(ngModel)]="d.onlyWhenFieldKey"
-          [showClear]="true"
-          styleClass="full-width"
-          appendTo="body"
-        />
-        <label for="reportOnly">Solo registros donde… (sí)</label>
-      </p-floatlabel>
-    </div>
-    <p class="reports__hint">
-      Usa «Solo registros donde» con un atributo como «Es cuenta de detalle» para no sumar dos veces las
-      cuentas agrupadoras.
-    </p>
+      <p class="reports__hint">
+        Los datos operados (encabezados derivados de Operaciones) se eligen como cualquier otro dato en las
+        columnas. Usa «Solo registros donde» con un atributo como «Es cuenta de detalle» para no sumar dos
+        veces las cuentas agrupadoras.
+      </p>
+    </p-fieldset>
+
+    <p-fieldset legend="2. Alcance">
+      <div class="reports__grid">
+        <p-floatlabel variant="on">
+          <p-multiselect
+            inputId="scopeOrganizations"
+            ariaLabel="Organizaciones (todas)"
+            name="organizations"
+            [options]="organizationOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [(ngModel)]="d.organizationIds"
+            (ngModelChange)="touch()"
+            display="chip"
+            styleClass="full-width"
+            appendTo="body"
+          />
+          <label for="scopeOrganizations">Organizaciones (todas)</label>
+        </p-floatlabel>
+        <p-floatlabel variant="on">
+          <p-multiselect
+            inputId="scopeCountries"
+            ariaLabel="Países (todos)"
+            name="countries"
+            [options]="countryOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [(ngModel)]="d.countryIds"
+            (ngModelChange)="touch()"
+            display="chip"
+            styleClass="full-width"
+            appendTo="body"
+          />
+          <label for="scopeCountries">Países (todos)</label>
+        </p-floatlabel>
+        <p-floatlabel variant="on">
+          <p-multiselect
+            inputId="scopeCurrencies"
+            ariaLabel="Monedas (todas)"
+            name="currencies"
+            [options]="currencyOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [(ngModel)]="d.currencies"
+            display="chip"
+            styleClass="full-width"
+            appendTo="body"
+          />
+          <label for="scopeCurrencies">Monedas (todas)</label>
+        </p-floatlabel>
+        <p-floatlabel variant="on">
+          <p-multiselect
+            inputId="scopeCompanies"
+            ariaLabel="Compañías (todas)"
+            name="companies"
+            [options]="companyOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [(ngModel)]="d.companyIds"
+            (ngModelChange)="touch()"
+            display="chip"
+            styleClass="full-width"
+            appendTo="body"
+          />
+          <label for="scopeCompanies">Compañías (todas)</label>
+        </p-floatlabel>
+        <p-floatlabel variant="on">
+          <p-multiselect
+            inputId="scopeEnterprises"
+            ariaLabel="Empresas (todas)"
+            name="enterprises"
+            [options]="enterpriseOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [(ngModel)]="d.enterpriseIds"
+            (ngModelChange)="touch()"
+            display="chip"
+            styleClass="full-width"
+            appendTo="body"
+          />
+          <label for="scopeEnterprises">Empresas (todas)</label>
+        </p-floatlabel>
+        <p-floatlabel variant="on">
+          <p-multiselect
+            inputId="scopeBranches"
+            ariaLabel="Sucursales (todas)"
+            name="branches"
+            [options]="branchOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [(ngModel)]="d.branchIds"
+            display="chip"
+            styleClass="full-width"
+            appendTo="body"
+          />
+          <label for="scopeBranches">Sucursales (todas)</label>
+        </p-floatlabel>
+      </div>
+      <div class="reports__grid">
+        <p-floatlabel variant="on">
+          <p-multiselect
+            inputId="columnSplit"
+            ariaLabel="Abrir columnas por"
+            name="split"
+            [options]="splitOptions"
+            optionLabel="label"
+            optionValue="value"
+            [(ngModel)]="d.columnSplit"
+            display="chip"
+            styleClass="full-width"
+            appendTo="body"
+          />
+          <label for="columnSplit">Abrir columnas por (consolidado si se deja vacío)</label>
+        </p-floatlabel>
+        <span class="reports__toolbar">
+          <p-checkbox inputId="subtotals" name="subtotals" [binary]="true" [(ngModel)]="d.subtotals" />
+          <label for="subtotals">Subtotales por nivel y total consolidado</label>
+        </span>
+      </div>
+      <p class="reports__hint">
+        Sin elegir nada entra toda la información del proyecto. Con «Abrir columnas por» (p. ej. Organización
+        y Compañía) cada dato se repite por compañía y se agregan los subtotales.
+      </p>
+    </p-fieldset>
+
+    <p-fieldset legend="3. Período">
+      <div class="reports__grid">
+        <p-floatlabel variant="on">
+          <p-select
+            inputId="periodGrouping"
+            ariaLabel="Agrupación del período"
+            name="grouping"
+            [options]="groupingOptions"
+            optionLabel="label"
+            optionValue="value"
+            [(ngModel)]="d.periodGrouping"
+            styleClass="full-width"
+            appendTo="body"
+          />
+          <label for="periodGrouping">Agrupación del período</label>
+        </p-floatlabel>
+      </div>
+      <p class="reports__hint">
+        Al consultar se elige el mes de cierre; el período toma los meses de su bimestre, trimestre, semestre
+        o año hasta ese mes. Cada columna indica cómo toma esos meses.
+      </p>
+    </p-fieldset>
+
+    <p-fieldset legend="4. Filas">
+      <p-selectbutton
+        name="rowSource"
+        [options]="sourceOptions"
+        optionLabel="label"
+        optionValue="value"
+        [(ngModel)]="d.rowSource"
+        (ngModelChange)="touch()"
+        [allowEmpty]="false"
+        ariaLabel="Filas de la tabla"
+      />
+      @if (d.rowSource === RowSource.CLASSIFICATION) {
+      <div class="reports__grid">
+        <p-floatlabel variant="on">
+          <p-select
+            inputId="reportClassification"
+            ariaLabel="Clasificación"
+            name="classification"
+            [options]="classificationOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [(ngModel)]="d.classificationId"
+            styleClass="full-width"
+            appendTo="body"
+          />
+          <label for="reportClassification">Clasificación</label>
+        </p-floatlabel>
+        <span class="reports__toolbar">
+          <p-checkbox
+            inputId="reportUnclassified"
+            name="unclassified"
+            [binary]="true"
+            [(ngModel)]="d.includeUnclassified"
+          />
+          <label for="reportUnclassified">Mostrar la fila «Sin clasificar»</label>
+        </span>
+      </div>
+      } @else {
+      <div class="reports__grid">
+        <p-floatlabel variant="on">
+          <p-select
+            inputId="reportRowField"
+            ariaLabel="Una fila por"
+            name="rowField"
+            [options]="groupOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [(ngModel)]="d.rowFieldKey"
+            styleClass="full-width"
+            appendTo="body"
+          />
+          <label for="reportRowField">Una fila por (p. ej. número de cuenta)</label>
+        </p-floatlabel>
+        <p-floatlabel variant="on">
+          <p-multiselect
+            inputId="classificationColumns"
+            ariaLabel="Columnas de clasificación"
+            name="classificationColumns"
+            [options]="classificationOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [(ngModel)]="d.classificationColumns"
+            display="chip"
+            styleClass="full-width"
+            appendTo="body"
+          />
+          <label for="classificationColumns">Columnas de clasificación</label>
+        </p-floatlabel>
+      </div>
+      <p class="reports__hint">
+        Junto al identificador se muestra su nombre (p. ej. nombre de cuenta) y el grupo de cada clasificación
+        elegida.
+      </p>
+      }
+    </p-fieldset>
+
+    <p-fieldset legend="5. Columnas de datos (en orden)">
+      <div class="reports__stack">
+        @for (column of d.columns; track $index; let i = $index; let last = $last) {
+        <div class="reports__column" [attr.data-testid]="'data-column-' + i">
+          <div class="reports__grid">
+            @if (column.isFormula()) {
+            <p-floatlabel variant="on">
+              <input
+                pInputText
+                [id]="'colLabel' + i"
+                [name]="'colLabel' + i"
+                class="full-width"
+                [(ngModel)]="column.label"
+              />
+              <label [for]="'colLabel' + i">Título de la columna {{ i + 1 }}</label>
+            </p-floatlabel>
+            <p-floatlabel variant="on">
+              <input
+                pInputText
+                [id]="'colFormula' + i"
+                [name]="'colFormula' + i"
+                class="full-width reports__mono"
+                autocomplete="off"
+                [(ngModel)]="column.formula"
+              />
+              <label [for]="'colFormula' + i">Fórmula de la columna {{ i + 1 }}</label>
+            </p-floatlabel>
+            } @else {
+            <p-floatlabel variant="on">
+              <p-select
+                [inputId]="'colField' + i"
+                [ariaLabel]="'Dato de la columna ' + (i + 1)"
+                [name]="'colField' + i"
+                [options]="measureOptions()"
+                optionLabel="label"
+                optionValue="value"
+                [filter]="true"
+                [ngModel]="column.fieldKey"
+                (ngModelChange)="changeField(column, $event)"
+                styleClass="full-width"
+                appendTo="body"
+              />
+              <label [for]="'colField' + i">Dato de la columna {{ i + 1 }}</label>
+            </p-floatlabel>
+            <p-floatlabel variant="on">
+              <input
+                pInputText
+                [id]="'colTitle' + i"
+                [name]="'colTitle' + i"
+                class="full-width"
+                [(ngModel)]="column.label"
+              />
+              <label [for]="'colTitle' + i">Título (vacío = nombre del dato)</label>
+            </p-floatlabel>
+            }
+            <p-floatlabel variant="on">
+              <p-select
+                [inputId]="'colPeriod' + i"
+                [ariaLabel]="'Al agrupar meses, columna ' + (i + 1)"
+                [name]="'colPeriod' + i"
+                [options]="periodValueOptions"
+                optionLabel="label"
+                optionValue="value"
+                [(ngModel)]="column.periodValue"
+                styleClass="full-width"
+                appendTo="body"
+              />
+              <label [for]="'colPeriod' + i">Al agrupar meses</label>
+            </p-floatlabel>
+          </div>
+          <div class="reports__title">
+            <span class="reports__toolbar">
+              <p-checkbox
+                [inputId]="'colPrevious' + i"
+                [name]="'colPrevious' + i"
+                [binary]="true"
+                [(ngModel)]="column.previous"
+              />
+              <label [for]="'colPrevious' + i"
+                >Del período anterior (en enero, diciembre del año anterior)</label
+              >
+            </span>
+            <span class="reports__toolbar">
+              <p-button
+                icon="pi pi-arrow-up"
+                [text]="true"
+                size="small"
+                [disabled]="i === 0"
+                [ariaLabel]="'Mover antes la columna ' + (i + 1)"
+                (onClick)="moveColumn(d, i, -1)"
+              />
+              <p-button
+                icon="pi pi-arrow-down"
+                [text]="true"
+                size="small"
+                [disabled]="last"
+                [ariaLabel]="'Mover después la columna ' + (i + 1)"
+                (onClick)="moveColumn(d, i, 1)"
+              />
+              <p-button
+                icon="pi pi-trash"
+                [text]="true"
+                size="small"
+                severity="danger"
+                [ariaLabel]="'Quitar la columna ' + (i + 1)"
+                (onClick)="removeColumn(d, i)"
+              />
+            </span>
+          </div>
+          @if (column.isFormula()) { @if (columnCheck(column); as check) {
+          <p-message
+            [severity]="check.ok ? 'success' : 'error'"
+            size="small"
+            [attr.data-testid]="'column-check-' + i"
+            >{{ check.message }}</p-message
+          >
+          } }
+        </div>
+        } @empty {
+        <p class="reports__hint">Agrega al menos un dato o una columna calculada.</p>
+        }
+        <span class="reports__toolbar">
+          <p-button
+            label="Agregar dato"
+            icon="pi pi-plus"
+            size="small"
+            [outlined]="true"
+            (onClick)="addMeasure(d)"
+          />
+          <p-button
+            label="Agregar columna calculada"
+            icon="pi pi-plus"
+            size="small"
+            [text]="true"
+            (onClick)="addFormulaColumn(d)"
+          />
+        </span>
+        <p class="reports__hint">
+          En las columnas calculadas cada encabezado se agrega con los filtros de la celda:
+          <code>=SUMA([Debe]) - SUMA([Haber])</code>,
+          <code>=DIVIDIR(SUMA([Monto de venta]); SUMA([Unidades vendidas]))</code>.
+        </p>
+      </div>
+    </p-fieldset>
+
     <div class="reports__dialog-actions">
       <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="draft.set(null)" />
       <p-button type="submit" label="Guardar" icon="pi pi-check" />

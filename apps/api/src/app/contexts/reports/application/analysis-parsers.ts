@@ -1,11 +1,18 @@
 import {
   ClassificationNodeDto,
   ClassificationRequest,
+  DataColumnDto,
+  DataColumnKind,
+  DataScopeDto,
   FormulaColumnDto,
+  OrgLevel,
+  PeriodGrouping,
+  PeriodValue,
   ReportDefinitionRequest,
   RowSource,
 } from '@asisteglt/shared-contracts';
-import { Decoder, FieldDecoder, FieldReader, Result } from '@asisteglt/shared-kernel';
+import { Decoder, FieldDecoder, FieldReader, Nullable, Result } from '@asisteglt/shared-kernel';
+import { DataScope } from '../domain/data-scope';
 
 /** Validación de los cuerpos JSON de clasificaciones e informes (compartible con el navegador). */
 export class AnalysisParsers {
@@ -30,20 +37,81 @@ export class AnalysisParsers {
       nodes: f.list('nodes', AnalysisParsers.NODE),
     }));
 
+  public static readonly COLUMN: Decoder<DataColumnDto> = new FieldDecoder<DataColumnDto>(
+    (f: FieldReader): DataColumnDto => ({
+      kind: f.oneOf('kind', Object.values(DataColumnKind)),
+      label: f.string('label'),
+      fieldKey: f.nullableString('fieldKey'),
+      formula: f.nullableString('formula'),
+      periodValue: f.oneOf('periodValue', Object.values(PeriodValue)),
+      periodOffset: f.number('periodOffset'),
+    }),
+  );
+
+  public static readonly SCOPE: Decoder<DataScopeDto> = new FieldDecoder<DataScopeDto>(
+    (f: FieldReader): DataScopeDto => ({
+      organizationIds: f.stringList('organizationIds'),
+      countryIds: f.stringList('countryIds'),
+      currencies: f.stringList('currencies'),
+      companyIds: f.stringList('companyIds'),
+      enterpriseIds: f.stringList('enterpriseIds'),
+      branchIds: f.stringList('branchIds'),
+    }),
+  );
+
+  /**
+   * Tabla de datos. Acepta también la forma anterior de los informes (medidas como lista de
+   * encabezados, columnas calculadas aparte y una sola compañía) y la convierte.
+   */
   private static readonly REPORT: Decoder<ReportDefinitionRequest> =
-    new FieldDecoder<ReportDefinitionRequest>((f: FieldReader): ReportDefinitionRequest => ({
-      name: f.string('name'),
-      rowSource: f.oneOf('rowSource', Object.values(RowSource)),
-      classificationId: f.nullableString('classificationId'),
-      rowFieldKey: f.nullableString('rowFieldKey'),
-      measures: f.stringList('measures'),
-      profileId: f.nullableString('profileId'),
-      companyId: f.nullableString('companyId'),
-      onlyWhenFieldKey: f.nullableString('onlyWhenFieldKey'),
-      includeUnclassified: f.boolean('includeUnclassified'),
-      formulaColumns:
-        f.raw('formulaColumns') === null ? [] : f.list('formulaColumns', AnalysisParsers.FORMULA_COLUMN),
-    }));
+    new FieldDecoder<ReportDefinitionRequest>((f: FieldReader): ReportDefinitionRequest => {
+      const legacy: boolean = f.raw('columns') === null;
+      const company: Nullable<string> = f.raw('scope') === null ? f.nullableString('companyId') : null;
+      return {
+        name: f.string('name'),
+        rowSource: f.oneOf('rowSource', Object.values(RowSource)),
+        classificationId: f.nullableString('classificationId'),
+        rowFieldKey: f.nullableString('rowFieldKey'),
+        classificationColumns:
+          f.raw('classificationColumns') === null ? [] : f.stringList('classificationColumns'),
+        columns: legacy
+          ? [
+              ...f.stringList('measures').map((key: string): DataColumnDto => ({
+                kind: DataColumnKind.MEASURE,
+                label: '',
+                fieldKey: key,
+                formula: null,
+                periodValue: PeriodValue.ACCUMULATED,
+                periodOffset: 0,
+              })),
+              ...(f.raw('formulaColumns') === null
+                ? []
+                : f.list('formulaColumns', AnalysisParsers.FORMULA_COLUMN)
+              ).map((c: FormulaColumnDto): DataColumnDto => ({
+                kind: DataColumnKind.FORMULA,
+                label: c.label,
+                fieldKey: null,
+                formula: c.formula,
+                periodValue: PeriodValue.ACCUMULATED,
+                periodOffset: 0,
+              })),
+            ]
+          : f.list('columns', AnalysisParsers.COLUMN),
+        profileId: f.nullableString('profileId'),
+        scope:
+          f.raw('scope') === null
+            ? { ...DataScope.all(), companyIds: company === null ? [] : [company] }
+            : f.nested('scope', AnalysisParsers.SCOPE),
+        periodGrouping:
+          f.raw('periodGrouping') === null
+            ? PeriodGrouping.MONTH
+            : f.oneOf('periodGrouping', Object.values(PeriodGrouping)),
+        columnSplit: f.raw('columnSplit') === null ? [] : f.oneOfList('columnSplit', Object.values(OrgLevel)),
+        subtotals: f.raw('subtotals') === null ? true : f.boolean('subtotals'),
+        onlyWhenFieldKey: f.nullableString('onlyWhenFieldKey'),
+        includeUnclassified: f.boolean('includeUnclassified'),
+      };
+    });
 
   public static classification(body: unknown): Result<ClassificationRequest> {
     return AnalysisParsers.CLASSIFICATION.decode(body);

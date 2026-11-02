@@ -96,3 +96,21 @@
 .reports__wide {
   grid-column: 1 / -1;
 }
+
+.reports__group {
+  text-align: center;
+}
+
+.reports__subtotal {
+  background: var(--p-content-hover-background);
+  font-weight: 600;
+}
+
+.reports__column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-content-border-radius);
+}

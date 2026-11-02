@@ -13,6 +13,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
   ChartType,
+  DataColumnDto,
   ElementKind,
   NegativeStyle,
   NumberScale,
@@ -119,7 +120,7 @@ export class TemplateDesignerPage implements OnInit {
       .units.filter((u: OrgUnitView): boolean => u.s.level === OrgLevel.COMPANY)
       .map((u: OrgUnitView): Option<string> => ({ label: u.label(), value: u.id })),
   );
-  /** Columnas del informe elegido en el gráfico (medidas y columnas calculadas, en orden). */
+  /** Columnas de la tabla de datos elegida en el gráfico (en orden; sin abrir por compañía). */
   protected readonly columnOptions: Signal<Option<number>[]> = computed((): Option<number>[] => {
     const element: Nullable<TemplateElementDto> = this.store.selected();
     const report: Nullable<ReportDefinitionView> =
@@ -129,10 +130,9 @@ export class TemplateDesignerPage implements OnInit {
     if (report === null) {
       return [];
     }
-    const labels: string[] = [
-      ...report.spec.measures.map((key: string): string => this.catalog().labelOf(key)),
-      ...report.spec.formulaColumns.map((c): string => c.label),
-    ];
+    const labels: string[] = report.spec.columns.map((c: DataColumnDto): string =>
+      c.label !== '' || c.fieldKey === null ? c.label : this.catalog().labelOf(c.fieldKey),
+    );
     return labels.map((label: string, value: number): Option<number> => ({ label, value }));
   });
   protected readonly formulaCheck: Signal<FormulaCheck> = computed((): FormulaCheck => {
@@ -360,7 +360,7 @@ export class TemplateDesignerPage implements OnInit {
   private reportName(id: Nullable<string>): string {
     const report: Nullable<ReportDefinitionView> =
       this.reports().find((r: ReportDefinitionView): boolean => r.id === id) ?? null;
-    return report === null ? 'sin informe' : report.name;
+    return report === null ? 'sin tabla de datos' : report.name;
   }
 
   private async load(): Promise<void> {

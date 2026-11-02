@@ -49,8 +49,12 @@ export class ImportUploads implements OnApplicationBootstrap, OnApplicationShutd
       if (entry === ImportUploads.INSTANCE) {
         continue;
       }
-      const modified: number = (await stat(join(root, entry))).mtimeMs;
-      if (now - modified > ImportUploads.STALE_MS) {
+      // Otra instancia puede borrar su directorio mientras se recorre (al apagarse): se omite.
+      const modified: Nullable<number> = await stat(join(root, entry)).then(
+        (s): number => s.mtimeMs,
+        (): null => null,
+      );
+      if (modified !== null && now - modified > ImportUploads.STALE_MS) {
         await rm(join(root, entry), { recursive: true, force: true });
       }
     }

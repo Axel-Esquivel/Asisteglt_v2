@@ -77,7 +77,7 @@ export const PROJECTS_ROUTES: Route[] = [
       },
       {
         path: 'reports',
-        title: 'Informes · AsisteGLT',
+        title: 'Tablas de datos · AsisteGLT',
         loadComponent: () => import('../reports/report-viewer/reports.page').then((m) => m.ReportsPage),
       },
       {

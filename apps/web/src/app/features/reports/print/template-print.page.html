@@ -65,17 +65,31 @@
       } } @case (kinds.MATRIX) { @if (value.table; as table) {
       <p-table [value]="table.rows" size="small">
         <ng-template #header>
+          @for (cells of table.headerRows(); track $index; let first = $first) {
           <tr>
-            <th></th>
-            @for (column of table.columns; track column.fieldKey) {
+            @if (first) { @for (attribute of table.attributeColumns; track attribute.key) {
+            <th [attr.rowspan]="table.depth() + 1"></th>
+            } } @for (cell of cells; track $index) {
+            <th [attr.colspan]="cell.span" class="print__group">{{ cell.label }}</th>
+            }
+          </tr>
+          }
+          <tr>
+            @if (table.depth() === 0) { @for (attribute of table.attributeColumns; track attribute.key; let i
+            = $index) {
+            <th>{{ i === 0 ? '' : attribute.label }}</th>
+            } } @for (column of table.columns; track column.fieldKey) {
             <th class="print__number">{{ column.label }}</th>
             }
           </tr>
         </ng-template>
         <ng-template #body let-row>
           <tr [class.print__total]="row.total">
+            @for (attribute of table.attributeColumns; track attribute.key; let i = $index) { @if (i === 0) {
             <td [style.padding-inline-start]="indent(row)">{{ row.label }}</td>
-            @for (cell of row.values; track $index) { @if (number(cell, element.numberFormat); as n) {
+            } @else {
+            <td>{{ row.attributes[i] ?? '' }}</td>
+            } } @for (cell of row.values; track $index) { @if (number(cell, element.numberFormat); as n) {
             <td
               class="print__number"
               [class.print__negative]="n.negative && element.numberFormat.negative === 'RED'"

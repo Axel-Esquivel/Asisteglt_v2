@@ -118,7 +118,10 @@ gantt
   complementarias con captura manual, clasificaciones por patrones, `formula-engine` (forma
   canónica, nombres vigentes, tipos y naturaleza), operaciones (campos calculados, acumulado del
   año, conversión de moneda con colecciones), columnas calculadas en informes, informes que no
-  suman monedas distintas y validaciones de cuadre por preconfiguración (bloqueantes o con aviso).
+  suman monedas distintas, validaciones de cuadre por preconfiguración (bloqueantes o con aviso) y
+  **tablas de datos** (antes «informes») con alcance de varias organizaciones, países, monedas y
+  compañías, columnas abiertas por la estructura con subtotales y total consolidado, períodos
+  bimestrales a anuales y columnas del período anterior.
 - Pendiente: `COLECCION()` dentro de fórmulas, importación de colecciones desde archivo,
   definiciones de consolidación con eliminaciones, filtros de texto, asignación condicional y
   filas sintéticas en las operaciones, y pruebas basadas en propiedades del motor de fórmulas.

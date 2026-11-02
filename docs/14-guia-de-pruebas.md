@@ -54,7 +54,8 @@ Proyecto de demostración: **Demo · Balance ficticio** (o crea uno nuevo).
 | # | Paso | Resultado esperado |
 |---|---|---|
 | 5.1 | Clasificaciones → nueva, «Clasificar por» *Código de cuenta*, nodos con patrones (`1.*`, `1.001.*`) | El patrón más específico gana |
-| 5.2 | Informes → nuevo: filas por clasificación, columnas *Saldo anterior*, *Debe*, *Haber* | Subtotales por nodo superior, fila «Sin clasificar» y total |
+| 5.2 | Tablas de datos → nueva: filas por clasificación, columnas *Saldo anterior*, *Debe*, *Haber* | Subtotales por nodo superior, fila «Sin clasificar» y total |
+| 5.2b | Tabla por *Número de cuenta* con columna de clasificación, abierta por *Organización* y *Compañía* con subtotales, período trimestral; *Saldo* al mes de cierre, *Mes* acumulado y *Saldo* del período anterior | Una columna por compañía, el total de la organización y el total consolidado; en marzo, *Mes* suma enero a marzo y el saldo anterior es el de diciembre |
 | 5.3 | Activar «Solo registros donde… *Es cuenta de detalle*» | Los totales ya no duplican las cuentas de mayor |
 | 5.4 | Cambiar el período y exportar CSV | El CSV abre en hojas de cálculo (separador `;`, UTF-8) |
 | 5.5 | Operaciones → Agregar paso «Campo calculado», «Nuevo encabezado…» *Saldo final* (Decimal, Monto), fórmula `=[Saldo anterior] + [Debe] - [Haber]` | La fórmula se valida al escribir («Resultado: Monto»); una mezcla de texto y número se rechaza |

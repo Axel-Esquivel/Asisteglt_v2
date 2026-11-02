@@ -1,3 +1,5 @@
+import { OrgLevel } from './org-structure.contracts';
+
 /** Clasificaciones e informes matriciales (docs/04 §8 y §11, versión inicial). */
 export interface ClassificationNodeDto {
   readonly id: string;
@@ -49,18 +51,76 @@ export interface FormulaColumnDto {
   readonly formula: string;
 }
 
+/** Agrupación de meses de una tabla de datos; el período elegido es el mes de cierre. */
+export enum PeriodGrouping {
+  MONTH = 'MONTH',
+  BIMESTER = 'BIMESTER',
+  QUARTER = 'QUARTER',
+  SEMESTER = 'SEMESTER',
+  YEAR = 'YEAR',
+}
+
+/** Cómo toma una columna los datos cuando el período agrupa varios meses. */
+export enum PeriodValue {
+  /** Valor del último mes del período (p. ej. un saldo). */
+  CLOSING = 'CLOSING',
+  /** Valor del primer mes del período (p. ej. un saldo anterior). */
+  OPENING = 'OPENING',
+  /** Suma (o agregación) de todos los meses del período (p. ej. movimientos o ventas). */
+  ACCUMULATED = 'ACCUMULATED',
+}
+
+export enum DataColumnKind {
+  MEASURE = 'MEASURE',
+  FORMULA = 'FORMULA',
+}
+
+/**
+ * Columna de valores de una tabla de datos, en el orden en que se muestra. Una medida toma un
+ * encabezado (cargado u operado); una fórmula, una expresión agregada.
+ */
+export interface DataColumnDto {
+  readonly kind: DataColumnKind;
+  /** Título; vacío = nombre vigente del encabezado (solo medidas). */
+  readonly label: string;
+  /** Encabezado de la medida; `null` en fórmulas. */
+  readonly fieldKey: string | null;
+  /** Fórmula de la columna; `null` en medidas. */
+  readonly formula: string | null;
+  readonly periodValue: PeriodValue;
+  /** 0 = período del informe; -1 = período anterior (enero → diciembre del año anterior). */
+  readonly periodOffset: number;
+}
+
+/** Alcance de una tabla de datos; una lista vacía no filtra ese nivel. */
+export interface DataScopeDto {
+  readonly organizationIds: ReadonlyArray<string>;
+  readonly countryIds: ReadonlyArray<string>;
+  readonly currencies: ReadonlyArray<string>;
+  readonly companyIds: ReadonlyArray<string>;
+  readonly enterpriseIds: ReadonlyArray<string>;
+  readonly branchIds: ReadonlyArray<string>;
+}
+
+/** Tabla de datos guardada (antes «informe»): origen, alcance, período, filas y columnas. */
 export interface ReportDefinitionRequest {
   readonly name: string;
   readonly rowSource: RowSource;
   readonly classificationId: string | null;
   readonly rowFieldKey: string | null;
-  readonly measures: ReadonlyArray<string>;
+  /** Clasificaciones que se muestran como columnas de texto (el grupo de cada fila). */
+  readonly classificationColumns: ReadonlyArray<string>;
+  readonly columns: ReadonlyArray<DataColumnDto>;
   readonly profileId: string | null;
-  readonly companyId: string | null;
+  readonly scope: DataScopeDto;
+  readonly periodGrouping: PeriodGrouping;
+  /** Niveles de la estructura que abren las columnas (p. ej. organización › país › compañía). */
+  readonly columnSplit: ReadonlyArray<OrgLevel>;
+  /** Con columnas abiertas: agrega subtotales por nivel y el total consolidado. */
+  readonly subtotals: boolean;
   /** Encabezado sí/no que debe ser verdadero (p. ej. «Es cuenta de detalle»). */
   readonly onlyWhenFieldKey: string | null;
   readonly includeUnclassified: boolean;
-  readonly formulaColumns: ReadonlyArray<FormulaColumnDto>;
 }
 
 export interface ReportDefinitionResponse extends ReportDefinitionRequest {
@@ -69,7 +129,18 @@ export interface ReportDefinitionResponse extends ReportDefinitionRequest {
 }
 
 export interface ReportColumnResponse {
+  /** Clave estable de la columna (el encabezado si no hay grupos ni período distinto). */
   readonly fieldKey: string;
+  readonly label: string;
+  /** Títulos de los grupos que la contienen (p. ej. organización, país, compañía); vacío sin grupos. */
+  readonly group: ReadonlyArray<string>;
+  /** Columna de subtotal o total consolidado. */
+  readonly subtotal: boolean;
+}
+
+/** Columna de texto de cada fila: identificador, su nombre o el grupo de una clasificación. */
+export interface ReportAttributeColumnResponse {
+  readonly key: string;
   readonly label: string;
 }
 
@@ -78,6 +149,8 @@ export interface ReportRowResponse {
   readonly label: string;
   readonly level: number;
   readonly total: boolean;
+  /** Textos de la fila, alineados con `attributeColumns`. */
+  readonly attributes: ReadonlyArray<string | null>;
   readonly values: ReadonlyArray<string | null>;
 }
 
@@ -85,7 +158,10 @@ export interface ComputedReportResponse {
   readonly definitionId: string;
   readonly name: string;
   readonly period: string;
+  /** Meses que cubre el período, p. ej. «01/2026 – 03/2026». */
+  readonly periodLabel: string;
   readonly records: number;
+  readonly attributeColumns: ReadonlyArray<ReportAttributeColumnResponse>;
   readonly columns: ReadonlyArray<ReportColumnResponse>;
   readonly rows: ReadonlyArray<ReportRowResponse>;
   /** Avisos del cálculo (p. ej. montos en monedas distintas que no se sumaron). */
