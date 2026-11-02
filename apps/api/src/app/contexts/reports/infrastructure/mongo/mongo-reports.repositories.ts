@@ -10,6 +10,7 @@ import { OrgStructure } from '../../domain/org-structure';
 import {
   DataRecordRepository,
   DataRecordSnapshot,
+  DistinctValue,
   FieldCatalogRepository,
   ImportBatchRepository,
   OrgStructureRepository,
@@ -248,6 +249,49 @@ export class MongoDataRecordRepository extends DataRecordRepository {
     for await (const record of cursor) {
       yield Records.withoutId(record);
     }
+  }
+
+  public override async distinctValues(
+    query: RecordQuery,
+    fieldKey: string,
+    nameKey: Nullable<string>,
+    limit: number,
+  ): Promise<DistinctValue[]> {
+    const rows: unknown[] = await this.model
+      .aggregate<unknown>([
+        {
+          $match: { ...MongoDataRecordRepository.filter(query), [`values.${fieldKey}`]: { $type: 'string' } },
+        },
+        {
+          $group: {
+            _id: `$values.${fieldKey}`,
+            name: { $first: nameKey === null ? null : `$values.${nameKey}` },
+            firstPeriod: { $min: '$period' },
+            lastPeriod: { $max: '$period' },
+            records: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+        { $limit: limit },
+      ])
+      .allowDiskUse(true)
+      .exec();
+    return rows.flatMap((row: unknown): DistinctValue[] => {
+      if (typeof row !== 'object' || row === null) {
+        return [];
+      }
+      const value: unknown = Reflect.get(row, '_id');
+      const name: unknown = Reflect.get(row, 'name');
+      const first: unknown = Reflect.get(row, 'firstPeriod');
+      const last: unknown = Reflect.get(row, 'lastPeriod');
+      const records: unknown = Reflect.get(row, 'records');
+      return typeof value === 'string' &&
+        typeof first === 'string' &&
+        typeof last === 'string' &&
+        typeof records === 'number'
+        ? [new DistinctValue(value, typeof name === 'string' ? name : null, first, last, records)]
+        : [];
+    });
   }
 
   private static filter(query: RecordQuery): QueryFilter<DataRecordDocument> {

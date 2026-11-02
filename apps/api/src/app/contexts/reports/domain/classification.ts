@@ -1,5 +1,13 @@
 import { AnalysisErrorCode, ClassificationNodeDto } from '@asisteglt/shared-contracts';
-import { AggregateRoot, Clock, EntityId, Nullable, Result, ValidationError } from '@asisteglt/shared-kernel';
+import {
+  AggregateRoot,
+  Clock,
+  EntityId,
+  Nullable,
+  PatternClassifier,
+  Result,
+  ValidationError,
+} from '@asisteglt/shared-kernel';
 import { CatalogField, FieldCatalog } from './field-catalog';
 
 export interface ClassificationSnapshot {
@@ -17,37 +25,13 @@ export interface ClassificationDraft {
   readonly nodes: ReadonlyArray<ClassificationNodeDto>;
 }
 
-/** Patrón de asignación con `*` (cualquier texto) y `?` (un carácter), sin distinguir mayúsculas. */
-export class NodePattern {
-  private readonly regex: RegExp;
-
-  public constructor(public readonly source: string) {
-    const body: string = source
-      .trim()
-      .split('')
-      .map((c: string): string =>
-        c === '*' ? '.*' : c === '?' ? '.' : c.replace(/[.+^${}()|[\]\\]/g, '\\$&'),
-      )
-      .join('');
-    this.regex = new RegExp(`^${body}$`, 'i');
-  }
-
-  public matches(value: string): boolean {
-    return this.regex.test(value.trim());
-  }
-
-  /** Cuántos caracteres literales tiene: el patrón más específico gana. */
-  public specificity(): number {
-    return this.source.replace(/[*?]/g, '').length;
-  }
-}
-
 /**
  * Clasificación: árbol de nodos sobre un encabezado clasificable (`id` o `id_name`). Cada nodo
- * asigna valores con patrones; si varios coinciden, gana el más específico.
+ * asigna valores con patrones (`1.*`) o cuentas exactas (`1.001.002`); si varios coinciden, gana el
+ * más específico (una cuenta exacta siempre gana).
  */
 export class Classification extends AggregateRoot {
-  private patterns: ReadonlyArray<{ readonly nodeId: string; readonly pattern: NodePattern }> = [];
+  private classifier: PatternClassifier = new PatternClassifier([]);
 
   private constructor(
     id: EntityId,
@@ -116,16 +100,7 @@ export class Classification extends AggregateRoot {
 
   /** Nodo al que pertenece un valor, o `null` si ningún patrón coincide. */
   public classify(value: string): Nullable<string> {
-    let best: Nullable<{ readonly nodeId: string; readonly pattern: NodePattern }> = null;
-    for (const entry of this.patterns) {
-      if (
-        entry.pattern.matches(value) &&
-        (best === null || entry.pattern.specificity() > best.pattern.specificity())
-      ) {
-        best = entry;
-      }
-    }
-    return best === null ? null : best.nodeId;
+    return this.classifier.classify(value);
   }
 
   public children(parentId: Nullable<string>): ClassificationNodeDto[] {
@@ -144,8 +119,8 @@ export class Classification extends AggregateRoot {
   }
 
   private index(): void {
-    this.patterns = this.nodes.flatMap((n: ClassificationNodeDto) =>
-      n.patterns.map((p: string) => ({ nodeId: n.id, pattern: new NodePattern(p) })),
+    this.classifier = new PatternClassifier(
+      this.nodes.map((n: ClassificationNodeDto) => ({ key: n.id, patterns: n.patterns })),
     );
   }
 

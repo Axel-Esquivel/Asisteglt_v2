@@ -204,6 +204,7 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
   await expect(page.getByTestId('classification-tree')).toContainText('1.*');
   await page.getByRole('button', { name: 'Guardar' }).click();
   await expect(page.getByTestId('classification-list')).toContainText('Balance general');
+  await expect(page.getByTestId('classification-pending')).toContainText('Cuentas sin clasificar');
 
   await page.getByRole('tab', { name: 'Informes' }).click();
   await page.getByRole('button', { name: 'Nuevo informe' }).click();

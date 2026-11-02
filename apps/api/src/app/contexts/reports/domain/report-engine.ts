@@ -135,6 +135,8 @@ export class ReportEngine {
   private readonly buckets: Map<string, Bucket> = new Map<string, Bucket>();
   private readonly total: Bucket;
   private records: number = 0;
+  /** Valores del encabezado clasificado que ningún nodo captura (p. ej. cuentas nuevas). */
+  private readonly unclassified: Set<string> = new Set<string>();
 
   public constructor(
     private readonly definition: ReportDefinition,
@@ -281,6 +283,16 @@ export class ReportEngine {
         );
       }
     });
+    if (this.unclassified.size > 0) {
+      const sample: string[] = [...this.unclassified].sort().slice(0, 5);
+      const more: string = this.unclassified.size > sample.length ? ', …' : '';
+      const where: string = this.definition.getSpec().includeUnclassified
+        ? 'se suman en «Sin clasificar»'
+        : 'no se incluyen en el informe';
+      warnings.push(
+        `${String(this.unclassified.size)} valor(es) sin clasificar ${where} (${sample.join(', ')}${more}). Asígnalos en Clasificaciones.`,
+      );
+    }
     return warnings;
   }
 
@@ -306,6 +318,9 @@ export class ReportEngine {
     const value: CellValue = record.values[this.classification.getFieldKey()] ?? null;
     const node: Nullable<string> = typeof value === 'string' ? this.classification.classify(value) : null;
     if (node === null) {
+      if (typeof value === 'string') {
+        this.unclassified.add(value.trim());
+      }
       return spec.includeUnclassified ? ReportEngine.UNCLASSIFIED : null;
     }
     return node;

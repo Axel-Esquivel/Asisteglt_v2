@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, Query } from '@nestjs/common';
 import {
+  ClassifiableValuesResponse,
   ClassificationResponse,
   ComputedReportResponse,
   ReportDefinitionResponse,
@@ -24,6 +25,21 @@ export class AnalysisController {
     return (await this.analysis.listClassifications(projectId, p.userId))
       .unwrap()
       .map(AnalysisController.classification);
+  }
+
+  @Get('classification-values')
+  public async classifiableValues(
+    @CurrentPrincipal() p: AuthenticatedPrincipal,
+    @Param('projectId') projectId: string,
+    @Query('fieldKey') fieldKey: string,
+  ): Promise<ClassifiableValuesResponse> {
+    return (
+      await this.analysis.classifiableValues(
+        projectId,
+        p.userId,
+        typeof fieldKey === 'string' ? fieldKey : '',
+      )
+    ).unwrap();
   }
 
   @Post('classifications')

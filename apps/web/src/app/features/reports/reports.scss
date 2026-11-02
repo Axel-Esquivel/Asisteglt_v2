@@ -92,3 +92,7 @@
   padding-block-end: 1rem;
   border-block-end: 1px solid var(--p-content-border-color);
 }
+
+.reports__wide {
+  grid-column: 1 / -1;
+}

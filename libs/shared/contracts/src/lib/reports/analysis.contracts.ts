@@ -18,6 +18,25 @@ export interface ClassificationResponse extends ClassificationRequest {
   readonly updatedAt: string;
 }
 
+/** Un valor distinto del encabezado clasificable en los datos publicados (p. ej. una cuenta). */
+export interface ClassifiableValueResponse {
+  readonly value: string;
+  /** Nombre tomado del encabezado «nombre de» que describe al identificador, si existe. */
+  readonly name: string | null;
+  readonly firstPeriod: string;
+  readonly lastPeriod: string;
+  readonly records: number;
+}
+
+export interface ClassifiableValuesResponse {
+  readonly fieldKey: string;
+  /** Período más reciente con datos; los valores que aparecen por primera vez en él son nuevos. */
+  readonly latestPeriod: string | null;
+  readonly values: ReadonlyArray<ClassifiableValueResponse>;
+  /** `true` si hay más valores que el máximo devuelto. */
+  readonly truncated: boolean;
+}
+
 export enum RowSource {
   CLASSIFICATION = 'CLASSIFICATION',
   FIELD = 'FIELD',
