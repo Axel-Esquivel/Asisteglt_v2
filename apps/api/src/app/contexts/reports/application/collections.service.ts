@@ -3,7 +3,12 @@ import { CollectionErrorCode, CollectionRequest } from '@asisteglt/shared-contra
 import { Clock, ConflictError, EntityId, NotFoundError, Nullable, Result } from '@asisteglt/shared-kernel';
 import { Project } from '../../projects/domain/project';
 import { OperationPipeline } from '../domain/operation-pipeline';
-import { CollectionRepository, OperationPipelineRepository } from '../domain/ports';
+import {
+  CollectionRepository,
+  OperationPipelineRepository,
+  ReportDefinitionRepository,
+} from '../domain/ports';
+import { ReportDefinition } from '../domain/report-definition';
 import { SupplementaryCollection } from '../domain/supplementary-collection';
 import { ReportsAccess } from './reports-access';
 
@@ -13,6 +18,7 @@ export class CollectionsService {
   public constructor(
     private readonly collections: CollectionRepository,
     private readonly pipelines: OperationPipelineRepository,
+    private readonly definitions: ReportDefinitionRepository,
     private readonly access: ReportsAccess,
     private readonly clock: Clock,
   ) {}
@@ -60,6 +66,18 @@ export class CollectionsService {
                 new ConflictError(
                   CollectionErrorCode.COLLECTION_IN_USE,
                   'La colección se usa en una conversión de moneda',
+                ),
+              );
+            }
+            const table: Nullable<ReportDefinition> =
+              (await this.definitions.findByProject(p.getId())).find((d: ReportDefinition): boolean =>
+                d.usesCollection(c.getId().toString()),
+              ) ?? null;
+            if (table !== null) {
+              return Result.fail(
+                new ConflictError(
+                  CollectionErrorCode.COLLECTION_IN_USE,
+                  `La colección es la de tasas de la tabla de datos «${table.getSpec().name}»`,
                 ),
               );
             }

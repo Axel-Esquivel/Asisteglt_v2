@@ -11,13 +11,16 @@ import {
 import { FormsModule } from '@angular/forms';
 import {
   Aggregation,
+  CollectionFieldDto,
   DataColumnDto,
   DataColumnKind,
   ImportItemStatus,
   OrgLevel,
   PeriodGrouping,
   PeriodValue,
+  PresentationCurrencyDto,
   ProjectPermission,
+  RateQuote,
   ReportDefinitionRequest,
   RowSource,
 } from '@asisteglt/shared-contracts';
@@ -51,7 +54,8 @@ import { ImportBatchView, ImportItemView } from '../data/import.model';
 import { OrgTree, OrgUnitView } from '../data/org.model';
 import { ProfileView } from '../data/profile.model';
 import { ReportsApiClient } from '../data/reports.api-client';
-import { FormulaCheck } from '../data/operations.model';
+import { CollectionView } from '../data/collections.model';
+import { FormulaCheck, OperationsView } from '../data/operations.model';
 import { Option, ReportsLabels } from '../data/reports-labels';
 
 /** Columna de valores editable: un dato (encabezado) o una columna calculada. */
@@ -115,6 +119,13 @@ class ReportDraft {
     public subtotals: boolean,
     public onlyWhenFieldKey: Nullable<string>,
     public includeUnclassified: boolean,
+    /** Convertir los montos a una moneda de presentación. */
+    public convert: boolean,
+    public targetCurrency: string,
+    public collectionId: Nullable<string>,
+    public rateFieldKey: Nullable<string>,
+    public currencyFieldKey: Nullable<string>,
+    public quote: RateQuote,
   ) {}
 
   public static blank(): ReportDraft {
@@ -138,6 +149,12 @@ class ReportDraft {
       true,
       null,
       true,
+      false,
+      '',
+      null,
+      null,
+      null,
+      RateQuote.UNITS_PER_TARGET,
     );
   }
 
@@ -163,6 +180,12 @@ class ReportDraft {
       s.subtotals,
       s.onlyWhenFieldKey,
       s.includeUnclassified,
+      s.presentation !== null,
+      s.presentation === null ? '' : s.presentation.targetCurrency,
+      s.presentation === null ? null : s.presentation.collectionId,
+      s.presentation === null ? null : s.presentation.rateFieldKey,
+      s.presentation === null ? null : s.presentation.currencyFieldKey,
+      s.presentation === null ? RateQuote.UNITS_PER_TARGET : s.presentation.quote,
     );
   }
 
@@ -188,7 +211,21 @@ class ReportDraft {
       subtotals: this.subtotals,
       onlyWhenFieldKey: this.onlyWhenFieldKey,
       includeUnclassified: this.includeUnclassified,
+      presentation: this.presentation(),
     };
+  }
+
+  /** Lo incompleto viaja vacío para que la API explique qué falta. */
+  private presentation(): Nullable<PresentationCurrencyDto> {
+    return this.convert
+      ? {
+          targetCurrency: this.targetCurrency.trim().toUpperCase(),
+          collectionId: this.collectionId ?? '',
+          rateFieldKey: this.rateFieldKey ?? '',
+          currencyFieldKey: this.currencyFieldKey ?? '',
+          quote: this.quote,
+        }
+      : null;
   }
 }
 
@@ -301,6 +338,12 @@ export class ReportsPage implements OnInit {
     }
     return [...currencies].sort().map((c: string): Option<string> => ({ label: c, value: c }));
   });
+
+  protected readonly collections: WritableSignal<CollectionView[]> = signal<CollectionView[]>([]);
+  protected readonly collectionOptions: Signal<Option<string>[]> = computed((): Option<string>[] =>
+    this.collections().map((c: CollectionView): Option<string> => ({ label: c.name, value: c.id })),
+  );
+  protected readonly quotes: Option<RateQuote>[] = OperationsView.QUOTES;
 
   protected readonly reportTitle: Signal<string> = computed((): string => {
     const report: Nullable<ComputedReport> = this.report();
@@ -502,16 +545,45 @@ export class ReportsPage implements OnInit {
     );
   }
 
+  protected rateFieldOptions(collectionId: Nullable<string>): Option<string>[] {
+    const collection: Nullable<CollectionView> = this.collection(collectionId);
+    return collection === null
+      ? []
+      : collection
+          .rateFields()
+          .map((f: CollectionFieldDto): Option<string> => ({ label: f.label, value: f.key }));
+  }
+
+  protected currencyFieldOptions(collectionId: Nullable<string>): Option<string>[] {
+    const collection: Nullable<CollectionView> = this.collection(collectionId);
+    return collection === null
+      ? []
+      : collection
+          .textFields()
+          .map((f: CollectionFieldDto): Option<string> => ({ label: f.label, value: f.key }));
+  }
+
+  private collection(id: Nullable<string>): Nullable<CollectionView> {
+    return this.collections().find((c: CollectionView): boolean => c.id === id) ?? null;
+  }
+
   private async load(): Promise<void> {
     const projectId: string = this.context.id();
-    const [catalog, classifications, profiles, org, history] = await Promise.all([
+    const [catalog, classifications, profiles, org, history, collections] = await Promise.all([
       this.api.fieldCatalog(projectId),
       this.api.classificationList(projectId),
       this.api.profileList(projectId),
       this.api.orgStructure(projectId),
       this.api.importHistory(projectId),
+      this.api.collections(projectId),
       this.loadDefinitions(),
     ]);
+    collections.match(
+      (items: CollectionView[]): void => this.collections.set(items),
+      (): void => {
+        // Sin colecciones visibles: la moneda de presentación no ofrece tasas.
+      },
+    );
     catalog.match(
       (c: CatalogView): void => this.catalog.set(c),
       (e): void => this.notifier.error(e),

@@ -49,6 +49,7 @@ import {
 } from '../domain/ports';
 import { ReportTemplate } from '../domain/report-template';
 import { ReportDefinition } from '../domain/report-definition';
+import { PresentationConverter } from '../domain/presentation-currency';
 import { ReportEngine, TableWindows } from '../domain/report-engine';
 import { ColumnSplit, DataScope } from '../domain/data-scope';
 import { OrgStructureService } from './org-structure.service';
@@ -286,6 +287,9 @@ export class AnalysisService {
               new ColumnSplit(spec.columnSplit, await this.org.of(p.getId())),
               windows,
               await this.operations.convertedCurrencies(p.getId()),
+              spec.presentation === null
+                ? null
+                : new PresentationConverter(spec.presentation, await this.operations.rates(p.getId())),
             );
             const months: string[] = windows.months();
             const query: RecordQuery = new RecordQuery(

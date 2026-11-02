@@ -1,3 +1,4 @@
+import { RateQuote } from './operations.contracts';
 import { OrgLevel } from './org-structure.contracts';
 
 /** Clasificaciones e informes matriciales (docs/04 §8 y §11, versión inicial). */
@@ -103,6 +104,19 @@ export interface DataScopeDto {
 }
 
 /** Tabla de datos guardada (antes «informe»): origen, alcance, período, filas y columnas. */
+/**
+ * Moneda de presentación: convierte los montos y precios de la tabla con las tasas de una
+ * colección (p. ej. «Tipo de cambio»). Cada registro se convierte con la tasa de su mes, así un
+ * saldo de cierre usa la tasa de cierre y un acumulado suma cada mes a su propia tasa.
+ */
+export interface PresentationCurrencyDto {
+  readonly targetCurrency: string;
+  readonly collectionId: string;
+  readonly rateFieldKey: string;
+  readonly currencyFieldKey: string;
+  readonly quote: RateQuote;
+}
+
 export interface ReportDefinitionRequest {
   readonly name: string;
   readonly rowSource: RowSource;
@@ -121,6 +135,8 @@ export interface ReportDefinitionRequest {
   /** Encabezado sí/no que debe ser verdadero (p. ej. «Es cuenta de detalle»). */
   readonly onlyWhenFieldKey: string | null;
   readonly includeUnclassified: boolean;
+  /** `null` = cada monto en su moneda (no se suman monedas distintas). */
+  readonly presentation: PresentationCurrencyDto | null;
 }
 
 export interface ReportDefinitionResponse extends ReportDefinitionRequest {
@@ -161,6 +177,8 @@ export interface ComputedReportResponse {
   /** Meses que cubre el período, p. ej. «01/2026 – 03/2026». */
   readonly periodLabel: string;
   readonly records: number;
+  /** Moneda a la que se convirtieron los montos; `null` si no se convierten. */
+  readonly presentationCurrency: string | null;
   readonly attributeColumns: ReadonlyArray<ReportAttributeColumnResponse>;
   readonly columns: ReadonlyArray<ReportColumnResponse>;
   readonly rows: ReadonlyArray<ReportRowResponse>;

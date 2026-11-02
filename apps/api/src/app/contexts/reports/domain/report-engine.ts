@@ -34,6 +34,7 @@ import { Classification } from './classification';
 import { ColumnGroup, ColumnSplit, DataScope } from './data-scope';
 import { CatalogField, FieldCatalog } from './field-catalog';
 import { PeriodWindow } from './period-window';
+import { PresentationConverter } from './presentation-currency';
 import { DataRecordSnapshot } from './ports';
 import { ReportDefinition } from './report-definition';
 
@@ -235,6 +236,8 @@ export class ReportEngine {
     private readonly split: ColumnSplit,
     private readonly windows: TableWindows,
     private readonly convertedCurrencies: ReadonlyMap<string, string>,
+    /** Moneda de presentación; `null` deja cada monto en su moneda. */
+    private readonly presentation: Nullable<PresentationConverter>,
   ) {
     const spec: ReportDefinitionRequest = definition.getSpec();
     this.resolver = CatalogResolver.of(catalog);
@@ -293,7 +296,12 @@ export class ReportEngine {
       if (!m.selects(record.period)) {
         return;
       }
-      const value: Nullable<Decimal> = ReportEngine.decimal(record.values[m.key] ?? null);
+      const raw: Nullable<Decimal> = ReportEngine.decimal(record.values[m.key] ?? null);
+      const currency: string = this.convertedCurrencies.get(m.key) ?? record.currency;
+      const value: Nullable<Decimal> =
+        raw === null || !m.currencySensitive || this.presentation === null
+          ? raw
+          : this.presentation.convert(record.period, currency, raw);
       const weight: Nullable<Decimal> =
         m.weightKey === null ? null : ReportEngine.decimal(record.values[m.weightKey] ?? null);
       for (const target of [cell, total]) {
@@ -303,7 +311,7 @@ export class ReportEngine {
         }
         if (value !== null && m.currencySensitive) {
           (target.currencies[i] ?? new Set<string>()).add(
-            this.convertedCurrencies.get(m.key) ?? record.currency,
+            this.presentation === null ? currency : this.presentation.target(),
           );
         }
       }
@@ -328,6 +336,7 @@ export class ReportEngine {
       period,
       periodLabel: this.windows.current().label(),
       records: this.records,
+      presentationCurrency: this.presentation === null ? null : this.presentation.target(),
       attributeColumns: this.attributeColumns,
       columns: groups.flatMap((g: OutputGroup): ReportColumnResponse[] =>
         this.columns.map((c: ValueColumn): ReportColumnResponse => ({
@@ -585,6 +594,10 @@ export class ReportEngine {
         );
       }
     });
+    const missingRates: Nullable<string> = this.presentation === null ? null : this.presentation.warning();
+    if (missingRates !== null) {
+      warnings.push(missingRates);
+    }
     if (this.unclassified.size > 0) {
       const sample: string[] = [...this.unclassified].sort().slice(0, 5);
       const more: string = this.unclassified.size > sample.length ? ', …' : '';

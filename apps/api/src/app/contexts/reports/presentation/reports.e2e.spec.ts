@@ -748,6 +748,48 @@ describe('Reportes: importación (e2e)', () => {
     const total: unknown = Body.list(Reflect.get(run.body, 'rows')).at(-1);
     expect(total).toMatchObject({ label: 'Total', values: [null, '3000', null] });
 
+    // Moneda de presentación: los quetzales se convierten con la tasa del mes y se suman con los dólares.
+    const presentation = {
+      targetCurrency: 'usd',
+      collectionId,
+      rateFieldKey: rateKey,
+      currencyFieldKey: currencyKey,
+      quote: 'UNITS_PER_TARGET',
+    };
+    await request(app.server())
+      .post(api('/report-definitions'))
+      .set('authorization', owner.bearer())
+      .send({
+        ...consolidated,
+        name: 'En dólares',
+        formulaColumns: [],
+        presentation: { ...presentation, targetCurrency: 'US' },
+      })
+      .expect(400);
+    const inUsd: Response = await request(app.server())
+      .post(api('/report-definitions'))
+      .set('authorization', owner.bearer())
+      .send({ ...consolidated, name: 'En dólares', formulaColumns: [], presentation })
+      .expect(201);
+    expect(inUsd.body).toMatchObject({ presentation: { targetCurrency: 'USD' } });
+    const usdRun: Response = await request(app.server())
+      .get(api(`/report-definitions/${Body.text(inUsd.body, 'id')}/run?period=2026-08`))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    expect(usdRun.body).toMatchObject({ presentationCurrency: 'USD', warnings: [] });
+    await request(app.server())
+      .delete(api(`/collections/${collectionId}`))
+      .set('authorization', owner.bearer())
+      .expect(409);
+    expect(Body.list(Reflect.get(usdRun.body, 'rows')).at(-1)).toMatchObject({
+      label: 'Total',
+      values: ['3000'],
+    });
+    await request(app.server())
+      .delete(api(`/report-definitions/${Body.text(inUsd.body, 'id')}`))
+      .set('authorization', owner.bearer())
+      .expect(204);
+
     await request(app.server())
       .delete(api(`/collections/${collectionId}`))
       .set('authorization', owner.bearer())

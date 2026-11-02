@@ -11,7 +11,7 @@ import { Project } from '../../projects/domain/project';
 import { FieldCatalog } from '../domain/field-catalog';
 import { OperationPipeline } from '../domain/operation-pipeline';
 import { CollectionRates } from '../domain/collection-rates';
-import { HistorySource, OperationRunner } from '../domain/operation-runner';
+import { HistorySource, OperationRunner, RateTable } from '../domain/operation-runner';
 import { SupplementaryCollection } from '../domain/supplementary-collection';
 import {
   CollectionRepository,
@@ -107,6 +107,11 @@ export class OperationsService {
     );
     await runner.prepare(periods, new RepositoryHistory(this.records, query));
     return runner;
+  }
+
+  /** Tasas de las colecciones del proyecto (p. ej. para la moneda de presentación de una tabla). */
+  public async rates(projectId: EntityId): Promise<RateTable> {
+    return new CollectionRates(await this.collections.findByProject(projectId));
   }
 
   /** Moneda fija de los encabezados que escribe una conversión (para no mezclar monedas). */

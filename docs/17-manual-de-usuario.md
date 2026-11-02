@@ -125,25 +125,33 @@ montos en varias monedas». Convierte a una moneda común con una operación.
     se marcan como **Nueva**, se avisa en la clasificación y en la lista de clasificaciones, y el
     informe muestra una advertencia mientras haya valores sin clasificar.
 - **Tablas de datos** (antes «Informes»): arman los datos que después usan las plantillas. El
-  diseño tiene cinco partes:
+  diseño tiene seis partes:
   1. **Origen**: preconfiguración (o todas) y «Solo registros donde… *Es cuenta de detalle*» para
      no duplicar las cuentas de mayor.
   2. **Alcance**: organizaciones, países, monedas, compañías, empresas y sucursales (selección
      múltiple; vacío = todas). **Abrir columnas por** (p. ej. *Organización* y *Compañía*) repite
      cada dato por compañía; con **Subtotales** agrega el total de cada organización o país y el
-     **Total consolidado**. Sin abrir columnas, todo el alcance se suma en una sola columna.
-  3. **Período**: mensual, bimestral, trimestral, semestral o anual. Al consultar se elige el mes
+     **Total consolidado**. Sin abrir columnas, todo el alcance se suma en una sola columna. Si
+     una compañía no tiene empresas o sucursales, esos encabezados quedan vacíos.
+  3. **Moneda de presentación** (opcional): convierte los montos y precios a una sola moneda
+     (p. ej. `USD`) con una colección de tasas (*Tipo de cambio*: campo de tasa, campo de moneda y
+     cotización). Cada registro usa la tasa de su mes (o la más reciente anterior): un saldo al
+     cierre queda a la tasa de cierre y un acumulado suma cada mes a su propia tasa. Las
+     cantidades no se convierten. Si falta la tasa de una moneda en un mes, la tabla lo avisa y
+     no incluye esos montos. Una colección usada así no se puede eliminar.
+  4. **Período**: mensual, bimestral, trimestral, semestral o anual. Al consultar se elige el mes
      de cierre y se toman los meses de su bloque hasta ese mes (marzo trimestral = enero a marzo).
-  4. **Filas**: por identificador (p. ej. número de cuenta, con su nombre y, si se eligen,
+  5. **Filas**: por identificador (p. ej. número de cuenta, con su nombre y, si se eligen,
      **columnas de clasificación** con el grupo de cada cuenta) o por clasificación (árbol con
      subtotales, «Sin clasificar» y total).
-  5. **Columnas de datos**, en el orden que se elija (flechas para moverlas): datos cargados u
+  6. **Columnas de datos**, en el orden que se elija (flechas para moverlas): datos cargados u
      operados y **columnas calculadas** (`=SUMA([Debe]) - SUMA([Haber])`). Cada columna indica
      **Al agrupar meses**: *valor del mes de cierre* (saldos), *valor del mes inicial* (saldo
      anterior) o *acumulado* (movimientos, ventas); y puede tomar el **período anterior** (en
      enero, diciembre del año anterior).
-- Nunca se suman montos de monedas distintas: la tabla avisa y deja la celda vacía. Conviértelos
-  con una operación de conversión de moneda, filtra por moneda o abre las columnas por compañía.
+- Nunca se suman montos de monedas distintas: la tabla avisa y deja la celda vacía. Elige una
+  moneda de presentación, conviértelos con una operación de conversión de moneda, filtra por
+  moneda o abre las columnas por compañía.
 - Elige el período y **Exportar CSV** (separador `;`, UTF-8; abre en hojas de cálculo).
 
 ### 4.7 Plantillas e impresión en PDF
