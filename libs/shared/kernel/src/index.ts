@@ -16,3 +16,4 @@ export * from './lib/values/email';
 export * from './lib/json/json-reader';
 export * from './lib/json/decoder';
 export * from './lib/json/field-reader';
+export * from './lib/values/wildcard-pattern';

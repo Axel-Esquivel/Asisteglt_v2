@@ -122,3 +122,114 @@ export class ComputedReport {
     return [header, ...lines].join('\r\n');
   }
 }
+
+/** Un valor real del encabezado clasificable (p. ej. una cuenta) en los datos publicados. */
+export class ClassifiableValue {
+  public readonly label: string;
+  private readonly searchText: string;
+
+  public constructor(
+    public readonly value: string,
+    public readonly name: Nullable<string>,
+    public readonly firstPeriod: string,
+    public readonly lastPeriod: string,
+    public readonly records: number,
+  ) {
+    this.label = name === null ? value : `${value} · ${name}`;
+    this.searchText = this.label.toLowerCase();
+  }
+
+  /** Valor que no aparece en los datos (p. ej. una cuenta escrita a mano). */
+  public static unknown(value: string): ClassifiableValue {
+    return new ClassifiableValue(value, null, '', '', 0);
+  }
+
+  public static decoder(): FieldDecoder<ClassifiableValue> {
+    return new FieldDecoder<ClassifiableValue>(
+      (f: FieldReader): ClassifiableValue =>
+        new ClassifiableValue(
+          f.string('value'),
+          f.nullableString('name'),
+          f.string('firstPeriod'),
+          f.string('lastPeriod'),
+          f.number('records'),
+        ),
+    );
+  }
+
+  /** Coincide si todas las palabras buscadas aparecen en el código o el nombre. */
+  public matches(words: ReadonlyArray<string>): boolean {
+    return words.every((w: string): boolean => this.searchText.includes(w));
+  }
+}
+
+/** Valores distintos de un encabezado clasificable en todos los datos publicados del proyecto. */
+export class ClassifiableValues {
+  private readonly byValue: ReadonlyMap<string, ClassifiableValue>;
+  private readonly hasHistory: boolean;
+
+  public constructor(
+    public readonly fieldKey: string,
+    public readonly latestPeriod: Nullable<string>,
+    public readonly values: ReadonlyArray<ClassifiableValue>,
+    public readonly truncated: boolean,
+  ) {
+    this.byValue = new Map<string, ClassifiableValue>(
+      values.map((v: ClassifiableValue): [string, ClassifiableValue] => [
+        ClassifiableValues.normalize(v.value),
+        v,
+      ]),
+    );
+    this.hasHistory = values.some(
+      (v: ClassifiableValue): boolean => latestPeriod !== null && v.firstPeriod < latestPeriod,
+    );
+  }
+
+  public static empty(fieldKey: string): ClassifiableValues {
+    return new ClassifiableValues(fieldKey, null, [], false);
+  }
+
+  public static decoder(): FieldDecoder<ClassifiableValues> {
+    return new FieldDecoder<ClassifiableValues>(
+      (f: FieldReader): ClassifiableValues =>
+        new ClassifiableValues(
+          f.string('fieldKey'),
+          f.nullableString('latestPeriod'),
+          f.list('values', ClassifiableValue.decoder()),
+          f.boolean('truncated'),
+        ),
+    );
+  }
+
+  private static normalize(value: string): string {
+    return value.trim().toLowerCase();
+  }
+
+  /** El valor tal como aparece en los datos o, si no aparece, uno sin nombre. */
+  public find(value: string): ClassifiableValue {
+    return this.byValue.get(ClassifiableValues.normalize(value)) ?? ClassifiableValue.unknown(value.trim());
+  }
+
+  /** Aparece por primera vez en el último período cargado (y antes ya había otros períodos). */
+  public isNew(value: ClassifiableValue): boolean {
+    return this.hasHistory && value.firstPeriod === this.latestPeriod;
+  }
+
+  /** Hasta `limit` valores que contienen todas las palabras de `query`. */
+  public search(query: string, limit: number): ClassifiableValue[] {
+    const words: string[] = query
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((w: string): boolean => w.length > 0);
+    const found: ClassifiableValue[] = [];
+    for (const v of this.values) {
+      if (found.length >= limit) {
+        break;
+      }
+      if (v.matches(words)) {
+        found.push(v);
+      }
+    }
+    return found;
+  }
+}

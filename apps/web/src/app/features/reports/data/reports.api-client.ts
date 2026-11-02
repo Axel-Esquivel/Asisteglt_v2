@@ -15,7 +15,12 @@ import {
 } from '@asisteglt/shared-contracts';
 import { ArrayDecoder, EmptyDecoder, FieldDecoder, Nullable, Result } from '@asisteglt/shared-kernel';
 import { ApiClient } from '@asisteglt/web-core';
-import { ClassificationView, ComputedReport, ReportDefinitionView } from './analysis.model';
+import {
+  ClassifiableValues,
+  ClassificationView,
+  ComputedReport,
+  ReportDefinitionView,
+} from './analysis.model';
 import { CatalogFieldView, CatalogView } from './catalog.model';
 import { CollectionView } from './collections.model';
 import { RecordPage, ImportBatchView } from './import.model';
@@ -47,6 +52,7 @@ export class ReportsApiClient extends ApiClient {
   private readonly classificationDecoder: FieldDecoder<ClassificationView> = ClassificationView.decoder();
   private readonly classificationsDecoder: ArrayDecoder<ClassificationView> =
     new ArrayDecoder<ClassificationView>(ClassificationView.decoder());
+  private readonly valuesDecoder: FieldDecoder<ClassifiableValues> = ClassifiableValues.decoder();
   private readonly reportDecoder: FieldDecoder<ReportDefinitionView> = ReportDefinitionView.decoder();
   private readonly reportsDecoder: ArrayDecoder<ReportDefinitionView> =
     new ArrayDecoder<ReportDefinitionView>(ReportDefinitionView.decoder());
@@ -212,6 +218,15 @@ export class ReportsApiClient extends ApiClient {
 
   public classificationList(projectId: string): Promise<Result<ClassificationView[]>> {
     return this.get(`${ReportsApiClient.base(projectId)}/classifications`, this.classificationsDecoder);
+  }
+
+  /** Valores reales (p. ej. cuentas) del encabezado clasificable en los datos publicados. */
+  public classifiableValues(projectId: string, fieldKey: string): Promise<Result<ClassifiableValues>> {
+    const query: URLSearchParams = new URLSearchParams({ fieldKey });
+    return this.get(
+      `${ReportsApiClient.base(projectId)}/classification-values?${query.toString()}`,
+      this.valuesDecoder,
+    );
   }
 
   public saveClassification(

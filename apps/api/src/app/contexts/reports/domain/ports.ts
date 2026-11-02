@@ -79,12 +79,33 @@ export class RecordPage {
   ) {}
 }
 
+/** Un valor distinto de un encabezado en los registros publicados, con su nombre y alcance. */
+export class DistinctValue {
+  public constructor(
+    public readonly value: string,
+    public readonly name: Nullable<string>,
+    public readonly firstPeriod: string,
+    public readonly lastPeriod: string,
+    public readonly records: number,
+  ) {}
+}
+
 /** Registros publicados (`data_records`), con valores bajo la clave de cada encabezado. */
 export abstract class DataRecordRepository {
   public abstract insertMany(records: ReadonlyArray<DataRecordSnapshot>): Promise<void>;
   public abstract deleteByLoad(loadId: string): Promise<void>;
   public abstract page(query: RecordQuery, page: number, size: number): Promise<RecordPage>;
   public abstract stream(query: RecordQuery): AsyncIterable<DataRecordSnapshot>;
+  /**
+   * Valores de texto distintos de `fieldKey` ordenados, hasta `limit`, con el primer valor de
+   * `nameKey` que los acompaña (si se indica).
+   */
+  public abstract distinctValues(
+    query: RecordQuery,
+    fieldKey: string,
+    nameKey: Nullable<string>,
+    limit: number,
+  ): Promise<DistinctValue[]>;
 }
 
 /** Almacén de archivos cargados (memoria o disco local; los datos nunca van al repositorio). */

@@ -165,6 +165,16 @@ export class FieldCatalog extends AggregateRoot {
     );
   }
 
+  /** Clave del encabezado activo «nombre de» que describe al identificador `key`, si existe. */
+  public nameFieldOf(key: string): Nullable<string> {
+    const name: Nullable<CatalogFieldSnapshot> =
+      this.fields.find(
+        (f: CatalogFieldSnapshot): boolean =>
+          f.active && f.role === FieldRole.IDENTIFIER_NAME && f.describes === key,
+      ) ?? null;
+    return name === null ? null : name.key;
+  }
+
   public labels(): ReadonlyMap<string, string> {
     return new Map<string, string>(
       this.fields.map((f: CatalogFieldSnapshot): [string, string] => [f.key, f.label]),

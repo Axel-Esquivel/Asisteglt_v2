@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import {
   AnalysisErrorCode,
   ClassificationRequest,
+  ClassifiableValueResponse,
+  ClassifiableValuesResponse,
   ComputedReportResponse,
   FormulaColumnDto,
   NumericNature,
@@ -36,10 +38,11 @@ import {
 import { RecordAggregates } from '../domain/record-aggregates';
 import { CatalogResolver } from '../domain/catalog-resolver';
 import { Classification } from '../domain/classification';
-import { FieldCatalog } from '../domain/field-catalog';
+import { CatalogField, FieldCatalog } from '../domain/field-catalog';
 import {
   ClassificationRepository,
   DataRecordRepository,
+  DistinctValue,
   RecordQuery,
   ReportDefinitionRepository,
   ReportTemplateRepository,
@@ -54,6 +57,9 @@ import { OperationRunner } from '../domain/operation-runner';
 /** Clasificaciones e informes matriciales calculados sobre los datos publicados. */
 @Injectable()
 export class AnalysisService {
+  /** Máximo de valores distintos que se devuelven para elegir cuentas. */
+  public static readonly VALUES_LIMIT: number = 20_000;
+
   public constructor(
     private readonly classifications: ClassificationRepository,
     private readonly definitions: ReportDefinitionRepository,
@@ -69,6 +75,58 @@ export class AnalysisService {
     return (await this.access.load(projectId, userId)).flatMapAsync(
       async (p: Project): Promise<Result<Classification[]>> =>
         Result.ok(await this.classifications.findByProject(p.getId())),
+    );
+  }
+
+  /**
+   * Valores distintos de un encabezado clasificable en todos los datos publicados (p. ej. las
+   * cuentas), con su nombre, el primer y último período en que aparecen y el período más reciente.
+   */
+  public async classifiableValues(
+    projectId: string,
+    userId: EntityId,
+    fieldKey: string,
+  ): Promise<Result<ClassifiableValuesResponse>> {
+    return (await this.access.require(projectId, userId, ProjectPermission.DATA_VIEW)).flatMapAsync(
+      async (p: Project): Promise<Result<ClassifiableValuesResponse>> => {
+        const catalog: FieldCatalog = await this.catalogs.of(p.getId());
+        const classifiable: boolean = catalog
+          .find(fieldKey)
+          .map((f: CatalogField): boolean => f.isActive() && f.isClassifiable())
+          .orElse(false);
+        if (!classifiable) {
+          return Result.fail(
+            new ValidationError(
+              AnalysisErrorCode.FIELD_NOT_CLASSIFIABLE,
+              'Solo se clasifica por un identificador o su nombre',
+            ),
+          );
+        }
+        const found: DistinctValue[] = await this.records.distinctValues(
+          new RecordQuery(p.getId().toString(), null, null, null, [], null),
+          fieldKey,
+          catalog.nameFieldOf(fieldKey),
+          AnalysisService.VALUES_LIMIT + 1,
+        );
+        const values: DistinctValue[] = found.slice(0, AnalysisService.VALUES_LIMIT);
+        const latest: Nullable<string> = values.reduce(
+          (max: Nullable<string>, v: DistinctValue): Nullable<string> =>
+            max === null || v.lastPeriod > max ? v.lastPeriod : max,
+          null,
+        );
+        return Result.ok({
+          fieldKey,
+          latestPeriod: latest,
+          truncated: found.length > AnalysisService.VALUES_LIMIT,
+          values: values.map((v: DistinctValue): ClassifiableValueResponse => ({
+            value: v.value,
+            name: v.name,
+            firstPeriod: v.firstPeriod,
+            lastPeriod: v.lastPeriod,
+            records: v.records,
+          })),
+        });
+      },
     );
   }
 

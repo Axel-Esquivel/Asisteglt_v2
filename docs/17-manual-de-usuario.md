@@ -115,6 +115,15 @@ montos en varias monedas». Convierte a una moneda común con una operación.
 
 - **Clasificaciones**: árbol de nodos con patrones sobre un encabezado (p. ej. `1.*` = Activo,
   `1.001.*` = Caja y bancos). El patrón más específico gana.
+  - **Cuentas exactas**: en el diálogo del nodo, el buscador «Cuentas exactas» lista las cuentas
+    reales de los datos publicados (código y nombre). Escribe parte del código o del nombre y elige;
+    si la cuenta ya estaba en otro nodo, se mueve. Una cuenta exacta siempre gana sobre un patrón.
+  - La columna **Cuentas** del árbol indica cuántas cuentas captura cada nodo.
+  - **Cuentas sin clasificar**: el panel bajo el árbol lista las cuentas que ningún nodo captura.
+    Selecciónalas (o filtra con «Solo nuevas») y asígnalas en lote a un nodo; los cambios se
+    aplican al **Guardar**. Las cuentas que aparecen por primera vez en el último período cargado
+    se marcan como **Nueva**, se avisa en la clasificación y en la lista de clasificaciones, y el
+    informe muestra una advertencia mientras haya valores sin clasificar.
 - **Informes**: filas por clasificación y columnas con encabezados o **columnas calculadas**
   (`=SUMA([Debe]) - SUMA([Haber])`). Muestran subtotales, «Sin clasificar» y total. Con «Solo
   registros donde… *Es cuenta de detalle*» se evita duplicar las cuentas de mayor.

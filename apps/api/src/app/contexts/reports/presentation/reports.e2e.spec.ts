@@ -328,6 +328,46 @@ describe('Reportes: importación (e2e)', () => {
       .set('authorization', owner.bearer())
       .send({ name: 'Inválida', fieldKey: key('Debe'), nodes: [] })
       .expect(400);
+    const values: Response = await request(app.server())
+      .get(api(`/classification-values?fieldKey=${key('Código de cuenta')}`))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    const valuesBody: unknown = values.body;
+    // La carga grande de 2026-10 deja 30 002 cuentas: se devuelven las primeras 20 000 en orden.
+    expect(valuesBody).toMatchObject({
+      fieldKey: key('Código de cuenta'),
+      latestPeriod: '2026-10',
+      truncated: true,
+    });
+    expect(Body.list(Reflect.get(values.body, 'values'))).toHaveLength(20_000);
+    expect(Body.list(Reflect.get(values.body, 'values'))).toEqual(
+      expect.arrayContaining([
+        {
+          value: '1.001.001.0003',
+          name: 'Caja chica',
+          firstPeriod: '2026-08',
+          lastPeriod: '2026-08',
+          records: 1,
+        },
+      ]),
+    );
+    await request(app.server())
+      .get(api(`/classification-values?fieldKey=${key('Debe')}`))
+      .set('authorization', owner.bearer())
+      .expect(400);
+    const accounts: string[] = Array.from(
+      { length: 8000 },
+      (_value: unknown, index: number): string => `9.900.${String(index).padStart(6, '0')}`,
+    );
+    const loose: Response = await request(app.server())
+      .post(api('/classifications'))
+      .set('authorization', owner.bearer())
+      .send({
+        name: 'Cuentas sueltas',
+        fieldKey: key('Código de cuenta'),
+        nodes: [{ id: 'n1', parentId: null, code: '', name: 'Sueltas', patterns: accounts }],
+      })
+      .expect(201);
     const base = {
       rowSource: 'CLASSIFICATION',
       classificationId: Body.text(classification.body, 'id'),
@@ -360,6 +400,24 @@ describe('Reportes: importación (e2e)', () => {
         { label: 'Total', total: true, values: ['7200', '1300', '500'] },
       ],
     });
+    expect(Body.list(Reflect.get(runAll.body, 'warnings'))).toEqual([]);
+    const looseReport: Response = await request(app.server())
+      .post(api('/report-definitions'))
+      .set('authorization', owner.bearer())
+      .send({
+        ...base,
+        classificationId: Body.text(loose.body, 'id'),
+        name: 'Sueltas',
+        onlyWhenFieldKey: null,
+      })
+      .expect(201);
+    const runLoose: Response = await request(app.server())
+      .get(api(`/report-definitions/${Body.text(looseReport.body, 'id')}/run?period=2026-08`))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    expect(Body.list(Reflect.get(runLoose.body, 'warnings'))).toEqual([
+      '2 valor(es) sin clasificar se suman en «Sin clasificar» (1.001.001.0000, 1.001.001.0003). Asígnalos en Clasificaciones.',
+    ]);
     const runDetail: Response = await request(app.server())
       .get(api(`/report-definitions/${Body.text(detail.body, 'id')}/run?period=2026-08`))
       .set('authorization', owner.bearer())

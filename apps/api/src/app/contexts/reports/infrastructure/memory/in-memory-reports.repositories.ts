@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ImportItemStatus } from '@asisteglt/shared-contracts';
 import { EntityId, Nullable, Optional } from '@asisteglt/shared-kernel';
+import { CellValue } from '@asisteglt/shared-ingestion-core';
 import { InMemoryCollection } from '../../../../common/persistence/in-memory-collection';
 import { DataSourceProfile, ProfileSnapshot } from '../../domain/data-source-profile';
 import { FieldCatalog, FieldCatalogSnapshot } from '../../domain/field-catalog';
@@ -9,6 +10,7 @@ import { OrgStructure, OrgStructureSnapshot } from '../../domain/org-structure';
 import {
   DataRecordRepository,
   DataRecordSnapshot,
+  DistinctValue,
   FieldCatalogRepository,
   ImportBatchRepository,
   OrgStructureRepository,
@@ -155,6 +157,48 @@ export class InMemoryDataRecordRepository extends DataRecordRepository {
     for (const record of this.matching(query)) {
       yield await Promise.resolve(record);
     }
+  }
+
+  public override distinctValues(
+    query: RecordQuery,
+    fieldKey: string,
+    nameKey: Nullable<string>,
+    limit: number,
+  ): Promise<DistinctValue[]> {
+    const found: Map<string, DistinctValue> = new Map<string, DistinctValue>();
+    for (const record of this.matching(query)) {
+      const value: CellValue = record.values[fieldKey] ?? null;
+      if (typeof value !== 'string') {
+        continue;
+      }
+      const rawName: CellValue = nameKey === null ? null : (record.values[nameKey] ?? null);
+      const current: Nullable<DistinctValue> = found.get(value) ?? null;
+      found.set(
+        value,
+        current === null
+          ? new DistinctValue(
+              value,
+              typeof rawName === 'string' ? rawName : null,
+              record.period,
+              record.period,
+              1,
+            )
+          : new DistinctValue(
+              value,
+              current.name,
+              record.period < current.firstPeriod ? record.period : current.firstPeriod,
+              record.period > current.lastPeriod ? record.period : current.lastPeriod,
+              current.records + 1,
+            ),
+      );
+    }
+    return Promise.resolve(
+      [...found.values()]
+        .sort((a: DistinctValue, b: DistinctValue): number =>
+          a.value < b.value ? -1 : a.value > b.value ? 1 : 0,
+        )
+        .slice(0, limit),
+    );
   }
 
   private matching(query: RecordQuery): DataRecordSnapshot[] {
