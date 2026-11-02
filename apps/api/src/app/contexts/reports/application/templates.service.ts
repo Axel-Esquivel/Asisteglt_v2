@@ -135,7 +135,7 @@ export class TemplatesService {
     const columns: Map<string, number> = new Map<string, number>(
       (await this.definitions.findByProject(p.getId())).map((d: ReportDefinition): [string, number] => {
         const spec: ReportDefinitionRequest = d.getSpec();
-        return [d.getId().toString(), spec.measures.length + spec.formulaColumns.length];
+        return [d.getId().toString(), spec.columns.length];
       }),
     );
     return new TemplateContext(CatalogResolver.of(await this.catalogs.of(p.getId())), columns);

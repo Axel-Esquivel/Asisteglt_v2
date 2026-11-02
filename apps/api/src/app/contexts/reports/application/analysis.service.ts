@@ -5,7 +5,7 @@ import {
   ClassifiableValueResponse,
   ClassifiableValuesResponse,
   ComputedReportResponse,
-  FormulaColumnDto,
+  DataColumnDto,
   NumericNature,
   ProjectPermission,
   ReportDefinitionRequest,
@@ -49,7 +49,9 @@ import {
 } from '../domain/ports';
 import { ReportTemplate } from '../domain/report-template';
 import { ReportDefinition } from '../domain/report-definition';
-import { ReportEngine } from '../domain/report-engine';
+import { ReportEngine, TableWindows } from '../domain/report-engine';
+import { ColumnSplit, DataScope } from '../domain/data-scope';
+import { OrgStructureService } from './org-structure.service';
 import { CatalogService } from './catalog.service';
 import { OperationsService } from './operations.service';
 import { OperationRunner } from '../domain/operation-runner';
@@ -67,6 +69,7 @@ export class AnalysisService {
     private readonly templates: ReportTemplateRepository,
     private readonly catalogs: CatalogService,
     private readonly operations: OperationsService,
+    private readonly org: OrgStructureService,
     private readonly access: ProjectAccess,
     private readonly clock: Clock,
   ) {}
@@ -163,13 +166,15 @@ export class AnalysisService {
         (await this.classification(p, classificationId)).flatMapAsync(
           async (c: Classification): Promise<Result<true>> => {
             const used: boolean = (await this.definitions.findByProject(p.getId())).some(
-              (d: ReportDefinition): boolean => d.getSpec().classificationId === c.getId().toString(),
+              (d: ReportDefinition): boolean =>
+                d.getSpec().classificationId === c.getId().toString() ||
+                d.getSpec().classificationColumns.includes(c.getId().toString()),
             );
             if (used) {
               return Result.fail(
                 new ValidationError(
                   AnalysisErrorCode.INVALID_CLASSIFICATION,
-                  'La clasificación se usa en un informe',
+                  'La clasificación se usa en una tabla de datos',
                 ),
               );
             }
@@ -251,42 +256,60 @@ export class AnalysisService {
     );
   }
 
-  /** Calcula un informe del proyecto (sin revisar permisos: lo hace quien llama). */
+  /** Calcula una tabla de datos del proyecto (sin revisar permisos: lo hace quien llama). */
   public async compute(
     p: Project,
     reportId: string,
     period: string,
   ): Promise<Result<ComputedReportResponse>> {
     return (await this.report(p, reportId)).flatMapAsync(
-      async (definition: ReportDefinition): Promise<Result<ComputedReportResponse>> => {
-        const spec: ReportDefinitionRequest = definition.getSpec();
-        const classification: Nullable<Classification> =
-          spec.classificationId === null
-            ? null
-            : (await this.classification(p, spec.classificationId)).match(
-                (c: Classification): Nullable<Classification> => c,
-                (): Nullable<Classification> => null,
-              );
-        const engine: ReportEngine = new ReportEngine(
-          definition,
-          await this.catalogs.of(p.getId()),
-          classification,
-          await this.operations.convertedCurrencies(p.getId()),
-        );
-        const query: RecordQuery = new RecordQuery(
-          p.getId().toString(),
-          period,
-          spec.profileId,
-          spec.companyId,
-          [],
-          null,
-        );
-        const runner: OperationRunner = await this.operations.runner(p.getId(), query, [period]);
-        for await (const record of this.records.stream(query)) {
-          engine.add(runner.apply(record));
-        }
-        return Result.ok(engine.result(definition.getId().toString(), period));
-      },
+      async (definition: ReportDefinition): Promise<Result<ComputedReportResponse>> =>
+        TableWindows.of(definition, period).flatMapAsync(
+          async (windows: TableWindows): Promise<Result<ComputedReportResponse>> => {
+            const spec: ReportDefinitionRequest = definition.getSpec();
+            const classification: Nullable<Classification> =
+              spec.classificationId === null
+                ? null
+                : await this.optionalClassification(p, spec.classificationId);
+            const columns: Classification[] = [];
+            for (const id of spec.classificationColumns) {
+              const found: Nullable<Classification> = await this.optionalClassification(p, id);
+              if (found !== null) {
+                columns.push(found);
+              }
+            }
+            const engine: ReportEngine = new ReportEngine(
+              definition,
+              await this.catalogs.of(p.getId()),
+              classification,
+              columns,
+              new ColumnSplit(spec.columnSplit, await this.org.of(p.getId())),
+              windows,
+              await this.operations.convertedCurrencies(p.getId()),
+            );
+            const months: string[] = windows.months();
+            const query: RecordQuery = new RecordQuery(
+              p.getId().toString(),
+              months.at(-1) ?? period,
+              spec.profileId,
+              DataScope.of(spec.scope).singleCompany(),
+              [],
+              months[0] ?? period,
+            );
+            const runner: OperationRunner = await this.operations.runner(p.getId(), query, months);
+            for await (const record of this.records.stream(query)) {
+              engine.add(runner.apply(record));
+            }
+            return Result.ok(engine.result(definition.getId().toString(), period));
+          },
+        ),
+    );
+  }
+
+  private async optionalClassification(p: Project, id: string): Promise<Nullable<Classification>> {
+    return (await this.classification(p, id)).match(
+      (c: Classification): Nullable<Classification> => c,
+      (): Nullable<Classification> => null,
     );
   }
 
@@ -359,9 +382,9 @@ export class AnalysisService {
     return {
       ...spec,
       id: snapshot.id,
-      formulaColumns: spec.formulaColumns.map((c: FormulaColumnDto): FormulaColumnDto => ({
-        label: c.label,
-        formula: formatter.format(c.formula, resolver),
+      columns: spec.columns.map((c: DataColumnDto): DataColumnDto => ({
+        ...c,
+        formula: c.formula === null ? null : formatter.format(c.formula, resolver),
       })),
       updatedAt: snapshot.updatedAt.toISOString(),
     };

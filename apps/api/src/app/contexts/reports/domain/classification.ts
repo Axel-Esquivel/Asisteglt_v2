@@ -75,6 +75,10 @@ export class Classification extends AggregateRoot {
     );
   }
 
+  public getName(): string {
+    return this.name;
+  }
+
   public getFieldKey(): string {
     return this.fieldKey;
   }

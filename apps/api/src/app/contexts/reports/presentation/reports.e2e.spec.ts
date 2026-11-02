@@ -715,7 +715,11 @@ describe('Reportes: importación (e2e)', () => {
       .expect(201);
     const reportBody: unknown = report.body;
     expect(reportBody).toMatchObject({
-      formulaColumns: [{ formula: '=SUMA([Saldo final USD])' }, { formula: '=SUMA([Debe]) - SUMA([Haber])' }],
+      columns: [
+        { kind: 'MEASURE', fieldKey: keyOf('Saldo final') },
+        { kind: 'FORMULA', formula: '=SUMA([Saldo final USD])' },
+        { kind: 'FORMULA', formula: '=SUMA([Debe]) - SUMA([Haber])' },
+      ],
     });
     await request(app.server())
       .post(api('/report-definitions'))

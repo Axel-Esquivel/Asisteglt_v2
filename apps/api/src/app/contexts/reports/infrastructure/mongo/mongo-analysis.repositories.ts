@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { ReportDefinitionRequest } from '@asisteglt/shared-contracts';
 import { EntityId, Nullable, Optional } from '@asisteglt/shared-kernel';
 import { Model, Schema } from 'mongoose';
 import { MongoDatabase } from '../../../../common/persistence/mongo-database';
 import { Classification, ClassificationSnapshot } from '../../domain/classification';
 import { ClassificationRepository, ReportDefinitionRepository } from '../../domain/ports';
 import { ReportDefinition, ReportDefinitionSnapshot } from '../../domain/report-definition';
+import { AnalysisParsers } from '../../application/analysis-parsers';
 
 type ClassificationRecord = Omit<ClassificationSnapshot, 'id'> & { readonly _id: string };
 type ReportDefinitionRecord = Omit<ReportDefinitionSnapshot, 'id'> & { readonly _id: string };
@@ -29,15 +31,18 @@ const REPORT_DEFINITION_SCHEMA: Schema<ReportDefinitionRecord> = new Schema<Repo
     rowSource: { type: String, required: true },
     classificationId: { type: String, default: null },
     rowFieldKey: { type: String, default: null },
-    measures: { type: [String], required: true },
+    classificationColumns: { type: [String], default: [] },
+    columns: { type: Schema.Types.Mixed, default: [] },
     profileId: { type: String, default: null },
-    companyId: { type: String, default: null },
+    scope: { type: Schema.Types.Mixed, default: null },
+    periodGrouping: { type: String, default: null },
+    columnSplit: { type: [String], default: [] },
+    subtotals: { type: Boolean, default: true },
     onlyWhenFieldKey: { type: String, default: null },
     includeUnclassified: { type: Boolean, required: true },
-    formulaColumns: { type: Schema.Types.Mixed, default: [] },
     updatedAt: { type: Date, required: true },
   },
-  { collection: 'report_definitions', versionKey: false },
+  { collection: 'report_definitions', versionKey: false, minimize: false },
 );
 
 @Injectable()
@@ -119,8 +124,14 @@ export class MongoReportDefinitionRepository extends ReportDefinitionRepository 
     await this.model.deleteOne({ _id: id.toString() }).exec();
   }
 
+  /** Los documentos guardados con la forma anterior de los informes se convierten al leerlos. */
   private static restore(record: ReportDefinitionRecord): ReportDefinition {
-    const { _id, ...rest } = record;
-    return ReportDefinition.restore({ ...rest, id: _id });
+    const spec: ReportDefinitionRequest = AnalysisParsers.report(record).unwrap();
+    return ReportDefinition.restore({
+      ...spec,
+      id: record._id,
+      projectId: record.projectId,
+      updatedAt: record.updatedAt,
+    });
   }
 }

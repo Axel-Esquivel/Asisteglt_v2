@@ -31,7 +31,7 @@ export class ProjectSections {
       sections.push({ path: 'classifications', label: 'Clasificaciones', icon: 'pi pi-sitemap' });
     }
     if (project.can(ProjectPermission.REPORTS_VIEW)) {
-      sections.push({ path: 'reports', label: 'Informes', icon: 'pi pi-chart-bar' });
+      sections.push({ path: 'reports', label: 'Tablas de datos', icon: 'pi pi-th-large' });
       sections.push({ path: 'templates', label: 'Plantillas', icon: 'pi pi-file' });
     }
     const inventory: boolean = [

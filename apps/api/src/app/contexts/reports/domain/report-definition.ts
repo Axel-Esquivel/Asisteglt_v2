@@ -1,7 +1,10 @@
 import {
+  Aggregation,
   AnalysisErrorCode,
+  DataColumnDto,
+  DataColumnKind,
   DataType,
-  FormulaColumnDto,
+  PeriodValue,
   ReportDefinitionRequest,
   RowSource,
 } from '@asisteglt/shared-contracts';
@@ -13,6 +16,7 @@ import {
 } from '@asisteglt/shared-formula-engine';
 import { AggregateRoot, Clock, EntityId, Nullable, Result, ValidationError } from '@asisteglt/shared-kernel';
 import { CatalogResolver } from './catalog-resolver';
+import { ColumnSplit } from './data-scope';
 import { CatalogField, FieldCatalog } from './field-catalog';
 
 export interface ReportDefinitionSnapshot extends ReportDefinitionRequest {
@@ -21,7 +25,10 @@ export interface ReportDefinitionSnapshot extends ReportDefinitionRequest {
   readonly updatedAt: Date;
 }
 
-/** Informe matricial guardado: filas (clasificación o encabezado agrupable) × medidas. */
+/**
+ * Tabla de datos guardada (antes «informe»): origen, alcance, período, filas (clasificación o
+ * encabezado agrupable) y columnas ordenadas, opcionalmente abiertas por la estructura.
+ */
 export class ReportDefinition extends AggregateRoot {
   private constructor(
     id: EntityId,
@@ -49,7 +56,7 @@ export class ReportDefinition extends AggregateRoot {
     return new ReportDefinition(
       EntityId.fromString(id).unwrap(),
       EntityId.fromString(projectId).unwrap(),
-      { ...spec, formulaColumns: Array.isArray(spec.formulaColumns) ? spec.formulaColumns : [] },
+      spec,
       updatedAt,
     );
   }
@@ -85,6 +92,11 @@ export class ReportDefinition extends AggregateRoot {
     };
   }
 
+  /** Cómo se propone tomar un encabezado al agrupar meses: los saldos (último valor), al cierre. */
+  public static suggestedPeriodValue(field: CatalogField): PeriodValue {
+    return field.snapshot().aggregation === Aggregation.LAST ? PeriodValue.CLOSING : PeriodValue.ACCUMULATED;
+  }
+
   /** La compatibilidad se valida con rol, tipo y naturaleza (docs/12 §2.6). */
   private static validate(
     r: ReportDefinitionRequest,
@@ -96,37 +108,57 @@ export class ReportDefinition extends AggregateRoot {
     if (name.length < 2 || name.length > 80) {
       return fail(AnalysisErrorCode.INVALID_REPORT, 'El nombre debe tener entre 2 y 80 caracteres');
     }
-    if (r.measures.length + r.formulaColumns.length === 0 || r.measures.length > 20) {
+    const measures: number = r.columns.filter(
+      (c: DataColumnDto): boolean => c.kind === DataColumnKind.MEASURE,
+    ).length;
+    const formulas: number = r.columns.length - measures;
+    if (r.columns.length === 0 || measures > 30) {
       return fail(
         AnalysisErrorCode.INVALID_REPORT,
-        'Elige entre 1 y 20 medidas o agrega una columna calculada',
+        'Agrega entre 1 y 30 columnas de datos o columnas calculadas',
       );
     }
-    if (r.formulaColumns.length > 10) {
-      return fail(AnalysisErrorCode.INVALID_REPORT, 'Un informe admite hasta 10 columnas calculadas');
+    if (formulas > 10) {
+      return fail(AnalysisErrorCode.INVALID_REPORT, 'Una tabla admite hasta 10 columnas calculadas');
+    }
+    if (r.classificationColumns.length > 10) {
+      return fail(AnalysisErrorCode.INVALID_REPORT, 'Una tabla admite hasta 10 columnas de clasificación');
     }
     const resolver: ListFieldResolver = CatalogResolver.of(catalog);
-    const formulaColumns: FormulaColumnDto[] = [];
-    for (const column of r.formulaColumns) {
+    const columns: DataColumnDto[] = [];
+    for (const column of r.columns) {
       const label: string = column.label.trim();
-      if (label.length < 1 || label.length > 80) {
+      if (label.length > 80) {
+        return fail(AnalysisErrorCode.INVALID_REPORT, 'Los títulos de columna admiten hasta 80 caracteres');
+      }
+      if (!Number.isInteger(column.periodOffset) || column.periodOffset > 0 || column.periodOffset < -1) {
         return fail(
           AnalysisErrorCode.INVALID_REPORT,
-          'Cada columna calculada necesita un título de hasta 80 caracteres',
+          'Una columna solo puede usar el período del informe o el anterior',
         );
       }
-      const compiled: Result<CompiledFormula> = new FormulaCompiler().compile(
-        column.formula,
-        resolver,
-        FormulaContext.AGGREGATE,
-      );
-      const error = compiled.errorOrNull();
-      if (error !== null) {
-        return fail(AnalysisErrorCode.INVALID_REPORT, `Columna «${label}»: ${error.message}`);
+      if (column.kind === DataColumnKind.FORMULA) {
+        if (label.length < 1) {
+          return fail(AnalysisErrorCode.INVALID_REPORT, 'Cada columna calculada necesita un título');
+        }
+        const compiled: Result<CompiledFormula> = new FormulaCompiler().compile(
+          column.formula ?? '',
+          resolver,
+          FormulaContext.AGGREGATE,
+        );
+        const error = compiled.errorOrNull();
+        if (error !== null) {
+          return fail(AnalysisErrorCode.INVALID_REPORT, `Columna «${label}»: ${error.message}`);
+        }
+        columns.push({
+          ...column,
+          label,
+          fieldKey: null,
+          formula: compiled.unwrap().canonicalSource,
+        });
+        continue;
       }
-      formulaColumns.push({ label, formula: compiled.unwrap().canonicalSource });
-    }
-    for (const key of r.measures) {
+      const key: string = column.fieldKey ?? '';
       const field: Nullable<CatalogField> = catalog.find(key).toNullable();
       if (field === null || !field.isActive() || !field.isAggregatable()) {
         return fail(
@@ -134,6 +166,7 @@ export class ReportDefinition extends AggregateRoot {
           `«${field === null ? key : field.label}» no se puede sumar ni promediar`,
         );
       }
+      columns.push({ ...column, label, fieldKey: key, formula: null });
     }
     if (r.rowSource === RowSource.CLASSIFICATION && r.classificationId === null) {
       return fail(AnalysisErrorCode.INVALID_REPORT, 'Elige la clasificación de las filas');
@@ -154,13 +187,23 @@ export class ReportDefinition extends AggregateRoot {
         return fail(AnalysisErrorCode.INVALID_REPORT, 'El filtro «solo cuando» debe ser un encabezado sí/no');
       }
     }
+    const unique = (list: ReadonlyArray<string>): string[] => [...new Set(list)];
     return Result.ok({
       ...r,
       name,
       classificationId: r.rowSource === RowSource.CLASSIFICATION ? r.classificationId : null,
       rowFieldKey: r.rowSource === RowSource.FIELD ? r.rowFieldKey : null,
-      measures: [...new Set(r.measures)],
-      formulaColumns,
+      classificationColumns: unique(r.classificationColumns),
+      columns,
+      columnSplit: ColumnSplit.normalize(r.columnSplit),
+      scope: {
+        organizationIds: unique(r.scope.organizationIds),
+        countryIds: unique(r.scope.countryIds),
+        currencies: unique(r.scope.currencies),
+        companyIds: unique(r.scope.companyIds),
+        enterpriseIds: unique(r.scope.enterpriseIds),
+        branchIds: unique(r.scope.branchIds),
+      },
     });
   }
 }
