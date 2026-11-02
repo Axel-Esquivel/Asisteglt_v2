@@ -457,6 +457,14 @@ export class ReportEngine {
         const members: string[] = leaves
           .filter((g: ColumnGroup): boolean => ColumnGroup.keyOf(g.ids.slice(0, level)) === prefix)
           .map((g: ColumnGroup): string => g.key());
+        // Sin unidad en este nivel (p. ej. compañía sin empresas), o un único grupo sin niveles
+        // más abajo: el subtotal repetiría la columna, así que no se agrega.
+        const missing: boolean = (leaf.ids[level - 1] ?? null) === null;
+        const repeated: boolean =
+          members.length === 1 && leaf.ids.slice(level).every((id: Nullable<string>): boolean => id === null);
+        if (missing || repeated) {
+          continue;
+        }
         const labels: string[] = leaf.labels.slice(0, level);
         result.push(
           new OutputGroup(

@@ -249,6 +249,23 @@ describe('ReportEngine: tablas de datos', () => {
     expect(all.columns.map((c) => c.fieldKey)).toEqual(['f_bal', 'f_mov', 'f_bal@prev']);
   });
 
+  it('si no hay empresa o sucursal deja el encabezado vacío y no repite el subtotal', (): void => {
+    const report: ComputedReportResponse = run(
+      request({
+        columnSplit: [OrgLevel.COMPANY, OrgLevel.BRANCH],
+        columns: [measure('f_bal', PeriodValue.CLOSING, 0)],
+      }),
+      '2026-03',
+    );
+    expect(report.columns.map((c) => c.group.join(' / '))).toEqual([
+      'Compañía A / ',
+      'Compañía B / ',
+      'Total consolidado / ',
+    ]);
+    expect(JSON.stringify(report)).not.toContain('Sin asignar');
+    expect(detail(report).values).toEqual(['160', '40', '200']);
+  });
+
   it('en enero el período anterior mensual es diciembre del año anterior', (): void => {
     const january: ComputedReportResponse = run(
       request({ periodGrouping: PeriodGrouping.MONTH, columnSplit: [] }),

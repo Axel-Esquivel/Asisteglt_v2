@@ -74,6 +74,9 @@ export class ColumnSplit {
     OrgLevel.BRANCH,
   ];
 
+  /** Niveles que una compañía puede no tener. */
+  public static readonly OPTIONAL_LEVELS: ReadonlyArray<OrgLevel> = [OrgLevel.ENTERPRISE, OrgLevel.BRANCH];
+
   private readonly order: ReadonlyMap<string, number>;
 
   public constructor(
@@ -100,7 +103,9 @@ export class ColumnSplit {
     );
     return new ColumnGroup(
       ids,
-      ids.map((id: Nullable<string>): string => this.label(id)),
+      ids.map((id: Nullable<string>, i: number): string =>
+        this.label(id, this.levels[i] ?? OrgLevel.COMPANY),
+      ),
     );
   }
 
@@ -121,9 +126,13 @@ export class ColumnSplit {
     return id === null ? Number.MAX_SAFE_INTEGER : (this.order.get(id) ?? Number.MAX_SAFE_INTEGER - 1);
   }
 
-  private label(id: Nullable<string>): string {
+  /**
+   * Nombre de la unidad. Empresa y sucursal son opcionales: si el registro no las tiene, el
+   * encabezado queda vacío; en los demás niveles se indica «Sin asignar».
+   */
+  private label(id: Nullable<string>, level: OrgLevel): string {
     if (id === null) {
-      return 'Sin asignar';
+      return ColumnSplit.OPTIONAL_LEVELS.includes(level) ? '' : 'Sin asignar';
     }
     const unit: Nullable<OrgUnitSnapshot> = this.org.find(id).toNullable();
     return unit === null ? id : unit.name;
