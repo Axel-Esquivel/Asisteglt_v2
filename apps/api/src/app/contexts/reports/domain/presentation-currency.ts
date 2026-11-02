@@ -1,6 +1,14 @@
-import { OperationKind, OperationStepDto, PresentationCurrencyDto } from '@asisteglt/shared-contracts';
+import {
+  CollectionFieldDto,
+  DataType,
+  NumericNature,
+  OperationKind,
+  OperationStepDto,
+  PresentationCurrencyDto,
+} from '@asisteglt/shared-contracts';
 import { Decimal, Nullable } from '@asisteglt/shared-kernel';
 import { RateTable } from './operation-runner';
+import { SupplementaryCollection } from './supplementary-collection';
 
 /**
  * Convierte los montos de una tabla de datos a su moneda de presentación. Cada registro usa la tasa
@@ -28,6 +36,31 @@ export class PresentationConverter {
       quote: dto.quote,
       targetCurrency: dto.targetCurrency,
     };
+  }
+
+  /**
+   * Motivo por el que la configuración no sirve con las colecciones del proyecto (la colección no
+   * existe, el campo de tasa no es una Tasa o el de moneda no es texto), o `null` si sirve.
+   */
+  public static problem(
+    dto: PresentationCurrencyDto,
+    collections: ReadonlyArray<SupplementaryCollection>,
+  ): Nullable<string> {
+    const collection: Nullable<SupplementaryCollection> =
+      collections.find((c: SupplementaryCollection): boolean => c.getId().toString() === dto.collectionId) ??
+      null;
+    if (collection === null) {
+      return 'La colección de tasas de la moneda de presentación no existe';
+    }
+    const rate: Nullable<CollectionFieldDto> = collection.field(dto.rateFieldKey);
+    const currency: Nullable<CollectionFieldDto> = collection.field(dto.currencyFieldKey);
+    if (rate === null || rate.nature !== NumericNature.RATE) {
+      return 'El campo de tasa de la moneda de presentación debe tener naturaleza Tasa';
+    }
+    if (currency === null || currency.dataType !== DataType.TEXT) {
+      return 'El campo de moneda de la moneda de presentación debe ser de texto';
+    }
+    return null;
   }
 
   public target(): string {

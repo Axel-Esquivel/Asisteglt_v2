@@ -766,6 +766,16 @@ describe('Reportes: importación (e2e)', () => {
         presentation: { ...presentation, targetCurrency: 'US' },
       })
       .expect(400);
+    await request(app.server())
+      .post(api('/report-definitions'))
+      .set('authorization', owner.bearer())
+      .send({
+        ...consolidated,
+        name: 'En dólares',
+        formulaColumns: [],
+        presentation: { ...presentation, rateFieldKey: currencyKey },
+      })
+      .expect(400);
     const inUsd: Response = await request(app.server())
       .post(api('/report-definitions'))
       .set('authorization', owner.bearer())

@@ -207,6 +207,15 @@ export class AnalysisService {
             return Result.fail(exists.errorOrNull() ?? AnalysisService.reportNotFound());
           }
         }
+        if (request.presentation !== null) {
+          const problem: Nullable<string> = PresentationConverter.problem(
+            request.presentation,
+            await this.operations.collectionsOf(p.getId()),
+          );
+          if (problem !== null) {
+            return Result.fail(new ValidationError(AnalysisErrorCode.INVALID_REPORT, problem));
+          }
+        }
         const catalog: FieldCatalog = await this.catalogs.of(p.getId());
         const result: Result<ReportDefinition> =
           reportId === null

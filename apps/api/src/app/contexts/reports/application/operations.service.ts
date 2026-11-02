@@ -109,6 +109,10 @@ export class OperationsService {
     return runner;
   }
 
+  public async collectionsOf(projectId: EntityId): Promise<SupplementaryCollection[]> {
+    return this.collections.findByProject(projectId);
+  }
+
   /** Tasas de las colecciones del proyecto (p. ej. para la moneda de presentación de una tabla). */
   public async rates(projectId: EntityId): Promise<RateTable> {
     return new CollectionRates(await this.collections.findByProject(projectId));
