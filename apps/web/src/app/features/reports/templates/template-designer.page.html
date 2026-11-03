@@ -12,6 +12,16 @@
         />
         <label for="templateName">Nombre de la plantilla</label>
       </p-floatlabel>
+      <span class="reports__toolbar">
+        <p-checkbox
+          inputId="scopeParameter"
+          [binary]="true"
+          [ngModel]="store.scopeParameter()"
+          (ngModelChange)="store.scopeParameter.set($event); store.dirty.set(true)"
+          [disabled]="!canDesign()"
+        />
+        <label for="scopeParameter">El alcance lo elige quien genera el informe</label>
+      </span>
       <div class="reports__toolbar">
         <p-button
           label="Plantillas"

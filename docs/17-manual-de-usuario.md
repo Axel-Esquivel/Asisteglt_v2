@@ -160,13 +160,26 @@ montos en varias monedas». Convierte a una moneda común con una operación.
 ### 4.7 Plantillas e impresión en PDF
 
 1. **Plantillas → Nueva plantilla**: página Carta vertical con encabezado `{proyecto}` y pie
-   `Página {pagina} de {paginas}` (también `{periodo}`, `{mes}`, `{año}`, `{fecha}`).
+   `Página {pagina} de {paginas}` (también `{periodo}`, `{mes}`, `{año}`, `{fecha}` y `{alcance}`,
+   que muestra las compañías u organizaciones con las que se generó el informe).
 2. Agrega **Texto**, **Tabla** (una tabla de datos), **Indicador** (fórmula agregada) y **Gráfico**. Se
    arrastran y redimensionan con el ratón o el dedo, o se mueven con las flechas (1 mm; con Mayús,
    10 mm).
 3. Cambia tamaño (Carta, Oficio, Legal, A4 o personalizado), orientación y formato numérico.
-4. **Guardar → Vista previa**, elige el período y **Imprimir / Guardar PDF** (en el diálogo del
+4. Marca **El alcance lo elige quien genera el informe** para que la misma plantilla sirva para una
+   compañía, varias o toda la organización: al generar el informe, el alcance elegido reemplaza el
+   de cada tabla de datos y el de los indicadores. Sin marcarla, cada tabla usa su propio alcance.
+   Un gráfico de una tabla con columnas abiertas por compañía usa las columnas del total
+   consolidado.
+5. **Guardar → Vista previa**, elige el período y **Imprimir / Guardar PDF** (en el diálogo del
    navegador, «Guardar como PDF»).
+
+### 4.8 Informes
+
+El resultado final: **Informes** → elige la **plantilla**, el **período** y, si la plantilla lo
+permite, el **alcance** (organizaciones, países, monedas, compañías, empresas y sucursales; sin
+elegir nada entra toda la información). **Generar informe** abre la vista para imprimir o guardar
+como PDF, con el alcance indicado arriba; **Volver** regresa a Informes.
 
 ## 5. Inventarios
 

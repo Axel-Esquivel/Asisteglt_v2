@@ -999,6 +999,45 @@ describe('Reportes: importación (e2e)', () => {
         },
       ],
     });
+
+    // El alcance lo elige quien genera el informe: reemplaza el de la tabla y el del indicador.
+    const parameterized: Response = await request(app.server())
+      .post(api('/templates'))
+      .set('authorization', owner.bearer())
+      .send({
+        name: 'Balance por alcance',
+        scopeParameter: true,
+        pages: [{ ...page(elements), header: 'Balance {alcance}' }],
+      })
+      .expect(201);
+    expect(parameterized.body).toMatchObject({ scopeParameter: true });
+    const renderUrl = (query: string): string =>
+      api(`/templates/${Body.text(parameterized.body, 'id')}/render?period=2026-08${query}`);
+    const ownScope: Response = await request(app.server())
+      .get(renderUrl(`&scope=chosen&companyIds=${String(scope['companyId'])}`))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    expect(ownScope.body).toMatchObject({
+      scopeLabel: 'Unidad DEMO-A',
+      pages: [{ header: 'Balance Unidad DEMO-A', elements: [{}, { error: null }, { value: '800' }, {}] }],
+    });
+    const otherScope: Response = await request(app.server())
+      .get(renderUrl('&scope=chosen&companyIds=no-existe'))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    expect(otherScope.body).toMatchObject({
+      pages: [{ elements: [{}, { table: { records: 0 } }, {}, {}] }],
+    });
+    const unchosen: Response = await request(app.server())
+      .get(renderUrl(''))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    expect(unchosen.body).toMatchObject({ scopeLabel: 'Según cada tabla de datos' });
+    await request(app.server())
+      .delete(api(`/templates/${Body.text(parameterized.body, 'id')}`))
+      .set('authorization', owner.bearer())
+      .expect(204);
+
     await request(app.server())
       .delete(api(`/report-definitions/${reportId}`))
       .set('authorization', owner.bearer())

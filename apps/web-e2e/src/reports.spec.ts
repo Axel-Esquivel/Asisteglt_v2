@@ -298,6 +298,7 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
   await closeMultiSelect(page, page.getByLabel('Nombre de la plantilla'));
   await page.getByLabel('Y', { exact: true }).fill('120');
   await page.getByLabel('Y', { exact: true }).press('Tab');
+  await page.getByText('El alcance lo elige quien genera el informe').click();
   await page.getByRole('button', { name: 'Guardar' }).click();
   await expect(page.getByRole('button', { name: 'Vista previa' })).toBeEnabled();
   await page.getByRole('button', { name: 'Vista previa' }).click();
@@ -309,4 +310,18 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
   await expect(page.getByTestId('print-Gráfico').locator('canvas')).toBeVisible();
   await page.screenshot({ path: test.info().outputPath('plantilla.png'), fullPage: true });
   await expect(page.getByRole('button', { name: 'Imprimir / Guardar PDF' })).toBeEnabled();
+
+  // Informes: plantilla + período + alcance elegido al generar
+  await page.getByRole('button', { name: 'Volver' }).click();
+  await page.getByRole('tab', { name: 'Informes' }).click();
+  await expect(page.getByRole('combobox', { name: 'Plantilla' })).toContainText('Balance mensual');
+  await expect(page.locator('p-multiselect:has(#issuedCompanies)')).toBeVisible();
+  await page.getByRole('button', { name: 'Generar informe' }).click();
+  await expect(page).toHaveURL(/from=informes/);
+  await expect(page).toHaveURL(/scope=chosen/);
+  await page.goto(page.url().replace(/period=\d{4}-\d{2}/, 'period=2026-08'));
+  await expect(page.getByTestId('print-scope')).toHaveText('Toda la información');
+  await expect(page.getByTestId('print-Tabla')).toContainText('15,600.00');
+  await page.getByRole('button', { name: 'Volver' }).click();
+  await expect(page.getByRole('button', { name: 'Generar informe' })).toBeVisible();
 });

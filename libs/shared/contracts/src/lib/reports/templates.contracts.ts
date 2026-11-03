@@ -107,6 +107,11 @@ export interface TemplatePageDto {
 export interface TemplateRequest {
   readonly name: string;
   readonly pages: ReadonlyArray<TemplatePageDto>;
+  /**
+   * El alcance (organizaciones, compañías…) lo elige quien genera el informe: reemplaza el de
+   * cada tabla de datos y el de los indicadores. Sin marcar, cada tabla usa el suyo.
+   */
+  readonly scopeParameter: boolean;
 }
 
 export interface TemplateResponse extends TemplateRequest {
@@ -147,6 +152,8 @@ export interface RenderedTemplateResponse {
   readonly templateId: string;
   readonly name: string;
   readonly period: string;
+  /** Alcance con el que se generó, p. ej. «Compañía A, Compañía B» o «Según cada tabla». */
+  readonly scopeLabel: string;
   readonly pages: ReadonlyArray<RenderedPageDto>;
 }
 

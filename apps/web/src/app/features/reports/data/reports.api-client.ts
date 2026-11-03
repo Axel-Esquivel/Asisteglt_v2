@@ -26,6 +26,7 @@ import { CollectionView } from './collections.model';
 import { RecordPage, ImportBatchView } from './import.model';
 import { OperationsView } from './operations.model';
 import { RenderedTemplate, TemplateView } from './templates.model';
+import { ReportScope } from './report-scope.model';
 import { OrgTree, OrgUnitView } from './org.model';
 import { ProfileView } from './profile.model';
 
@@ -344,9 +345,19 @@ export class ReportsApiClient extends ApiClient {
     return this.delete(`${ReportsApiClient.base(projectId)}/templates/${encodeURIComponent(id)}`, this.empty);
   }
 
-  public renderTemplate(projectId: string, id: string, period: string): Promise<Result<RenderedTemplate>> {
+  /** `scope` = alcance elegido al generar el informe (solo cuenta si la plantilla lo permite). */
+  public renderTemplate(
+    projectId: string,
+    id: string,
+    period: string,
+    scope: Nullable<ReportScope>,
+  ): Promise<Result<RenderedTemplate>> {
+    const query: URLSearchParams = new URLSearchParams({
+      period,
+      ...(scope === null ? {} : scope.toQuery()),
+    });
     return this.get(
-      `${ReportsApiClient.base(projectId)}/templates/${encodeURIComponent(id)}/render?period=${encodeURIComponent(period)}`,
+      `${ReportsApiClient.base(projectId)}/templates/${encodeURIComponent(id)}/render?${query.toString()}`,
       this.renderedDecoder,
     );
   }

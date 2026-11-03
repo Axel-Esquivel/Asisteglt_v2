@@ -92,6 +92,11 @@ export const PROJECTS_ROUTES: Route[] = [
           import('../reports/templates/template-designer.page').then((m) => m.TemplateDesignerPage),
       },
       {
+        path: 'issued',
+        title: 'Informes · AsisteGLT',
+        loadComponent: () => import('../reports/issued/issued-reports.page').then((m) => m.IssuedReportsPage),
+      },
+      {
         path: 'inventory',
         title: 'Tomas · AsisteGLT',
         loadComponent: () => import('../inventory/list/counts.page').then((m) => m.CountsPage),

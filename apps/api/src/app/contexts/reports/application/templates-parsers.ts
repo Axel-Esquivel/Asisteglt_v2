@@ -82,6 +82,7 @@ export class TemplatesParsers {
     (f: FieldReader): TemplateRequest => ({
       name: f.string('name'),
       pages: f.list('pages', TemplatesParsers.PAGE),
+      scopeParameter: f.raw('scopeParameter') === null ? false : f.boolean('scopeParameter'),
     }),
   );
 

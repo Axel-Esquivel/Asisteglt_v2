@@ -3,6 +3,7 @@ import {
   AnalysisErrorCode,
   DataColumnDto,
   DataColumnKind,
+  DataScopeDto,
   DataType,
   PeriodValue,
   PresentationCurrencyDto,
@@ -60,6 +61,11 @@ export class ReportDefinition extends AggregateRoot {
       spec,
       updatedAt,
     );
+  }
+
+  /** La misma tabla con otro alcance (el que elige quien genera un informe); no se guarda. */
+  public withScope(scope: DataScopeDto): ReportDefinition {
+    return new ReportDefinition(this.getId(), this.projectId, { ...this.spec, scope }, this.updatedAt);
   }
 
   public getSpec(): ReportDefinitionRequest {

@@ -1,8 +1,10 @@
 import {
   ComputedReportResponse,
+  DataScopeDto,
   ElementKind,
   RenderedChartDto,
   RenderedElementDto,
+  ReportColumnResponse,
   ReportRowResponse,
 } from '@asisteglt/shared-contracts';
 import { DomainError, Nullable, Result } from '@asisteglt/shared-kernel';
@@ -16,7 +18,10 @@ import {
 } from '../domain/report-template';
 import { AnalysisService } from './analysis.service';
 
-/** Textos con marcadores: {periodo}, {mes}, {año}, {fecha}, {proyecto}, {pagina}, {paginas}. */
+/**
+ * Textos con marcadores: {periodo}, {mes}, {año}, {fecha}, {proyecto}, {alcance}, {pagina},
+ * {paginas}.
+ */
 export class TemplateText {
   private static readonly MONTHS: ReadonlyArray<string> = [
     'enero',
@@ -36,6 +41,7 @@ export class TemplateText {
   public constructor(
     private readonly period: string,
     private readonly project: string,
+    private readonly scope: string,
     private readonly today: Date,
     private readonly page: number,
     private readonly pages: number,
@@ -52,6 +58,7 @@ export class TemplateText {
       ['año', year ?? ''],
       ['fecha', date],
       ['proyecto', this.project],
+      ['alcance', this.scope],
       ['pagina', String(this.page)],
       ['paginas', String(this.pages)],
     ]);
@@ -69,6 +76,8 @@ export class ElementRenderer implements ReportElementVisitor<Promise<RenderedEle
     private readonly project: Project,
     private readonly period: string,
     private readonly text: TemplateText,
+    /** Alcance elegido al generar el informe (reemplaza el de cada tabla); `null` = el de cada una. */
+    private readonly scope: Nullable<DataScopeDto>,
     reports: Map<string, Promise<Result<ComputedReportResponse>>>,
   ) {
     this.reports = reports;
@@ -102,6 +111,7 @@ export class ElementRenderer implements ReportElementVisitor<Promise<RenderedEle
         this.period,
         element.profileId,
         element.companyId,
+        this.scope,
       )
     ).match(
       (value: Nullable<string>): RenderedElementDto => ({
@@ -137,20 +147,35 @@ export class ElementRenderer implements ReportElementVisitor<Promise<RenderedEle
       this.project,
       reportId,
       this.period,
+      this.scope,
     );
     this.reports.set(reportId, computing);
     return computing;
   }
 
-  /** Categorías: las filas de detalle (sin subtotales ni total); series: las columnas elegidas. */
+  /**
+   * Categorías: las filas de detalle (sin subtotales ni total); series: las columnas elegidas. Si
+   * la tabla abre columnas (p. ej. por compañía), se toma el último grupo: el total consolidado.
+   */
   private static chart(table: ComputedReportResponse, columns: ReadonlyArray<number>): RenderedChartDto {
     const rows: ReportRowResponse[] = table.rows.filter((r: ReportRowResponse): boolean => !r.total);
+    const groupOf = (c: ReportColumnResponse): string => `${c.group.join('›')}|${String(c.subtotal)}`;
+    const last: Nullable<ReportColumnResponse> = table.columns.at(-1) ?? null;
+    const start: number =
+      last === null
+        ? 0
+        : table.columns.findIndex((c: ReportColumnResponse): boolean => groupOf(c) === groupOf(last));
     return {
       labels: rows.map((r: ReportRowResponse): string => r.label),
-      series: columns.map((index: number) => ({
-        label: (table.columns[index] ?? { label: '' }).label,
-        values: rows.map((r: ReportRowResponse): string | null => r.values[index] ?? null),
-      })),
+      series: columns.map((index: number) => {
+        const column: Nullable<ReportColumnResponse> = table.columns[start + index] ?? null;
+        const group: string =
+          column === null ? '' : column.group.filter((g: string): boolean => g !== '').join(' › ');
+        return {
+          label: column === null ? '' : group === '' ? column.label : `${column.label} (${group})`,
+          values: rows.map((r: ReportRowResponse): string | null => r.values[start + index] ?? null),
+        };
+      }),
     };
   }
 

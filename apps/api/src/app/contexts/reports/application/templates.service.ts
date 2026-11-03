@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   ComputedReportResponse,
+  DataScopeDto,
   ProjectPermission,
   RenderedElementDto,
   RenderedPageDto,
@@ -22,6 +23,8 @@ import { ReportDefinition } from '../domain/report-definition';
 import { ReportElement, ReportTemplate, TemplateContext } from '../domain/report-template';
 import { AnalysisService } from './analysis.service';
 import { CatalogService } from './catalog.service';
+import { OrgStructureService } from './org-structure.service';
+import { DataScope } from '../domain/data-scope';
 import { ElementRenderer, TemplateText } from './template-renderer';
 
 /** Plantillas de informe: diseño (REPORTS_DESIGN) y cálculo por período (REPORTS_VIEW). */
@@ -32,6 +35,7 @@ export class TemplatesService {
     private readonly definitions: ReportDefinitionRepository,
     private readonly catalogs: CatalogService,
     private readonly analysis: AnalysisService,
+    private readonly org: OrgStructureService,
     private readonly access: ProjectAccess,
     private readonly clock: Clock,
   ) {}
@@ -87,6 +91,8 @@ export class TemplatesService {
     userId: EntityId,
     templateId: string,
     period: string,
+    /** Alcance elegido al generar el informe; solo se usa si la plantilla lo permite. */
+    requested: Nullable<DataScopeDto>,
   ): Promise<Result<RenderedTemplateResponse>> {
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period)) {
       return Result.fail(
@@ -103,16 +109,29 @@ export class TemplatesService {
               Promise<Result<ComputedReportResponse>>
             >();
             const today: Date = this.clock.now();
+            const scope: Nullable<DataScopeDto> = spec.scopeParameter ? requested : null;
+            const scopeLabel: string =
+              scope === null
+                ? 'Según cada tabla de datos'
+                : DataScope.of(scope).describe(await this.org.of(p.getId()));
             const pages: RenderedPageDto[] = [];
             for (const [index, page] of spec.pages.entries()) {
               const text: TemplateText = new TemplateText(
                 period,
                 p.getName(),
+                scopeLabel,
                 today,
                 index + 1,
                 spec.pages.length,
               );
-              const renderer: ElementRenderer = new ElementRenderer(this.analysis, p, period, text, reports);
+              const renderer: ElementRenderer = new ElementRenderer(
+                this.analysis,
+                p,
+                period,
+                text,
+                scope,
+                reports,
+              );
               const elements: RenderedElementDto[] = await Promise.all(
                 page.elements.map((e: TemplateElementDto): Promise<RenderedElementDto> =>
                   ReportElement.from(e).accept(renderer),
@@ -125,7 +144,13 @@ export class TemplatesService {
                 elements,
               });
             }
-            return Result.ok({ templateId: template.getId().toString(), name: spec.name, period, pages });
+            return Result.ok({
+              templateId: template.getId().toString(),
+              name: spec.name,
+              period,
+              scopeLabel,
+              pages,
+            });
           },
         ),
     );
@@ -165,6 +190,7 @@ export class TemplatesService {
       name: snapshot.name,
       version: snapshot.version,
       updatedAt: snapshot.updatedAt.toISOString(),
+      scopeParameter: snapshot.scopeParameter,
       pages: snapshot.pages.map((page: TemplatePageDto): TemplatePageDto => ({
         ...page,
         elements: page.elements.map((e: TemplateElementDto): TemplateElementDto =>

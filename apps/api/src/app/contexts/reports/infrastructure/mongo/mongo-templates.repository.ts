@@ -14,6 +14,7 @@ const REPORT_TEMPLATE_SCHEMA: Schema<ReportTemplateRecord> = new Schema<ReportTe
     name: { type: String, required: true },
     version: { type: Number, required: true },
     pages: { type: Schema.Types.Mixed, required: true },
+    scopeParameter: { type: Boolean, default: false },
     updatedAt: { type: Date, required: true },
   },
   { collection: 'report_templates', versionKey: false, minimize: false },
@@ -56,6 +57,11 @@ export class MongoReportTemplateRepository extends ReportTemplateRepository {
 
   private static restore(record: ReportTemplateRecord): ReportTemplate {
     const { _id, ...rest } = record;
-    return ReportTemplate.restore({ ...rest, id: _id });
+    // Las plantillas anteriores no tienen el campo: el alcance lo define cada tabla.
+    return ReportTemplate.restore({
+      ...rest,
+      id: _id,
+      scopeParameter: Reflect.get(record, 'scopeParameter') === true,
+    });
   }
 }

@@ -415,7 +415,7 @@ export class ReportTemplate extends AggregateRoot {
       }
       pages.push(valid.unwrap());
     }
-    return Result.ok({ name, pages });
+    return Result.ok({ name, pages, scopeParameter: request.scopeParameter });
   }
 
   private static page(

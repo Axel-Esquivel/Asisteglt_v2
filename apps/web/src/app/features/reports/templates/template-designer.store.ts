@@ -32,6 +32,7 @@ export class TemplateDesignerStore {
   public static readonly SCALE: number = 3;
 
   public readonly name: WritableSignal<string> = signal<string>('');
+  public readonly scopeParameter: WritableSignal<boolean> = signal<boolean>(false);
   public readonly pages: WritableSignal<TemplatePageDto[]> = signal<TemplatePageDto[]>([]);
   public readonly pageIndex: WritableSignal<number> = signal<number>(0);
   public readonly selectedId: WritableSignal<Nullable<string>> = signal<Nullable<string>>(null);
@@ -74,6 +75,7 @@ export class TemplateDesignerStore {
 
   public load(view: TemplateView): void {
     this.name.set(view.name);
+    this.scopeParameter.set(view.scopeParameter);
     this.pages.set(view.pages);
     this.pageIndex.set(0);
     this.selectedId.set(null);
@@ -81,7 +83,7 @@ export class TemplateDesignerStore {
   }
 
   public request(): TemplateRequest {
-    return { name: this.name(), pages: this.pages() };
+    return { name: this.name(), pages: this.pages(), scopeParameter: this.scopeParameter() };
   }
 
   public selectPage(index: number): void {

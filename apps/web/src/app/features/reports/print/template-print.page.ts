@@ -29,6 +29,7 @@ import { ProgressSpinner } from 'primeng/progressspinner';
 import { TableModule } from 'primeng/table';
 import { ReportRow } from '../data/analysis.model';
 import { ReportsApiClient } from '../data/reports.api-client';
+import { ReportScope } from '../data/report-scope.model';
 import {
   ChartSeries,
   FormattedNumber,
@@ -74,6 +75,11 @@ export class TemplatePrintPage implements OnInit, OnDestroy {
   protected readonly loading: WritableSignal<boolean> = signal<boolean>(true);
   protected readonly error: WritableSignal<Nullable<string>> = signal<Nullable<string>>(null);
   protected readonly kinds: typeof ElementKind = ElementKind;
+  /** Alcance con el que se generó (lo muestra la barra). */
+  protected readonly scopeLabel: WritableSignal<string> = signal<string>('');
+  /** Se abrió desde Informes: «Volver» regresa ahí y conserva el alcance elegido. */
+  protected readonly fromIssued: WritableSignal<boolean> = signal<boolean>(false);
+  private scope: Nullable<ReportScope> = null;
 
   private readonly api: ReportsApiClient = inject(ReportsApiClient);
   private readonly router: Router = inject(Router);
@@ -94,6 +100,8 @@ export class TemplatePrintPage implements OnInit, OnDestroy {
     if (match !== null) {
       this.month.set(new Date(Number(match[1] ?? '0'), Number(match[2] ?? '1') - 1, 1));
     }
+    this.scope = ReportScope.fromQuery(this.route.snapshot.queryParamMap);
+    this.fromIssued.set(this.route.snapshot.queryParamMap.get('from') === 'informes');
     this.document.head.appendChild(this.pageStyles);
     this.load().catch((): void => {
       this.error.set('No se pudo calcular la plantilla');
@@ -109,7 +117,11 @@ export class TemplatePrintPage implements OnInit, OnDestroy {
       return;
     }
     this.month.set(date);
-    await this.router.navigate([], { queryParams: { period: this.periodText() }, replaceUrl: true });
+    await this.router.navigate([], {
+      queryParams: { period: this.periodText() },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
     await this.load();
   }
 
@@ -202,7 +214,7 @@ export class TemplatePrintPage implements OnInit, OnDestroy {
     this.charts.clear();
     const [template, rendered] = await Promise.all([
       this.api.template(this.projectId(), this.templateId()),
-      this.api.renderTemplate(this.projectId(), this.templateId(), this.periodText()),
+      this.api.renderTemplate(this.projectId(), this.templateId(), this.periodText(), this.scope),
     ]);
     this.loading.set(false);
     const failure: Nullable<DomainError> = template.errorOrNull() ?? rendered.errorOrNull();
@@ -217,6 +229,7 @@ export class TemplatePrintPage implements OnInit, OnDestroy {
     const view: TemplateView = template.unwrap();
     const result: RenderedTemplate = rendered.unwrap();
     this.name.set(view.name);
+    this.scopeLabel.set(result.scopeLabel);
     const sheets: PrintSheet[] = view.pages.map(
       (page: TemplatePageDto): PrintSheet =>
         new PrintSheet(

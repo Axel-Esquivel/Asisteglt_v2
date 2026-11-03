@@ -34,6 +34,31 @@ export class DataScope {
     );
   }
 
+  /**
+   * Descripción para encabezados de informe: las unidades del nivel más específico elegido (p. ej.
+   * «Compañía A, Compañía B») y las monedas; «Toda la información» si no se eligió nada.
+   */
+  public describe(org: OrgStructure): string {
+    const levels: ReadonlyArray<ReadonlyArray<string>> = [
+      this.dto.branchIds,
+      this.dto.enterpriseIds,
+      this.dto.companyIds,
+      this.dto.countryIds,
+      this.dto.organizationIds,
+    ];
+    const chosen: ReadonlyArray<string> =
+      levels.find((ids: ReadonlyArray<string>): boolean => ids.length > 0) ?? [];
+    const units: string[] = chosen.map((id: string): string => {
+      const unit: Nullable<OrgUnitSnapshot> = org.find(id).toNullable();
+      return unit === null ? id : unit.name;
+    });
+    const parts: string[] = [
+      ...(units.length > 0 ? [units.join(', ')] : []),
+      ...(this.dto.currencies.length > 0 ? [this.dto.currencies.join(', ')] : []),
+    ];
+    return parts.length === 0 ? 'Toda la información' : parts.join(' · ');
+  }
+
   /** Una única compañía elegida (para cálculos que aún filtran por compañía). */
   public singleCompany(): Nullable<string> {
     return this.dto.companyIds.length === 1 ? (this.dto.companyIds[0] ?? null) : null;

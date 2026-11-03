@@ -1,0 +1,153 @@
+<p-card header="Informes">
+  <p class="reports__hint">
+    Elige una plantilla y el período. Si la plantilla lo permite, elige también el alcance: una compañía,
+    varias o toda la organización (sin elegir nada entra toda la información). La misma plantilla sirve así
+    para cada compañía o para el consolidado.
+  </p>
+  @if (templates().length === 0) {
+  <p-message severity="info">Aún no hay plantillas. Créalas en Plantillas.</p-message>
+  } @else {
+  <div class="reports__stack">
+    <div class="reports__grid">
+      <p-floatlabel variant="on">
+        <p-select
+          inputId="issuedTemplate"
+          ariaLabel="Plantilla"
+          [options]="templateOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="templateId()"
+          (ngModelChange)="templateId.set($event)"
+          styleClass="full-width"
+          appendTo="body"
+        />
+        <label for="issuedTemplate">Plantilla</label>
+      </p-floatlabel>
+      <p-floatlabel variant="on">
+        <p-datepicker
+          inputId="issuedPeriod"
+          view="month"
+          dateFormat="mm/yy"
+          [ngModel]="month()"
+          (ngModelChange)="month.set($event)"
+          [readonlyInput]="true"
+          ariaLabel="Período"
+          styleClass="full-width"
+          appendTo="body"
+        />
+        <label for="issuedPeriod">Período</label>
+      </p-floatlabel>
+    </div>
+
+    @if (selected(); as template) { @if (template.scopeParameter) { @let s = scope();
+    <div class="reports__grid">
+      <p-floatlabel variant="on">
+        <p-multiselect
+          inputId="issuedOrganizations"
+          ariaLabel="Organizaciones (todas)"
+          [options]="options(levels.ORGANIZATION)"
+          optionLabel="label"
+          optionValue="value"
+          [(ngModel)]="s.organizationIds"
+          (ngModelChange)="touch()"
+          display="chip"
+          styleClass="full-width"
+          appendTo="body"
+        />
+        <label for="issuedOrganizations">Organizaciones (todas)</label>
+      </p-floatlabel>
+      <p-floatlabel variant="on">
+        <p-multiselect
+          inputId="issuedCountries"
+          ariaLabel="Países (todos)"
+          [options]="options(levels.COUNTRY)"
+          optionLabel="label"
+          optionValue="value"
+          [(ngModel)]="s.countryIds"
+          (ngModelChange)="touch()"
+          display="chip"
+          styleClass="full-width"
+          appendTo="body"
+        />
+        <label for="issuedCountries">Países (todos)</label>
+      </p-floatlabel>
+      <p-floatlabel variant="on">
+        <p-multiselect
+          inputId="issuedCurrencies"
+          ariaLabel="Monedas (todas)"
+          [options]="currencyOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [(ngModel)]="s.currencies"
+          (ngModelChange)="touch()"
+          display="chip"
+          styleClass="full-width"
+          appendTo="body"
+        />
+        <label for="issuedCurrencies">Monedas (todas)</label>
+      </p-floatlabel>
+    </div>
+    <div class="reports__grid">
+      <p-floatlabel variant="on">
+        <p-multiselect
+          inputId="issuedCompanies"
+          ariaLabel="Compañías (todas)"
+          [options]="options(levels.COMPANY)"
+          optionLabel="label"
+          optionValue="value"
+          [(ngModel)]="s.companyIds"
+          (ngModelChange)="touch()"
+          display="chip"
+          styleClass="full-width"
+          appendTo="body"
+        />
+        <label for="issuedCompanies">Compañías (todas)</label>
+      </p-floatlabel>
+      <p-floatlabel variant="on">
+        <p-multiselect
+          inputId="issuedEnterprises"
+          ariaLabel="Empresas (todas)"
+          [options]="options(levels.ENTERPRISE)"
+          optionLabel="label"
+          optionValue="value"
+          [(ngModel)]="s.enterpriseIds"
+          (ngModelChange)="touch()"
+          display="chip"
+          styleClass="full-width"
+          appendTo="body"
+        />
+        <label for="issuedEnterprises">Empresas (todas)</label>
+      </p-floatlabel>
+      <p-floatlabel variant="on">
+        <p-multiselect
+          inputId="issuedBranches"
+          ariaLabel="Sucursales (todas)"
+          [options]="options(levels.BRANCH)"
+          optionLabel="label"
+          optionValue="value"
+          [(ngModel)]="s.branchIds"
+          (ngModelChange)="touch()"
+          display="chip"
+          styleClass="full-width"
+          appendTo="body"
+        />
+        <label for="issuedBranches">Sucursales (todas)</label>
+      </p-floatlabel>
+    </div>
+    } @else {
+    <p-message severity="secondary" size="small">
+      Esta plantilla usa el alcance de cada tabla de datos. Para elegirlo aquí, marca «El alcance lo elige
+      quien genera el informe» en el diseño de la plantilla.
+    </p-message>
+    } }
+    <div class="reports__toolbar">
+      <p-button
+        label="Generar informe"
+        icon="pi pi-file-pdf"
+        [disabled]="selected() === null"
+        (onClick)="generate()"
+      />
+    </div>
+  </div>
+  }
+</p-card>

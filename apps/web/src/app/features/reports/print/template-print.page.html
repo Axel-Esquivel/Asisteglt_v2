@@ -4,9 +4,12 @@
     icon="pi pi-arrow-left"
     size="small"
     [text]="true"
-    [routerLink]="['/app/projects', projectId(), 'templates']"
+    [routerLink]="['/app/projects', projectId(), fromIssued() ? 'issued' : 'templates']"
   />
   <strong class="print__title">{{ name() }}</strong>
+  @if (scopeLabel() !== '') {
+  <span class="print__scope" data-testid="print-scope">{{ scopeLabel() }}</span>
+  }
   <p-datepicker
     view="month"
     dateFormat="mm/yy"

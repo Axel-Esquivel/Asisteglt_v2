@@ -89,12 +89,20 @@ export class TemplateView {
     public readonly name: string,
     public readonly version: number,
     public readonly pages: TemplatePageDto[],
+    /** El alcance lo elige quien genera el informe. */
+    public readonly scopeParameter: boolean,
   ) {}
 
   public static decoder(): FieldDecoder<TemplateView> {
     return new FieldDecoder<TemplateView>(
       (f: FieldReader): TemplateView =>
-        new TemplateView(f.string('id'), f.string('name'), f.number('version'), f.list('pages', PAGE)),
+        new TemplateView(
+          f.string('id'),
+          f.string('name'),
+          f.number('version'),
+          f.list('pages', PAGE),
+          f.boolean('scopeParameter'),
+        ),
     );
   }
 }
@@ -136,6 +144,7 @@ export class RenderedTemplate {
   public constructor(
     public readonly name: string,
     public readonly period: string,
+    public readonly scopeLabel: string,
     public readonly pages: RenderedPage[],
   ) {}
 
@@ -174,7 +183,12 @@ export class RenderedTemplate {
     );
     return new FieldDecoder<RenderedTemplate>(
       (f: FieldReader): RenderedTemplate =>
-        new RenderedTemplate(f.string('name'), f.string('period'), f.list('pages', page)),
+        new RenderedTemplate(
+          f.string('name'),
+          f.string('period'),
+          f.string('scopeLabel'),
+          f.list('pages', page),
+        ),
     );
   }
 }

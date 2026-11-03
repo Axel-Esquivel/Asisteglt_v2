@@ -30,6 +30,7 @@ import { DomainError, Nullable, Result } from '@asisteglt/shared-kernel';
 import { Notifier } from '@asisteglt/web-core';
 import { Button } from 'primeng/button';
 import { Card } from 'primeng/card';
+import { Checkbox } from 'primeng/checkbox';
 import { FloatLabel } from 'primeng/floatlabel';
 import { InputNumber } from 'primeng/inputnumber';
 import { InputText } from 'primeng/inputtext';
@@ -61,6 +62,7 @@ import { TemplateDesignerStore } from './template-designer.store';
     RouterLink,
     Button,
     Card,
+    Checkbox,
     FloatLabel,
     InputNumber,
     InputText,

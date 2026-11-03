@@ -62,6 +62,7 @@ export class TemplatesPage implements OnInit {
     const result: Result<TemplateView> = await this.api.saveTemplate(this.context.id(), null, {
       name: this.newName(),
       pages: [TemplateDesignerStore.blankPage(1)],
+      scopeParameter: false,
     });
     const error: Nullable<DomainError> = result.errorOrNull();
     if (error !== null) {

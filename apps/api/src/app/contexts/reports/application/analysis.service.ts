@@ -6,6 +6,7 @@ import {
   ClassifiableValuesResponse,
   ComputedReportResponse,
   DataColumnDto,
+  DataScopeDto,
   NumericNature,
   ProjectPermission,
   ReportDefinitionRequest,
@@ -262,19 +263,24 @@ export class AnalysisService {
       );
     }
     return (await this.access.require(projectId, userId, ProjectPermission.REPORTS_VIEW)).flatMapAsync(
-      (p: Project): Promise<Result<ComputedReportResponse>> => this.compute(p, reportId, period),
+      (p: Project): Promise<Result<ComputedReportResponse>> => this.compute(p, reportId, period, null),
     );
   }
 
-  /** Calcula una tabla de datos del proyecto (sin revisar permisos: lo hace quien llama). */
+  /**
+   * Calcula una tabla de datos del proyecto (sin revisar permisos: lo hace quien llama). `scope`
+   * reemplaza el alcance de la tabla (el que elige quien genera un informe); `null` usa el suyo.
+   */
   public async compute(
     p: Project,
     reportId: string,
     period: string,
+    scope: Nullable<DataScopeDto>,
   ): Promise<Result<ComputedReportResponse>> {
     return (await this.report(p, reportId)).flatMapAsync(
-      async (definition: ReportDefinition): Promise<Result<ComputedReportResponse>> =>
-        TableWindows.of(definition, period).flatMapAsync(
+      async (saved: ReportDefinition): Promise<Result<ComputedReportResponse>> => {
+        const definition: ReportDefinition = scope === null ? saved : saved.withScope(scope);
+        return TableWindows.of(definition, period).flatMapAsync(
           async (windows: TableWindows): Promise<Result<ComputedReportResponse>> => {
             const spec: ReportDefinitionRequest = definition.getSpec();
             const classification: Nullable<Classification> =
@@ -315,7 +321,8 @@ export class AnalysisService {
             }
             return Result.ok(engine.result(definition.getId().toString(), period));
           },
-        ),
+        );
+      },
     );
   }
 
@@ -336,7 +343,10 @@ export class AnalysisService {
     period: string,
     profileId: Nullable<string>,
     companyId: Nullable<string>,
+    /** Alcance elegido al generar el informe; reemplaza `companyId`. */
+    scope: Nullable<DataScopeDto>,
   ): Promise<Result<Nullable<string>>> {
+    const filter: Nullable<DataScope> = scope === null ? null : DataScope.of(scope);
     const catalog: FieldCatalog = await this.catalogs.of(p.getId());
     const resolver: ListFieldResolver = CatalogResolver.of(catalog);
     const root: Nullable<Expression> = new Lexer()
@@ -362,9 +372,19 @@ export class AnalysisService {
     const converted: ReadonlyMap<string, string> = await this.operations.convertedCurrencies(p.getId());
     const aggregates: RecordAggregates = new RecordAggregates(requests);
     const currencies: Set<string> = new Set<string>();
-    const query: RecordQuery = new RecordQuery(p.getId().toString(), period, profileId, companyId, [], null);
+    const query: RecordQuery = new RecordQuery(
+      p.getId().toString(),
+      period,
+      profileId,
+      filter === null ? companyId : filter.singleCompany(),
+      [],
+      null,
+    );
     const runner: OperationRunner = await this.operations.runner(p.getId(), query, [period]);
     for await (const raw of this.records.stream(query)) {
+      if (filter !== null && !filter.matches(raw)) {
+        continue;
+      }
       const record = runner.apply(raw);
       aggregates.add(record.values);
       for (const key of sensitive) {
