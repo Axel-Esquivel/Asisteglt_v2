@@ -264,6 +264,7 @@ export class DemoSeeder implements OnApplicationBootstrap {
         subtotals: true,
         onlyWhenFieldKey: key('Es cuenta de detalle'),
         includeUnclassified: true,
+        presentation: null,
       })
     ).unwrap();
   }

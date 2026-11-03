@@ -67,7 +67,10 @@
       </div>
     </ng-template>
     @if (report(); as current) {
-    <p class="reports__hint">{{ current.records }} registros · período {{ current.periodLabel }}</p>
+    <p class="reports__hint">
+      {{ current.records }} registros · período {{ current.periodLabel }}@if (current.presentationCurrency !==
+      null) { · montos en {{ current.presentationCurrency }} }
+    </p>
     @for (warning of current.warnings; track warning) {
     <p-message severity="warn" data-testid="report-warning">{{ warning }}</p-message>
     }
@@ -300,7 +303,94 @@
       </p>
     </p-fieldset>
 
-    <p-fieldset legend="3. Período">
+    <p-fieldset legend="3. Moneda de presentación">
+      <span class="reports__toolbar">
+        <p-checkbox inputId="convert" name="convert" [binary]="true" [(ngModel)]="d.convert" />
+        <label for="convert">Convertir los montos a una sola moneda</label>
+      </span>
+      @if (d.convert) {
+      <div class="reports__grid">
+        <p-floatlabel variant="on">
+          <input
+            pInputText
+            id="presentationCurrency"
+            name="presentationCurrency"
+            maxlength="3"
+            class="full-width"
+            [(ngModel)]="d.targetCurrency"
+          />
+          <label for="presentationCurrency">Moneda de presentación (p. ej. USD)</label>
+        </p-floatlabel>
+        <p-floatlabel variant="on">
+          <p-select
+            inputId="presentationCollection"
+            ariaLabel="Colección de tasas"
+            name="presentationCollection"
+            [options]="collectionOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [(ngModel)]="d.collectionId"
+            styleClass="full-width"
+            appendTo="body"
+          />
+          <label for="presentationCollection">Colección de tasas (p. ej. Tipo de cambio)</label>
+        </p-floatlabel>
+      </div>
+      <div class="reports__grid">
+        <p-floatlabel variant="on">
+          <p-select
+            inputId="presentationRate"
+            ariaLabel="Campo de tasa"
+            name="presentationRate"
+            [options]="rateFieldOptions(d.collectionId)"
+            optionLabel="label"
+            optionValue="value"
+            [(ngModel)]="d.rateFieldKey"
+            styleClass="full-width"
+            appendTo="body"
+          />
+          <label for="presentationRate">Campo de tasa</label>
+        </p-floatlabel>
+        <p-floatlabel variant="on">
+          <p-select
+            inputId="presentationCurrencyField"
+            ariaLabel="Campo de moneda"
+            name="presentationCurrencyField"
+            [options]="currencyFieldOptions(d.collectionId)"
+            optionLabel="label"
+            optionValue="value"
+            [(ngModel)]="d.currencyFieldKey"
+            styleClass="full-width"
+            appendTo="body"
+          />
+          <label for="presentationCurrencyField">Campo de moneda</label>
+        </p-floatlabel>
+      </div>
+      <p-floatlabel variant="on">
+        <p-select
+          inputId="presentationQuote"
+          ariaLabel="Cotización"
+          name="presentationQuote"
+          [options]="quotes"
+          optionLabel="label"
+          optionValue="value"
+          [(ngModel)]="d.quote"
+          styleClass="full-width"
+          appendTo="body"
+        />
+        <label for="presentationQuote">Cotización</label>
+      </p-floatlabel>
+      @if (collectionProblem(d.collectionId); as problem) {
+      <p-message severity="warn" data-testid="presentation-problem">{{ problem }}</p-message>
+      } }
+      <p class="reports__hint">
+        Cada registro se convierte con la tasa de su mes (si no hay, la del mes anterior más reciente). Así un
+        saldo al cierre usa la tasa de cierre y un acumulado suma cada mes a su propia tasa. Las cantidades no
+        se convierten.
+      </p>
+    </p-fieldset>
+
+    <p-fieldset legend="4. Período">
       <div class="reports__grid">
         <p-floatlabel variant="on">
           <p-select
@@ -323,7 +413,7 @@
       </p>
     </p-fieldset>
 
-    <p-fieldset legend="4. Filas">
+    <p-fieldset legend="5. Filas">
       <p-selectbutton
         name="rowSource"
         [options]="sourceOptions"
@@ -399,7 +489,7 @@
       }
     </p-fieldset>
 
-    <p-fieldset legend="5. Columnas de datos (en orden)">
+    <p-fieldset legend="6. Columnas de datos (en orden)">
       <div class="reports__stack">
         @for (column of d.columns; track $index; let i = $index; let last = $last) {
         <div class="reports__column" [attr.data-testid]="'data-column-' + i">

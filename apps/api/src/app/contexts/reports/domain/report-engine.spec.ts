@@ -7,19 +7,23 @@ import {
   FieldOrigin,
   FieldRole,
   NumericNature,
+  OperationStepDto,
   OrgLevel,
   PeriodGrouping,
   PeriodValue,
+  RateQuote,
   ReportDefinitionRequest,
   ReportRowResponse,
   RowSource,
 } from '@asisteglt/shared-contracts';
-import { EntityId, FixedClock, Nullable } from '@asisteglt/shared-kernel';
+import { Decimal, EntityId, FixedClock, Nullable } from '@asisteglt/shared-kernel';
 import { Classification } from './classification';
 import { ColumnSplit, DataScope } from './data-scope';
 import { CatalogFieldSnapshot, FieldCatalog } from './field-catalog';
 import { OrgStructure } from './org-structure';
+import { RateTable } from './operation-runner';
 import { PeriodWindow } from './period-window';
+import { PresentationConverter } from './presentation-currency';
 import { DataRecordSnapshot } from './ports';
 import { ReportDefinition } from './report-definition';
 import { ReportEngine, TableWindows } from './report-engine';
@@ -154,10 +158,18 @@ const request = (overrides: Partial<ReportDefinitionRequest>): ReportDefinitionR
   subtotals: true,
   onlyWhenFieldKey: null,
   includeUnclassified: true,
+  presentation: null,
   ...overrides,
 });
 
-const run = (spec: ReportDefinitionRequest, period: string): ComputedReportResponse => {
+const run = (spec: ReportDefinitionRequest, period: string): ComputedReportResponse =>
+  runWith(spec, period, null);
+
+const runWith = (
+  spec: ReportDefinitionRequest,
+  period: string,
+  presentation: Nullable<PresentationConverter>,
+): ComputedReportResponse => {
   const definition: ReportDefinition = ReportDefinition.create(
     projectId,
     spec,
@@ -172,6 +184,7 @@ const run = (spec: ReportDefinitionRequest, period: string): ComputedReportRespo
     new ColumnSplit(definition.getSpec().columnSplit, org),
     TableWindows.of(definition, period).unwrap(),
     new Map<string, string>(),
+    presentation,
   );
   for (const r of RECORDS) {
     engine.add(r);
@@ -187,6 +200,33 @@ const detail = (report: ComputedReportResponse): ReportRowResponse => {
   }
   return row;
 };
+
+/** Tasas FICTICIAS de quetzales por dólar; diciembre no tiene tasa. */
+class FakeRates extends RateTable {
+  private static readonly GTQ_PER_USD: ReadonlyMap<string, string> = new Map<string, string>([
+    ['2026-01', '10'],
+    ['2026-02', '10'],
+    ['2026-03', '8'],
+  ]);
+
+  public override convert(
+    _step: OperationStepDto,
+    period: string,
+    from: string,
+    amount: Decimal,
+  ): Nullable<Decimal> {
+    if (from === 'USD') {
+      return amount;
+    }
+    const rate: Nullable<string> = FakeRates.GTQ_PER_USD.get(period) ?? null;
+    return rate === null
+      ? null
+      : amount.divide(Decimal.of(rate).unwrap()).match(
+          (d: Decimal): Nullable<Decimal> => d,
+          (): Nullable<Decimal> => null,
+        );
+  }
+}
 
 describe('PeriodWindow', () => {
   it('toma el bloque del calendario hasta el mes del informe y el bloque anterior completo', (): void => {
@@ -264,6 +304,24 @@ describe('ReportEngine: tablas de datos', () => {
     ]);
     expect(JSON.stringify(report)).not.toContain('Sin asignar');
     expect(detail(report).values).toEqual(['160', '40', '200']);
+  });
+
+  it('convierte cada mes a la moneda de presentación con la tasa de ese mes', (): void => {
+    const converter: PresentationConverter = new PresentationConverter(
+      {
+        targetCurrency: 'USD',
+        collectionId: 'rates',
+        rateFieldKey: 'rate',
+        currencyFieldKey: 'currency',
+        quote: RateQuote.UNITS_PER_TARGET,
+      },
+      new FakeRates(),
+    );
+    const report: ComputedReportResponse = runWith(request({ columnSplit: [] }), '2026-03', converter);
+    expect(report.presentationCurrency).toBe('USD');
+    // Saldo de marzo a 8; movimientos de enero y febrero a 10 y de marzo a 8; diciembre sin tasa.
+    expect(detail(report).values).toEqual(['25', '7.375', null]);
+    expect(report.warnings.some((w: string): boolean => w.includes('GTQ 2025-12'))).toBe(true);
   });
 
   it('en enero el período anterior mensual es diciembre del año anterior', (): void => {

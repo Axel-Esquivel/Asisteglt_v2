@@ -22,6 +22,8 @@ class RateCandidate {
  */
 export class CollectionRates extends RateTable {
   private readonly byId: ReadonlyMap<string, SupplementaryCollection>;
+  /** Tasas ya buscadas (colección, campos, período y moneda): cada búsqueda recorre la colección. */
+  private readonly found: Map<string, Nullable<Decimal>> = new Map<string, Nullable<Decimal>>();
 
   public constructor(collections: ReadonlyArray<SupplementaryCollection>) {
     super();
@@ -52,13 +54,11 @@ export class CollectionRates extends RateTable {
     ) {
       return null;
     }
-    const rate: Nullable<Decimal> = CollectionRates.rate(
-      collection,
-      step.rateFieldKey,
-      step.currencyFieldKey,
-      period,
-      from,
-    );
+    const key: string = [step.collectionId, step.rateFieldKey, step.currencyFieldKey, period, from].join('|');
+    const rate: Nullable<Decimal> = this.found.has(key)
+      ? (this.found.get(key) ?? null)
+      : CollectionRates.rate(collection, step.rateFieldKey, step.currencyFieldKey, period, from);
+    this.found.set(key, rate);
     if (rate === null || rate.isZero()) {
       return null;
     }

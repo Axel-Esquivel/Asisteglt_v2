@@ -6,6 +6,8 @@ import {
   OrgLevel,
   PeriodGrouping,
   PeriodValue,
+  PresentationCurrencyDto,
+  RateQuote,
   ReportDefinitionRequest,
   RowSource,
 } from '@asisteglt/shared-contracts';
@@ -40,6 +42,16 @@ const SCOPE: FieldDecoder<DataScopeDto> = new FieldDecoder<DataScopeDto>((f: Fie
   enterpriseIds: f.stringList('enterpriseIds'),
   branchIds: f.stringList('branchIds'),
 }));
+
+const PRESENTATION: FieldDecoder<PresentationCurrencyDto> = new FieldDecoder<PresentationCurrencyDto>(
+  (f: FieldReader): PresentationCurrencyDto => ({
+    targetCurrency: f.string('targetCurrency'),
+    collectionId: f.string('collectionId'),
+    rateFieldKey: f.string('rateFieldKey'),
+    currencyFieldKey: f.string('currencyFieldKey'),
+    quote: f.oneOf('quote', Object.values(RateQuote)),
+  }),
+);
 
 export class ClassificationView {
   public constructor(
@@ -80,6 +92,7 @@ export class ReportDefinitionView {
           subtotals: f.boolean('subtotals'),
           onlyWhenFieldKey: f.nullableString('onlyWhenFieldKey'),
           includeUnclassified: f.boolean('includeUnclassified'),
+          presentation: f.raw('presentation') === null ? null : f.nested('presentation', PRESENTATION),
         }),
     );
   }
@@ -130,6 +143,7 @@ export class ComputedReport {
     public readonly period: string,
     public readonly periodLabel: string,
     public readonly records: number,
+    public readonly presentationCurrency: Nullable<string>,
     public readonly attributeColumns: { readonly key: string; readonly label: string }[],
     public readonly columns: ReportColumn[],
     public readonly rows: ReportRow[],
@@ -170,6 +184,7 @@ export class ComputedReport {
           f.string('period'),
           f.string('periodLabel'),
           f.number('records'),
+          f.nullableString('presentationCurrency'),
           f.list('attributeColumns', attribute),
           f.list('columns', column),
           f.list('rows', row),

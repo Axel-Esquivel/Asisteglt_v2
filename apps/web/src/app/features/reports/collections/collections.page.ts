@@ -56,6 +56,13 @@ class CollectionFieldDraft {
     return new CollectionFieldDraft(key, '', DataType.DECIMAL, NumericNature.RATE);
   }
 
+  /** Al volver a un tipo numérico sin naturaleza, propone *Tasa* (lo habitual en una colección). */
+  public normalize(): void {
+    if (this.isNumeric() && this.nature === null) {
+      this.nature = NumericNature.RATE;
+    }
+  }
+
   public isNumeric(): boolean {
     return this.dataType === DataType.DECIMAL || this.dataType === DataType.INTEGER;
   }
@@ -199,7 +206,12 @@ export class CollectionsPage implements OnInit {
 
   /** Fuerza el redibujado de las columnas de filas al cambiar el tipo o el nombre de un campo. */
   protected touchFields(): void {
-    this.fields.update((fields: CollectionFieldDraft[]): CollectionFieldDraft[] => [...fields]);
+    this.fields.update((fields: CollectionFieldDraft[]): CollectionFieldDraft[] => {
+      for (const field of fields) {
+        field.normalize();
+      }
+      return [...fields];
+    });
   }
 
   protected async save(): Promise<void> {

@@ -40,6 +40,7 @@ const REPORT_DEFINITION_SCHEMA: Schema<ReportDefinitionRecord> = new Schema<Repo
     subtotals: { type: Boolean, default: true },
     onlyWhenFieldKey: { type: String, default: null },
     includeUnclassified: { type: Boolean, required: true },
+    presentation: { type: Schema.Types.Mixed, default: null },
     updatedAt: { type: Date, required: true },
   },
   { collection: 'report_definitions', versionKey: false, minimize: false },

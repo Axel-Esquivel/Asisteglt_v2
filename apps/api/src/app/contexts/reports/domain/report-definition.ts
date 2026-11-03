@@ -5,6 +5,7 @@ import {
   DataColumnKind,
   DataType,
   PeriodValue,
+  PresentationCurrencyDto,
   ReportDefinitionRequest,
   RowSource,
 } from '@asisteglt/shared-contracts';
@@ -63,6 +64,11 @@ export class ReportDefinition extends AggregateRoot {
 
   public getSpec(): ReportDefinitionRequest {
     return this.spec;
+  }
+
+  /** ¿Toma las tasas de su moneda de presentación de esa colección? */
+  public usesCollection(collectionId: string): boolean {
+    return this.spec.presentation !== null && this.spec.presentation.collectionId === collectionId;
   }
 
   public belongsTo(projectId: EntityId): boolean {
@@ -187,10 +193,33 @@ export class ReportDefinition extends AggregateRoot {
         return fail(AnalysisErrorCode.INVALID_REPORT, 'El filtro «solo cuando» debe ser un encabezado sí/no');
       }
     }
+    const presentation: Nullable<PresentationCurrencyDto> =
+      r.presentation === null
+        ? null
+        : { ...r.presentation, targetCurrency: r.presentation.targetCurrency.trim().toUpperCase() };
+    if (presentation !== null) {
+      if (!/^[A-Z]{3}$/.test(presentation.targetCurrency)) {
+        return fail(
+          AnalysisErrorCode.INVALID_REPORT,
+          'La moneda de presentación debe ser un código de 3 letras (p. ej. USD)',
+        );
+      }
+      if (
+        presentation.collectionId.trim() === '' ||
+        presentation.rateFieldKey.trim() === '' ||
+        presentation.currencyFieldKey.trim() === ''
+      ) {
+        return fail(
+          AnalysisErrorCode.INVALID_REPORT,
+          'Elige la colección de tasas, su campo de tasa y su campo de moneda',
+        );
+      }
+    }
     const unique = (list: ReadonlyArray<string>): string[] => [...new Set(list)];
     return Result.ok({
       ...r,
       name,
+      presentation,
       classificationId: r.rowSource === RowSource.CLASSIFICATION ? r.classificationId : null,
       rowFieldKey: r.rowSource === RowSource.FIELD ? r.rowFieldKey : null,
       classificationColumns: unique(r.classificationColumns),

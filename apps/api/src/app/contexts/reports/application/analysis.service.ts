@@ -49,6 +49,7 @@ import {
 } from '../domain/ports';
 import { ReportTemplate } from '../domain/report-template';
 import { ReportDefinition } from '../domain/report-definition';
+import { PresentationConverter } from '../domain/presentation-currency';
 import { ReportEngine, TableWindows } from '../domain/report-engine';
 import { ColumnSplit, DataScope } from '../domain/data-scope';
 import { OrgStructureService } from './org-structure.service';
@@ -206,6 +207,15 @@ export class AnalysisService {
             return Result.fail(exists.errorOrNull() ?? AnalysisService.reportNotFound());
           }
         }
+        if (request.presentation !== null) {
+          const problem: Nullable<string> = PresentationConverter.problem(
+            request.presentation,
+            await this.operations.collectionsOf(p.getId()),
+          );
+          if (problem !== null) {
+            return Result.fail(new ValidationError(AnalysisErrorCode.INVALID_REPORT, problem));
+          }
+        }
         const catalog: FieldCatalog = await this.catalogs.of(p.getId());
         const result: Result<ReportDefinition> =
           reportId === null
@@ -286,6 +296,9 @@ export class AnalysisService {
               new ColumnSplit(spec.columnSplit, await this.org.of(p.getId())),
               windows,
               await this.operations.convertedCurrencies(p.getId()),
+              spec.presentation === null
+                ? null
+                : new PresentationConverter(spec.presentation, await this.operations.rates(p.getId())),
             );
             const months: string[] = windows.months();
             const query: RecordQuery = new RecordQuery(

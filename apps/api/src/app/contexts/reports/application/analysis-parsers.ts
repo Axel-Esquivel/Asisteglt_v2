@@ -8,6 +8,8 @@ import {
   OrgLevel,
   PeriodGrouping,
   PeriodValue,
+  PresentationCurrencyDto,
+  RateQuote,
   ReportDefinitionRequest,
   RowSource,
 } from '@asisteglt/shared-contracts';
@@ -58,6 +60,15 @@ export class AnalysisParsers {
       branchIds: f.stringList('branchIds'),
     }),
   );
+
+  public static readonly PRESENTATION: Decoder<PresentationCurrencyDto> =
+    new FieldDecoder<PresentationCurrencyDto>((f: FieldReader): PresentationCurrencyDto => ({
+      targetCurrency: f.string('targetCurrency'),
+      collectionId: f.string('collectionId'),
+      rateFieldKey: f.string('rateFieldKey'),
+      currencyFieldKey: f.string('currencyFieldKey'),
+      quote: f.oneOf('quote', Object.values(RateQuote)),
+    }));
 
   /**
    * Tabla de datos. Acepta también la forma anterior de los informes (medidas como lista de
@@ -110,6 +121,8 @@ export class AnalysisParsers {
         subtotals: f.raw('subtotals') === null ? true : f.boolean('subtotals'),
         onlyWhenFieldKey: f.nullableString('onlyWhenFieldKey'),
         includeUnclassified: f.boolean('includeUnclassified'),
+        presentation:
+          f.raw('presentation') === null ? null : f.nested('presentation', AnalysisParsers.PRESENTATION),
       };
     });
 
