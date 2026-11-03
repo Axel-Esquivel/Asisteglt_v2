@@ -14,7 +14,6 @@ import {
   CollectionFieldDto,
   DataColumnDto,
   DataColumnKind,
-  ImportItemStatus,
   OrgLevel,
   PeriodGrouping,
   PeriodValue,
@@ -50,7 +49,7 @@ import {
   ReportRow,
 } from '../data/analysis.model';
 import { CatalogFieldView, CatalogView } from '../data/catalog.model';
-import { ImportBatchView, ImportItemView } from '../data/import.model';
+import { ImportBatchView } from '../data/import.model';
 import { OrgTree, OrgUnitView } from '../data/org.model';
 import { ProfileView } from '../data/profile.model';
 import { ReportsApiClient } from '../data/reports.api-client';
@@ -617,15 +616,11 @@ export class ReportsPage implements OnInit {
     );
     history.match(
       (batches: ImportBatchView[]): void => {
-        const latest: Nullable<string> =
-          batches
-            .flatMap((b: ImportBatchView): ImportItemView[] => [...b.items])
-            .filter((i: ImportItemView): boolean => i.s.status === ImportItemStatus.PUBLISHED)
-            .map((i: ImportItemView): string => i.s.period)
-            .sort()
-            .reverse()[0] ?? null;
+        const latest: Nullable<Date> = ImportBatchView.monthOf(
+          ImportBatchView.latestPublishedPeriod(batches) ?? '',
+        );
         if (latest !== null) {
-          this.period.set(new Date(Number(latest.slice(0, 4)), Number(latest.slice(5, 7)) - 1, 1));
+          this.period.set(latest);
         }
       },
       (): void => {

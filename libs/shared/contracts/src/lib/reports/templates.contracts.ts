@@ -1,4 +1,10 @@
-import { ComputedReportResponse } from './analysis.contracts';
+import {
+  ComputedReportResponse,
+  DataScopeDto,
+  PeriodGrouping,
+  PeriodValue,
+  PresentationCurrencyDto,
+} from './analysis.contracts';
 
 /** Plantillas de informe multipágina (docs/04 §11, versión inicial). Medidas en milímetros. */
 export enum PageFormatName {
@@ -19,6 +25,7 @@ export enum ElementKind {
   MATRIX = 'MATRIX',
   KPI = 'KPI',
   CHART = 'CHART',
+  PIVOT = 'PIVOT',
 }
 
 export enum ChartType {
@@ -69,10 +76,79 @@ export interface ElementStyleDto {
 }
 
 /**
+ * Filtros de un valor filtrado o de una tabla dinámica: qué registros entran. Una lista vacía no
+ * filtra; los nodos elegidos incluyen sus descendientes.
+ */
+export interface ValueFilterDto {
+  readonly classificationId: string | null;
+  readonly nodeIds: ReadonlyArray<string>;
+  readonly scope: DataScopeDto;
+  readonly periodGrouping: PeriodGrouping;
+  readonly periodValue: PeriodValue;
+  /** 0 = período del informe; -1 = período anterior. */
+  readonly periodOffset: number;
+  /** `null` = cada monto en su moneda (no se suman monedas distintas). */
+  readonly presentation: PresentationCurrencyDto | null;
+}
+
+/** De dónde sale una dimensión de la tabla dinámica. */
+export enum PivotSource {
+  /** Un encabezado agrupable (p. ej. cuenta, vendedor). */
+  FIELD = 'FIELD',
+  /** El nodo de una clasificación (`level` 0 = el nodo; 1 = la raíz, 2 = su hijo…). */
+  CLASSIFICATION = 'CLASSIFICATION',
+  /** Un nivel de la estructura (`key` = organización, país, compañía, empresa o sucursal). */
+  ORG = 'ORG',
+  CURRENCY = 'CURRENCY',
+  MONTH = 'MONTH',
+}
+
+export interface PivotDimensionDto {
+  readonly source: PivotSource;
+  /** Encabezado, clasificación o nivel de la estructura; vacío en moneda y mes. */
+  readonly key: string;
+  readonly level: number;
+}
+
+export enum PivotValueKind {
+  /** Un encabezado numérico agregado (p. ej. Saldo) en el período del informe o el anterior. */
+  FIELD = 'FIELD',
+  /** Diferencia entre dos valores anteriores: A − B (p. ej. variación del mes). */
+  DIFFERENCE = 'DIFFERENCE',
+  /** Cociente en porcentaje entre dos valores anteriores: A ÷ B × 100 (p. ej. variación %). */
+  RATIO = 'RATIO',
+}
+
+export interface PivotValueDto {
+  readonly kind: PivotValueKind;
+  /** Encabezado del valor; `null` en diferencias y cocientes. */
+  readonly fieldKey: string | null;
+  /** Título; vacío = nombre vigente del encabezado (o «A − B» / «A ÷ B %»). */
+  readonly label: string;
+  /** 0 = período del informe; -1 = período anterior (solo encabezados). */
+  readonly periodOffset: number;
+  /** Posiciones (desde 0) de los valores A y B; solo diferencias y cocientes, y anteriores a este. */
+  readonly left: number;
+  readonly right: number;
+}
+
+export interface PivotDto {
+  readonly rows: ReadonlyArray<PivotDimensionDto>;
+  readonly columns: ReadonlyArray<PivotDimensionDto>;
+  readonly values: ReadonlyArray<PivotValueDto>;
+  readonly subtotals: boolean;
+  /** Título de la columna de filas; vacío = el nombre de las dimensiones. */
+  readonly rowTitle: string;
+  /** Texto de la fila de total; vacío = «Total». */
+  readonly totalLabel: string;
+}
+
+/**
  * Elemento de una página. Cada tipo usa sus propiedades y deja el resto en `null` / `[]`:
  * TEXT `text` (admite {periodo}, {mes}, {año}, {fecha}, {proyecto}, {pagina}, {paginas});
- * MATRIX `reportId`; KPI `formula` (agregada, con nombres) y filtros; CHART `reportId`,
- * `chartType` y `columns` (índices de columnas del informe que se grafican).
+ * MATRIX `reportId`; KPI (valor filtrado) `formula` (agregada, con nombres), `filter` y `text`
+ * (rótulo con {valor}); CHART `reportId`, `chartType` y `columns` (índices de columnas del informe
+ * que se grafican); PIVOT `pivot` y `filter`.
  */
 export interface TemplateElementDto {
   readonly id: string;
@@ -88,6 +164,8 @@ export interface TemplateElementDto {
   readonly companyId: string | null;
   readonly chartType: ChartType | null;
   readonly columns: ReadonlyArray<number>;
+  readonly filter: ValueFilterDto | null;
+  readonly pivot: PivotDto | null;
 }
 
 export interface TemplatePageDto {
@@ -107,6 +185,11 @@ export interface TemplatePageDto {
 export interface TemplateRequest {
   readonly name: string;
   readonly pages: ReadonlyArray<TemplatePageDto>;
+  /**
+   * El alcance (organizaciones, compañías…) lo elige quien genera el informe: reemplaza el de
+   * cada tabla de datos y el de los indicadores. Sin marcar, cada tabla usa el suyo.
+   */
+  readonly scopeParameter: boolean;
 }
 
 export interface TemplateResponse extends TemplateRequest {
@@ -147,6 +230,8 @@ export interface RenderedTemplateResponse {
   readonly templateId: string;
   readonly name: string;
   readonly period: string;
+  /** Alcance con el que se generó, p. ej. «Compañía A, Compañía B» o «Según cada tabla». */
+  readonly scopeLabel: string;
   readonly pages: ReadonlyArray<RenderedPageDto>;
 }
 

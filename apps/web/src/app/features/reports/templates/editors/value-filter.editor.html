@@ -1,0 +1,193 @@
+<strong>Filtros</strong>
+<p class="reports__hint">
+  Solo entran los registros que cumplen todo lo elegido. Una lista vacía no filtra ese nivel.
+</p>
+<p-floatlabel variant="on">
+  <p-select
+    [inputId]="id('Classification')"
+    ariaLabel="Clasificación (sin filtrar)"
+    [options]="classificationOptions()"
+    optionLabel="label"
+    optionValue="value"
+    [ngModel]="filter().classificationId"
+    (ngModelChange)="setClassification($event)"
+    [showClear]="true"
+    styleClass="full-width"
+    appendTo="body"
+  />
+  <label [for]="id('Classification')">Clasificación (sin filtrar)</label>
+</p-floatlabel>
+@if (filter().classificationId !== null) {
+<p-floatlabel variant="on">
+  <p-multiselect
+    [inputId]="id('Nodes')"
+    ariaLabel="Nodos (todos)"
+    [options]="nodeOptions()"
+    optionLabel="label"
+    optionValue="value"
+    [ngModel]="filter().nodeIds"
+    (ngModelChange)="setNodes($event)"
+    [filter]="true"
+    display="chip"
+    styleClass="full-width"
+    appendTo="body"
+  />
+  <label [for]="id('Nodes')">Nodos (todos)</label>
+</p-floatlabel>
+<p class="reports__hint">Cada nodo elegido incluye los que cuelgan de él (p. ej. Activo incluye sus rubros).</p>
+} @for (item of scopeLevels; track item.level) {
+<p-floatlabel variant="on">
+  <p-multiselect
+    [inputId]="id('Scope' + item.level)"
+    [ariaLabel]="item.label"
+    [options]="scopeOptions(item.level)"
+    optionLabel="label"
+    optionValue="value"
+    [ngModel]="scopeValue(item.level)"
+    (ngModelChange)="setScope(item.level, $event)"
+    display="chip"
+    styleClass="full-width"
+    appendTo="body"
+  />
+  <label [for]="id('Scope' + item.level)">{{ item.label }}</label>
+</p-floatlabel>
+}
+<p class="reports__hint">
+  Si la plantilla deja elegir el alcance al generar el informe, el alcance elegido reemplaza a este.
+</p>
+<strong>Período</strong>
+<p-floatlabel variant="on">
+  <p-select
+    [inputId]="id('Grouping')"
+    ariaLabel="Agrupación"
+    [options]="groupings"
+    optionLabel="label"
+    optionValue="value"
+    [ngModel]="filter().periodGrouping"
+    (ngModelChange)="setGrouping($event)"
+    styleClass="full-width"
+    appendTo="body"
+  />
+  <label [for]="id('Grouping')">Agrupación</label>
+</p-floatlabel>
+<p-floatlabel variant="on">
+  <p-select
+    [inputId]="id('PeriodValue')"
+    ariaLabel="Cómo se toman los meses"
+    [options]="periodValues"
+    optionLabel="label"
+    optionValue="value"
+    [ngModel]="filter().periodValue"
+    (ngModelChange)="setPeriodValue($event)"
+    styleClass="full-width"
+    appendTo="body"
+  />
+  <label [for]="id('PeriodValue')">Cómo se toman los meses</label>
+</p-floatlabel>
+@if (withOffset()) {
+<p-floatlabel variant="on">
+  <p-select
+    [inputId]="id('Offset')"
+    ariaLabel="Período"
+    [options]="offsets"
+    optionLabel="label"
+    optionValue="value"
+    [ngModel]="filter().periodOffset"
+    (ngModelChange)="setOffset($event)"
+    styleClass="full-width"
+    appendTo="body"
+  />
+  <label [for]="id('Offset')">Período</label>
+</p-floatlabel>
+}
+<p class="reports__hint">
+  Un saldo se toma del mes de cierre; los movimientos o ventas, acumulados. El período anterior de enero es
+  diciembre del año anterior.
+</p>
+<div class="reports__toolbar">
+  <p-toggleswitch
+    [inputId]="id('Convert')"
+    [ngModel]="filter().presentation !== null"
+    (ngModelChange)="setConvert($event)"
+  />
+  <label [for]="id('Convert')">Convertir los montos a una moneda</label>
+</div>
+@if (filter().presentation; as presentation) {
+<p class="reports__hint">
+  Cada registro se convierte con la tasa de su mes, tomada de una colección con un campo Texto con la moneda y
+  un campo Decimal con naturaleza Tasa.
+</p>
+<p-floatlabel variant="on">
+  <input
+    pInputText
+    [id]="id('Target')"
+    class="full-width"
+    maxlength="3"
+    [ngModel]="presentation.targetCurrency"
+    (ngModelChange)="setTarget($event)"
+  />
+  <label [for]="id('Target')">Moneda de presentación (p. ej. USD)</label>
+</p-floatlabel>
+<p-floatlabel variant="on">
+  <p-select
+    [inputId]="id('Collection')"
+    ariaLabel="Colección de tasas"
+    [options]="collectionOptions()"
+    optionLabel="label"
+    optionValue="value"
+    [ngModel]="presentation.collectionId"
+    (ngModelChange)="setCollection($event)"
+    styleClass="full-width"
+    appendTo="body"
+  />
+  <label [for]="id('Collection')">Colección de tasas</label>
+</p-floatlabel>
+@if (collections().length === 0) {
+<p-message severity="warn" size="small">
+  Aún no hay colecciones. Crea en Colecciones una con un campo Texto para la moneda y un campo Decimal con
+  naturaleza Tasa.
+</p-message>
+}
+<p-floatlabel variant="on">
+  <p-select
+    [inputId]="id('RateField')"
+    ariaLabel="Campo de la tasa"
+    [options]="rateFieldOptions(presentation.collectionId)"
+    optionLabel="label"
+    optionValue="value"
+    [ngModel]="presentation.rateFieldKey"
+    (ngModelChange)="setRateField($event)"
+    styleClass="full-width"
+    appendTo="body"
+  />
+  <label [for]="id('RateField')">Campo de la tasa</label>
+</p-floatlabel>
+<p-floatlabel variant="on">
+  <p-select
+    [inputId]="id('CurrencyField')"
+    ariaLabel="Campo de la moneda"
+    [options]="currencyFieldOptions(presentation.collectionId)"
+    optionLabel="label"
+    optionValue="value"
+    [ngModel]="presentation.currencyFieldKey"
+    (ngModelChange)="setCurrencyField($event)"
+    styleClass="full-width"
+    appendTo="body"
+  />
+  <label [for]="id('CurrencyField')">Campo de la moneda</label>
+</p-floatlabel>
+<p-floatlabel variant="on">
+  <p-select
+    [inputId]="id('Quote')"
+    ariaLabel="Cómo se expresa la tasa"
+    [options]="quotes"
+    optionLabel="label"
+    optionValue="value"
+    [ngModel]="presentation.quote"
+    (ngModelChange)="setQuote($event)"
+    styleClass="full-width"
+    appendTo="body"
+  />
+  <label [for]="id('Quote')">Cómo se expresa la tasa</label>
+</p-floatlabel>
+}

@@ -21,6 +21,11 @@
   flex: 1 1 12rem;
 }
 
+.print__scope {
+  color: var(--p-text-muted-color);
+  font-size: 0.875rem;
+}
+
 .print__status {
   display: flex;
   justify-content: center;

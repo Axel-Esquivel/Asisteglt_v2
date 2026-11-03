@@ -34,7 +34,7 @@ const DATA_COLUMN: FieldDecoder<DataColumnDto> = new FieldDecoder<DataColumnDto>
   }),
 );
 
-const SCOPE: FieldDecoder<DataScopeDto> = new FieldDecoder<DataScopeDto>((f: FieldReader): DataScopeDto => ({
+export const SCOPE: FieldDecoder<DataScopeDto> = new FieldDecoder<DataScopeDto>((f: FieldReader): DataScopeDto => ({
   organizationIds: f.stringList('organizationIds'),
   countryIds: f.stringList('countryIds'),
   currencies: f.stringList('currencies'),
@@ -43,7 +43,7 @@ const SCOPE: FieldDecoder<DataScopeDto> = new FieldDecoder<DataScopeDto>((f: Fie
   branchIds: f.stringList('branchIds'),
 }));
 
-const PRESENTATION: FieldDecoder<PresentationCurrencyDto> = new FieldDecoder<PresentationCurrencyDto>(
+export const PRESENTATION: FieldDecoder<PresentationCurrencyDto> = new FieldDecoder<PresentationCurrencyDto>(
   (f: FieldReader): PresentationCurrencyDto => ({
     targetCurrency: f.string('targetCurrency'),
     collectionId: f.string('collectionId'),

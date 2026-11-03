@@ -12,6 +12,16 @@
         />
         <label for="templateName">Nombre de la plantilla</label>
       </p-floatlabel>
+      <span class="reports__toolbar">
+        <p-checkbox
+          inputId="scopeParameter"
+          [binary]="true"
+          [ngModel]="store.scopeParameter()"
+          (ngModelChange)="store.scopeParameter.set($event); store.dirty.set(true)"
+          [disabled]="!canDesign()"
+        />
+        <label for="scopeParameter">El alcance lo elige quien genera el informe</label>
+      </span>
       <div class="reports__toolbar">
         <p-button
           label="Plantillas"
@@ -87,18 +97,25 @@
           (onClick)="store.addElement(kinds.TEXT)"
         />
         <p-button
-          label="Tabla"
+          label="Tabla de datos"
           icon="pi pi-table"
           size="small"
           [outlined]="true"
           (onClick)="store.addElement(kinds.MATRIX)"
         />
         <p-button
-          label="Indicador"
-          icon="pi pi-gauge"
+          label="Valor filtrado"
+          icon="pi pi-filter"
           size="small"
           [outlined]="true"
           (onClick)="store.addElement(kinds.KPI)"
+        />
+        <p-button
+          label="Tabla dinámica"
+          icon="pi pi-th-large"
+          size="small"
+          [outlined]="true"
+          (onClick)="store.addElement(kinds.PIVOT)"
         />
         <p-button
           label="Gráfico"
@@ -234,21 +251,50 @@
         >{{ formulaCheck().message }}</p-message
       >
       }
+      <p class="reports__hint">
+        Un solo total de los registros filtrados, p. ej. =SUMA([Saldo]) de los nodos elegidos de una
+        clasificación.
+      </p>
       <p-floatlabel variant="on">
-        <p-select
-          inputId="elCompany"
-          ariaLabel="Compañía (todas)"
-          [options]="companyOptions()"
-          optionLabel="label"
-          optionValue="value"
-          [ngModel]="e.companyId"
-          (ngModelChange)="company($event)"
-          [showClear]="true"
-          styleClass="full-width"
-          appendTo="body"
+        <input
+          pInputText
+          id="elCaption"
+          class="full-width"
+          [ngModel]="e.text ?? ''"
+          (ngModelChange)="caption($event)"
         />
-        <label for="elCompany">Compañía (todas)</label>
+        <label for="elCaption">Rótulo (opcional; {{ '{' }}valor{{ '}' }} es el número)</label>
       </p-floatlabel>
+      <p class="reports__hint">
+        Por ejemplo «Total activos: {{ '{' }}valor{{ '}' }}». Admite también {{ '{' }}mes{{ '}' }},
+        {{ '{' }}año{{ '}' }} y {{ '{' }}alcance{{ '}' }}. Vacío muestra solo el número.
+      </p>
+      <app-value-filter-editor
+        [filter]="filterOf(e)"
+        [classifications]="classifications()"
+        [org]="org()"
+        [collections]="collections()"
+        prefix="kpiFilter"
+        [withOffset]="true"
+        (changed)="setFilter($event)"
+      />
+      } @case (kinds.PIVOT) {
+      <app-pivot-editor
+        [pivot]="pivotOf(e)"
+        [catalog]="catalog()"
+        [classifications]="classifications()"
+        prefix="pivot"
+        (changed)="setPivot($event)"
+      />
+      <app-value-filter-editor
+        [filter]="filterOf(e)"
+        [classifications]="classifications()"
+        [org]="org()"
+        [collections]="collections()"
+        prefix="pivotFilter"
+        [withOffset]="false"
+        (changed)="setFilter($event)"
+      />
       } @case (kinds.MATRIX) {
       <p-floatlabel variant="on">
         <p-select

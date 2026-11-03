@@ -81,6 +81,14 @@ Proyecto de demostración: **Demo · Balance ficticio** (o crea uno nuevo).
 | 5.19 | Guardar → Vista previa y elegir el período | Cada página a su tamaño real con los valores del período; un indicador que suma monedas distintas muestra el aviso en su lugar |
 | 5.20 | «Imprimir / Guardar PDF» | El diálogo del navegador respeta el tamaño de cada página; elegir «Guardar como PDF» |
 | 5.21 | Intentar eliminar un informe usado en una plantilla | Se rechaza con «El informe se usa en una plantilla» |
+| 5.22 | En el diseño de la plantilla marcar «El alcance lo elige quien genera el informe», encabezado `Balance {alcance}`, y guardar | La plantilla guarda la opción |
+| 5.23 | Informes → elegir la plantilla, el período y una compañía → «Generar informe» | La vista de impresión muestra el alcance arriba y en el encabezado; las tablas y los indicadores solo suman esa compañía; «Volver» regresa a Informes |
+| 5.24 | Repetir sin elegir compañías | Alcance «Toda la información»: las tablas suman todo el proyecto |
+| 5.25 | Una plantilla sin la opción marcada | Informes avisa que usa el alcance de cada tabla de datos |
+| 5.26 | En una plantilla agregar «Valor filtrado» con `=SUMA([Saldo])`, filtro por un nodo de la clasificación y rótulo `Total: {valor}` | La vista previa muestra «Total: » y el saldo solo de las cuentas de ese nodo y sus descendientes |
+| 5.27 | Agregar «Tabla dinámica»: fila por la clasificación (nivel 1 y nivel 2), valores Saldo del período, Saldo del período anterior, Diferencia (1 − 2) y Cociente % (3 ÷ 1); texto del total «TOTAL ACTIVOS»; filtro al nodo Activo | Filas por grupo y rubro con el subtotal del grupo en negrita, columnas con los títulos elegidos y la fila «TOTAL ACTIVOS» |
+| 5.28 | Agregar a la tabla dinámica una columna por Compañía | Una columna por compañía con su total; sin moneda de presentación, los montos de monedas distintas no se suman y se avisa |
+| 5.29 | Intentar eliminar una clasificación usada por un valor filtrado o una tabla dinámica | No se elimina: «se usa en una tabla de datos o en una plantilla» |
 
 ## 6. Inventarios
 

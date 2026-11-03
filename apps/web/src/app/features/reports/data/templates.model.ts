@@ -8,9 +8,17 @@ import {
   NumberScale,
   PageFormatName,
   PageOrientation,
+  PeriodGrouping,
+  PeriodValue,
+  PivotDimensionDto,
+  PivotDto,
+  PivotSource,
+  PivotValueDto,
+  PivotValueKind,
   TemplateElementDto,
   TemplatePageDto,
   TextAlign,
+  ValueFilterDto,
 } from '@asisteglt/shared-contracts';
 import {
   Decimal,
@@ -20,7 +28,7 @@ import {
   NumberDecoder,
   RoundingMode,
 } from '@asisteglt/shared-kernel';
-import { ComputedReport } from './analysis.model';
+import { ComputedReport, PRESENTATION, SCOPE } from './analysis.model';
 import { Option } from './reports-labels';
 
 const BOX: FieldDecoder<LayoutBoxDto> = new FieldDecoder<LayoutBoxDto>((f: FieldReader): LayoutBoxDto => ({
@@ -49,6 +57,48 @@ const FORMAT: FieldDecoder<NumberFormatDto> = new FieldDecoder<NumberFormatDto>(
   }),
 );
 
+const FILTER: FieldDecoder<ValueFilterDto> = new FieldDecoder<ValueFilterDto>(
+  (f: FieldReader): ValueFilterDto => ({
+    classificationId: f.nullableString('classificationId'),
+    nodeIds: f.stringList('nodeIds'),
+    scope: f.nested('scope', SCOPE),
+    periodGrouping: f.oneOf('periodGrouping', Object.values(PeriodGrouping)),
+    periodValue: f.oneOf('periodValue', Object.values(PeriodValue)),
+    periodOffset: f.number('periodOffset'),
+    presentation: f.raw('presentation') === null ? null : f.nested('presentation', PRESENTATION),
+  }),
+);
+
+const DIMENSION: FieldDecoder<PivotDimensionDto> = new FieldDecoder<PivotDimensionDto>(
+  (f: FieldReader): PivotDimensionDto => ({
+    source: f.oneOf('source', Object.values(PivotSource)),
+    key: f.string('key'),
+    level: f.number('level'),
+  }),
+);
+
+const PIVOT_VALUE: FieldDecoder<PivotValueDto> = new FieldDecoder<PivotValueDto>(
+  (f: FieldReader): PivotValueDto => ({
+    kind: f.oneOf('kind', Object.values(PivotValueKind)),
+    fieldKey: f.nullableString('fieldKey'),
+    label: f.string('label'),
+    periodOffset: f.number('periodOffset'),
+    left: f.number('left'),
+    right: f.number('right'),
+  }),
+);
+
+const PIVOT: FieldDecoder<PivotDto> = new FieldDecoder<PivotDto>(
+  (f: FieldReader): PivotDto => ({
+    rows: f.list('rows', DIMENSION),
+    columns: f.list('columns', DIMENSION),
+    values: f.list('values', PIVOT_VALUE),
+    subtotals: f.boolean('subtotals'),
+    rowTitle: f.string('rowTitle'),
+    totalLabel: f.string('totalLabel'),
+  }),
+);
+
 const ELEMENT: FieldDecoder<TemplateElementDto> = new FieldDecoder<TemplateElementDto>(
   (f: FieldReader): TemplateElementDto => ({
     id: f.string('id'),
@@ -64,6 +114,8 @@ const ELEMENT: FieldDecoder<TemplateElementDto> = new FieldDecoder<TemplateEleme
     companyId: f.nullableString('companyId'),
     chartType: f.raw('chartType') === null ? null : f.oneOf('chartType', Object.values(ChartType)),
     columns: f.list('columns', new NumberDecoder()),
+    filter: f.raw('filter') === null ? null : f.nested('filter', FILTER),
+    pivot: f.raw('pivot') === null ? null : f.nested('pivot', PIVOT),
   }),
 );
 
@@ -89,12 +141,20 @@ export class TemplateView {
     public readonly name: string,
     public readonly version: number,
     public readonly pages: TemplatePageDto[],
+    /** El alcance lo elige quien genera el informe. */
+    public readonly scopeParameter: boolean,
   ) {}
 
   public static decoder(): FieldDecoder<TemplateView> {
     return new FieldDecoder<TemplateView>(
       (f: FieldReader): TemplateView =>
-        new TemplateView(f.string('id'), f.string('name'), f.number('version'), f.list('pages', PAGE)),
+        new TemplateView(
+          f.string('id'),
+          f.string('name'),
+          f.number('version'),
+          f.list('pages', PAGE),
+          f.boolean('scopeParameter'),
+        ),
     );
   }
 }
@@ -136,6 +196,7 @@ export class RenderedTemplate {
   public constructor(
     public readonly name: string,
     public readonly period: string,
+    public readonly scopeLabel: string,
     public readonly pages: RenderedPage[],
   ) {}
 
@@ -174,7 +235,12 @@ export class RenderedTemplate {
     );
     return new FieldDecoder<RenderedTemplate>(
       (f: FieldReader): RenderedTemplate =>
-        new RenderedTemplate(f.string('name'), f.string('period'), f.list('pages', page)),
+        new RenderedTemplate(
+          f.string('name'),
+          f.string('period'),
+          f.string('scopeLabel'),
+          f.list('pages', page),
+        ),
     );
   }
 }
@@ -280,5 +346,36 @@ export class NumberFormatter {
       return new FormattedNumber(body, false);
     }
     return new FormattedNumber(f.negative === NegativeStyle.PARENTHESES ? `(${body})` : `-${body}`, true);
+  }
+}
+
+/** Valores iniciales de los filtros y de la tabla dinámica de un elemento nuevo. */
+export class ElementDefaults {
+  public static filter(companyId: Nullable<string>): ValueFilterDto {
+    return {
+      classificationId: null,
+      nodeIds: [],
+      scope: {
+        organizationIds: [],
+        countryIds: [],
+        currencies: [],
+        companyIds: companyId === null ? [] : [companyId],
+        enterpriseIds: [],
+        branchIds: [],
+      },
+      periodGrouping: PeriodGrouping.MONTH,
+      periodValue: PeriodValue.CLOSING,
+      periodOffset: 0,
+      presentation: null,
+    };
+  }
+
+  public static pivot(): PivotDto {
+    return { rows: [], columns: [], values: [], subtotals: true, rowTitle: '', totalLabel: '' };
+  }
+
+  /** El filtro del elemento; los indicadores anteriores no lo tienen y usan su compañía. */
+  public static filterOf(element: TemplateElementDto): ValueFilterDto {
+    return element.filter ?? ElementDefaults.filter(element.companyId);
   }
 }

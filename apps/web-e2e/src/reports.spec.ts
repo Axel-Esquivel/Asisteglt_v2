@@ -281,13 +281,14 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
   await expect(page.getByTestId('designer-page')).toBeVisible();
   const palette = page.getByTestId('designer-palette');
   await palette.getByRole('button', { name: 'Texto' }).click();
-  await palette.getByRole('button', { name: 'Tabla' }).click();
+  await palette.getByRole('button', { name: 'Tabla de datos' }).click();
   await page.getByRole('combobox', { name: 'Tabla de datos', exact: true }).click();
   await page.getByRole('option', { name: 'Saldos por clasificación' }).click();
   await page.getByTestId('element-Tabla').press('ArrowDown');
-  await palette.getByRole('button', { name: 'Indicador' }).click();
+  await palette.getByRole('button', { name: 'Valor filtrado' }).click();
   await page.getByLabel('Fórmula').fill('=SUMA([Debe])');
   await expect(page.getByTestId('kpi-check')).toContainText('Resultado: Monto');
+  await page.getByLabel('Rótulo (opcional; {valor} es el número)').fill('Debe del mes: {valor}');
   await page.getByLabel('Y', { exact: true }).fill('200');
   await page.getByLabel('Y', { exact: true }).press('Tab');
   await palette.getByRole('button', { name: 'Gráfico' }).click();
@@ -298,15 +299,55 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
   await closeMultiSelect(page, page.getByLabel('Nombre de la plantilla'));
   await page.getByLabel('Y', { exact: true }).fill('120');
   await page.getByLabel('Y', { exact: true }).press('Tab');
+  // Tabla dinámica: filas por la clasificación, valor Debe del mes y del mes anterior y su diferencia
+  await palette.getByRole('button', { name: 'Tabla dinámica' }).click();
+  await page.getByRole('button', { name: /^\W*Fila$/ }).click();
+  await expect(page.getByRole('combobox', { name: 'Fila 1' })).toContainText('Clasificación: Balance general');
+  for (const offset of ['Período del informe', 'Período anterior']) {
+    await page.getByRole('button', { name: /^\W*Valor$/ }).click();
+    const index: number = offset === 'Período del informe' ? 1 : 2;
+    await page.getByRole('combobox', { name: `Encabezado del valor ${String(index)}` }).click();
+    await page.getByRole('option', { name: 'Debe', exact: true }).click();
+    await page.getByRole('combobox', { name: `Período del valor ${String(index)}` }).click();
+    await page.getByRole('option', { name: offset }).click();
+  }
+  await page.getByRole('button', { name: /^\W*Valor$/ }).click();
+  await page.getByRole('combobox', { name: 'Tipo del valor 3' }).click();
+  await page.getByRole('option', { name: 'Diferencia (A − B)' }).click();
+  await page.getByLabel('Texto del total (p. ej. TOTAL ACTIVOS)').fill('TOTAL ACTIVOS');
+  await page.getByLabel('Y', { exact: true }).fill('160');
+  await page.getByLabel('Y', { exact: true }).press('Tab');
+  await page.getByText('El alcance lo elige quien genera el informe').click();
   await page.getByRole('button', { name: 'Guardar' }).click();
   await expect(page.getByRole('button', { name: 'Vista previa' })).toBeEnabled();
   await page.getByRole('button', { name: 'Vista previa' }).click();
   await expect(page).toHaveURL(/\/print\/projects\//);
-  await page.goto(`${page.url()}?period=2026-08`);
+  // Sin período en la dirección abre el último mes con datos publicados.
   await expect(page.getByTestId('print-Texto')).toHaveText('Informe de agosto de 2026');
   await expect(page.getByTestId('print-Tabla')).toContainText('15,600.00');
-  await expect(page.getByTestId('print-Indicador')).toHaveText('4,020.00');
+  await expect(page.getByTestId('print-Valor filtrado')).toHaveText('Debe del mes: 4,020.00');
+  const pivot = page.getByTestId('print-Tabla dinámica');
+  await expect(pivot).toContainText('Activo');
+  await expect(pivot).toContainText('TOTAL ACTIVOS');
+  await expect(pivot.getByRole('columnheader', { name: 'Balance general' })).toBeVisible();
+  await expect(pivot).toContainText('Debe (período anterior)');
+  await expect(pivot).toContainText('Debe − Debe (período anterior)');
   await expect(page.getByTestId('print-Gráfico').locator('canvas')).toBeVisible();
   await page.screenshot({ path: test.info().outputPath('plantilla.png'), fullPage: true });
   await expect(page.getByRole('button', { name: 'Imprimir / Guardar PDF' })).toBeEnabled();
+
+  // Informes: plantilla + período + alcance elegido al generar
+  await page.getByRole('button', { name: 'Volver' }).click();
+  await page.getByRole('tab', { name: 'Informes' }).click();
+  await expect(page.getByRole('combobox', { name: 'Plantilla' })).toContainText('Balance mensual');
+  await expect(page.locator('p-multiselect:has(#issuedCompanies)')).toBeVisible();
+  await page.getByRole('button', { name: 'Generar informe' }).click();
+  await expect(page).toHaveURL(/from=informes/);
+  await expect(page).toHaveURL(/scope=chosen/);
+  await expect(page).toHaveURL(/period=2026-08/);
+  await expect(page.getByTestId('print-scope')).toHaveText('Toda la información');
+  await expect(page.getByTestId('print-Tabla')).toContainText('15,600.00');
+  await page.getByRole('button', { name: 'Volver' }).click();
+  await expect(page.getByRole('button', { name: 'Generar informe' })).toBeVisible();
+  await expect(page).toHaveURL(/scope=chosen/);
 });

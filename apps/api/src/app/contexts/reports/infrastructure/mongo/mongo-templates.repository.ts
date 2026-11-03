@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { EntityId, Nullable, Optional } from '@asisteglt/shared-kernel';
+import { TemplatePageDto } from '@asisteglt/shared-contracts';
+import { EntityId, Nullable, Optional, Result } from '@asisteglt/shared-kernel';
 import { Model, Schema } from 'mongoose';
 import { MongoDatabase } from '../../../../common/persistence/mongo-database';
 import { ReportTemplateRepository } from '../../domain/ports';
 import { ReportTemplate, ReportTemplateSnapshot } from '../../domain/report-template';
+import { TemplatesParsers } from '../../application/templates-parsers';
 
 type ReportTemplateRecord = Omit<ReportTemplateSnapshot, 'id'> & { readonly _id: string };
 
@@ -14,6 +16,7 @@ const REPORT_TEMPLATE_SCHEMA: Schema<ReportTemplateRecord> = new Schema<ReportTe
     name: { type: String, required: true },
     version: { type: Number, required: true },
     pages: { type: Schema.Types.Mixed, required: true },
+    scopeParameter: { type: Boolean, default: false },
     updatedAt: { type: Date, required: true },
   },
   { collection: 'report_templates', versionKey: false, minimize: false },
@@ -56,6 +59,17 @@ export class MongoReportTemplateRepository extends ReportTemplateRepository {
 
   private static restore(record: ReportTemplateRecord): ReportTemplate {
     const { _id, ...rest } = record;
-    return ReportTemplate.restore({ ...rest, id: _id });
+    // Las plantillas anteriores no tienen el campo: el alcance lo define cada tabla.
+    // Los elementos anteriores no traen filtros ni tabla dinámica: se completan con `null`.
+    const pages: TemplatePageDto[] = rest.pages.map((page: TemplatePageDto): TemplatePageDto => {
+      const decoded: Result<TemplatePageDto> = TemplatesParsers.PAGE.decode(page);
+      return decoded.isOk() ? decoded.unwrap() : page;
+    });
+    return ReportTemplate.restore({
+      ...rest,
+      pages,
+      id: _id,
+      scopeParameter: Reflect.get(record, 'scopeParameter') === true,
+    });
   }
 }

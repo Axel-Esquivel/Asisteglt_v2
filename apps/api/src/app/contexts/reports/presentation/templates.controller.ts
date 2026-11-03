@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, Query } from '@nestjs/common';
-import { RenderedTemplateResponse, TemplateResponse } from '@asisteglt/shared-contracts';
+import { DataScopeDto, RenderedTemplateResponse, TemplateResponse } from '@asisteglt/shared-contracts';
+import { Nullable } from '@asisteglt/shared-kernel';
 import { CurrentPrincipal } from '../../../common/auth/auth.decorators';
 import type { AuthenticatedPrincipal } from '../../iam/domain/ports';
 import { TemplatesParsers } from '../application/templates-parsers';
@@ -38,8 +39,37 @@ export class TemplatesController {
     @Param('projectId') projectId: string,
     @Param('id') id: string,
     @Query('period') period: string,
+    @Query('scope') scope: string,
+    @Query('organizationIds') organizationIds: string,
+    @Query('countryIds') countryIds: string,
+    @Query('currencies') currencies: string,
+    @Query('companyIds') companyIds: string,
+    @Query('enterpriseIds') enterpriseIds: string,
+    @Query('branchIds') branchIds: string,
   ): Promise<RenderedTemplateResponse> {
-    return (await this.templates.render(projectId, p.userId, id, period)).unwrap();
+    // `scope=chosen` indica que quien genera el informe eligió el alcance (listas vacías = todo).
+    const chosen: Nullable<DataScopeDto> =
+      scope === 'chosen'
+        ? {
+            organizationIds: TemplatesController.list(organizationIds),
+            countryIds: TemplatesController.list(countryIds),
+            currencies: TemplatesController.list(currencies),
+            companyIds: TemplatesController.list(companyIds),
+            enterpriseIds: TemplatesController.list(enterpriseIds),
+            branchIds: TemplatesController.list(branchIds),
+          }
+        : null;
+    return (await this.templates.render(projectId, p.userId, id, period, chosen)).unwrap();
+  }
+
+  /** Lista separada por comas de un parámetro de consulta (ausente = vacía). */
+  private static list(raw: unknown): string[] {
+    return typeof raw === 'string'
+      ? raw
+          .split(',')
+          .map((v: string): string => v.trim())
+          .filter((v: string): boolean => v.length > 0)
+      : [];
   }
 
   @Post()

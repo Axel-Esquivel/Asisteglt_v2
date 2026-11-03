@@ -6,12 +6,15 @@ import {
   ClassifiableValuesResponse,
   ComputedReportResponse,
   DataColumnDto,
+  DataScopeDto,
   NumericNature,
   ProjectPermission,
   ReportDefinitionRequest,
   ReportDefinitionResponse,
   RowSource,
+  ValueFilterDto,
 } from '@asisteglt/shared-contracts';
+import { CellValue } from '@asisteglt/shared-ingestion-core';
 import {
   Clock,
   Decimal,
@@ -42,12 +45,15 @@ import { CatalogField, FieldCatalog } from '../domain/field-catalog';
 import {
   ClassificationRepository,
   DataRecordRepository,
+  DataRecordSnapshot,
   DistinctValue,
   RecordQuery,
   ReportDefinitionRepository,
   ReportTemplateRepository,
 } from '../domain/ports';
-import { ReportTemplate } from '../domain/report-template';
+import { KpiElement, PivotElement, ReportTemplate } from '../domain/report-template';
+import { PivotEngine } from '../domain/pivot-engine';
+import { RecordFilter } from '../domain/record-filter';
 import { ReportDefinition } from '../domain/report-definition';
 import { PresentationConverter } from '../domain/presentation-currency';
 import { ReportEngine, TableWindows } from '../domain/report-engine';
@@ -166,16 +172,20 @@ export class AnalysisService {
       async (p: Project): Promise<Result<true>> =>
         (await this.classification(p, classificationId)).flatMapAsync(
           async (c: Classification): Promise<Result<true>> => {
-            const used: boolean = (await this.definitions.findByProject(p.getId())).some(
-              (d: ReportDefinition): boolean =>
-                d.getSpec().classificationId === c.getId().toString() ||
-                d.getSpec().classificationColumns.includes(c.getId().toString()),
-            );
+            const id: string = c.getId().toString();
+            const used: boolean =
+              (await this.definitions.findByProject(p.getId())).some(
+                (d: ReportDefinition): boolean =>
+                  d.getSpec().classificationId === id || d.getSpec().classificationColumns.includes(id),
+              ) ||
+              (await this.templates.findByProject(p.getId())).some((t: ReportTemplate): boolean =>
+                t.usesClassification(id),
+              );
             if (used) {
               return Result.fail(
                 new ValidationError(
                   AnalysisErrorCode.INVALID_CLASSIFICATION,
-                  'La clasificación se usa en una tabla de datos',
+                  'La clasificación se usa en una tabla de datos o en una plantilla',
                 ),
               );
             }
@@ -262,19 +272,24 @@ export class AnalysisService {
       );
     }
     return (await this.access.require(projectId, userId, ProjectPermission.REPORTS_VIEW)).flatMapAsync(
-      (p: Project): Promise<Result<ComputedReportResponse>> => this.compute(p, reportId, period),
+      (p: Project): Promise<Result<ComputedReportResponse>> => this.compute(p, reportId, period, null),
     );
   }
 
-  /** Calcula una tabla de datos del proyecto (sin revisar permisos: lo hace quien llama). */
+  /**
+   * Calcula una tabla de datos del proyecto (sin revisar permisos: lo hace quien llama). `scope`
+   * reemplaza el alcance de la tabla (el que elige quien genera un informe); `null` usa el suyo.
+   */
   public async compute(
     p: Project,
     reportId: string,
     period: string,
+    scope: Nullable<DataScopeDto>,
   ): Promise<Result<ComputedReportResponse>> {
     return (await this.report(p, reportId)).flatMapAsync(
-      async (definition: ReportDefinition): Promise<Result<ComputedReportResponse>> =>
-        TableWindows.of(definition, period).flatMapAsync(
+      async (saved: ReportDefinition): Promise<Result<ComputedReportResponse>> => {
+        const definition: ReportDefinition = scope === null ? saved : saved.withScope(scope);
+        return TableWindows.of(definition, period).flatMapAsync(
           async (windows: TableWindows): Promise<Result<ComputedReportResponse>> => {
             const spec: ReportDefinitionRequest = definition.getSpec();
             const classification: Nullable<Classification> =
@@ -315,7 +330,8 @@ export class AnalysisService {
             }
             return Result.ok(engine.result(definition.getId().toString(), period));
           },
-        ),
+        );
+      },
     );
   }
 
@@ -327,20 +343,21 @@ export class AnalysisService {
   }
 
   /**
-   * Evalúa una fórmula agregada (forma canónica) sobre los registros del período, con las
-   * operaciones aplicadas. Falla si suma montos de monedas distintas.
+   * Valor filtrado: evalúa la fórmula agregada (forma canónica) sobre los registros que pasan sus
+   * filtros (clasificación, alcance y período), con las operaciones aplicadas y, si se pidió, la
+   * moneda de presentación. `chosen` es el alcance que eligió quien genera el informe y reemplaza
+   * el del filtro. Falla si suma montos de monedas distintas.
    */
   public async kpi(
     p: Project,
-    formula: string,
+    element: KpiElement,
     period: string,
-    profileId: Nullable<string>,
-    companyId: Nullable<string>,
+    chosen: Nullable<DataScopeDto>,
   ): Promise<Result<Nullable<string>>> {
     const catalog: FieldCatalog = await this.catalogs.of(p.getId());
     const resolver: ListFieldResolver = CatalogResolver.of(catalog);
     const root: Nullable<Expression> = new Lexer()
-      .tokenize(formula)
+      .tokenize(element.formula)
       .flatMap((tokens: Token[]): Result<Expression> => new Parser(resolver).parse(tokens))
       .match(
         (e: Expression): Nullable<Expression> => e,
@@ -349,40 +366,147 @@ export class AnalysisService {
     if (root === null) {
       return Result.fail(new ValidationError(AnalysisErrorCode.INVALID_REPORT, 'La fórmula ya no es válida'));
     }
+    const dto: ValueFilterDto = element.filter;
+    const built: Result<RecordFilter> = await this.recordFilter(p, dto, chosen, period, []);
+    const failure = built.errorOrNull();
+    if (failure !== null) {
+      return Result.fail(failure);
+    }
+    const filter: RecordFilter = built.unwrap();
     const requests: AggregateRequest[] = new AggregateRequestCollector(resolver).collect(root);
-    const sensitive: string[] = requests
-      .map((r: AggregateRequest): string => r.key)
-      .filter((key: string): boolean => {
-        const field = resolver.find(key);
-        return (
-          field !== null &&
-          (field.nature === NumericNature.AMOUNT || field.nature === NumericNature.UNIT_PRICE)
-        );
-      });
+    const sensitive: string[] = [
+      ...new Set(
+        requests
+          .map((r: AggregateRequest): string => r.key)
+          .filter((key: string): boolean => {
+            const field = resolver.find(key);
+            return (
+              field !== null &&
+              (field.nature === NumericNature.AMOUNT || field.nature === NumericNature.UNIT_PRICE)
+            );
+          }),
+      ),
+    ];
     const converted: ReadonlyMap<string, string> = await this.operations.convertedCurrencies(p.getId());
+    const presentation: Nullable<PresentationConverter> =
+      dto.presentation === null
+        ? null
+        : new PresentationConverter(dto.presentation, await this.operations.rates(p.getId()));
     const aggregates: RecordAggregates = new RecordAggregates(requests);
     const currencies: Set<string> = new Set<string>();
-    const query: RecordQuery = new RecordQuery(p.getId().toString(), period, profileId, companyId, [], null);
-    const runner: OperationRunner = await this.operations.runner(p.getId(), query, [period]);
+    const months: string[] = filter.months();
+    const query: RecordQuery = new RecordQuery(
+      p.getId().toString(),
+      months.at(-1) ?? period,
+      element.profileId,
+      filter.singleCompany(),
+      [],
+      months[0] ?? period,
+    );
+    const runner: OperationRunner = await this.operations.runner(p.getId(), query, months);
     for await (const raw of this.records.stream(query)) {
-      const record = runner.apply(raw);
-      aggregates.add(record.values);
-      for (const key of sensitive) {
-        if (typeof record.values[key] === 'string') {
-          currencies.add(converted.get(key) ?? record.currency);
-        }
+      const record: DataRecordSnapshot = runner.apply(raw);
+      if (!filter.matches(record)) {
+        continue;
       }
+      const values: Record<string, CellValue> = { ...record.values };
+      for (const key of sensitive) {
+        const value: CellValue = values[key] ?? null;
+        if (typeof value !== 'string') {
+          continue;
+        }
+        const currency: string = converted.get(key) ?? record.currency;
+        if (presentation === null) {
+          currencies.add(currency);
+          continue;
+        }
+        currencies.add(presentation.target());
+        const amount: Nullable<Decimal> = Decimal.of(value).match(
+          (d: Decimal): Nullable<Decimal> => d,
+          (): Nullable<Decimal> => null,
+        );
+        const result: Nullable<Decimal> =
+          amount === null ? null : presentation.convert(record.period, currency, amount);
+        values[key] = result === null ? null : result.toString();
+      }
+      aggregates.add(values);
     }
     if (currencies.size > 1) {
       return Result.fail(
         new ValidationError(
           AnalysisErrorCode.INVALID_REPORT,
-          `Suma montos en varias monedas (${[...currencies].sort().join(', ')}); usa un encabezado convertido o filtra por compañía`,
+          `Suma montos en varias monedas (${[...currencies].sort().join(', ')}); elige una moneda de presentación o filtra por moneda o compañía`,
         ),
       );
     }
+    const missing: Nullable<string> = presentation === null ? null : presentation.warning();
+    if (missing !== null) {
+      return Result.fail(new ValidationError(AnalysisErrorCode.INVALID_REPORT, missing));
+    }
     const value: FormulaValue = new Evaluator(resolver, aggregates).evaluate(root);
     return Result.ok(value instanceof Decimal ? value.toString() : null);
+  }
+
+  /**
+   * Tabla dinámica: agrupa los registros que pasan sus filtros por las dimensiones de filas y
+   * columnas y agrega los valores elegidos. `chosen` reemplaza el alcance del filtro.
+   */
+  public async pivot(
+    p: Project,
+    element: PivotElement,
+    period: string,
+    chosen: Nullable<DataScopeDto>,
+  ): Promise<Result<ComputedReportResponse>> {
+    const dto: ValueFilterDto = element.filter;
+    return (
+      await this.recordFilter(p, dto, chosen, period, PivotEngine.offsets(element.pivot))
+    ).flatMapAsync(
+      async (filter: RecordFilter): Promise<Result<ComputedReportResponse>> => {
+        const engine: PivotEngine = new PivotEngine(
+          element.pivot,
+          await this.catalogs.of(p.getId()),
+          new Map<string, Classification>(
+            (await this.classifications.findByProject(p.getId())).map(
+              (c: Classification): [string, Classification] => [c.getId().toString(), c],
+            ),
+          ),
+          await this.org.of(p.getId()),
+          await this.operations.convertedCurrencies(p.getId()),
+          dto.presentation === null
+            ? null
+            : new PresentationConverter(dto.presentation, await this.operations.rates(p.getId())),
+        );
+        const months: string[] = filter.months();
+        const query: RecordQuery = new RecordQuery(
+          p.getId().toString(),
+          months.at(-1) ?? period,
+          element.profileId,
+          filter.singleCompany(),
+          [],
+          months[0] ?? period,
+        );
+        const runner: OperationRunner = await this.operations.runner(p.getId(), query, months);
+        for await (const raw of this.records.stream(query)) {
+          const record: DataRecordSnapshot = runner.apply(raw);
+          if (filter.admits(record)) {
+            engine.add(record, filter);
+          }
+        }
+        return Result.ok(engine.result(element.id, element.name, period, filter.label()));
+      },
+    );
+  }
+
+  private async recordFilter(
+    p: Project,
+    dto: ValueFilterDto,
+    chosen: Nullable<DataScopeDto>,
+    period: string,
+    offsets: ReadonlyArray<number>,
+  ): Promise<Result<RecordFilter>> {
+    const classification: Nullable<Classification> =
+      dto.classificationId === null ? null : await this.optionalClassification(p, dto.classificationId);
+    return RecordFilter.of(dto, chosen ?? dto.scope, classification, period, offsets);
   }
 
   /** Respuesta con las fórmulas de las columnas calculadas escritas con los nombres vigentes. */

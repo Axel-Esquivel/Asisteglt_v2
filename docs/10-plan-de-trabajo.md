@@ -144,8 +144,12 @@ vertical u horizontal) con encabezado y pie con marcadores; elementos Texto, Tab
 matricial), Indicador (fórmula agregada) y Gráfico (barras, líneas o circular sobre columnas de un
 informe); diseñador con arrastre y redimensionado en milímetros; formato numérico (decimales,
 miles, escala, negativos con paréntesis o en rojo); vista de impresión con `@page` por página para
-imprimir o guardar como PDF desde el navegador. Pendiente: tabla dinámica, filas/columnas por
-filtros y fórmulas entre celdas y páginas, imágenes y formas, formato condicional, edición
+imprimir o guardar como PDF desde el navegador; plantillas con alcance elegido al generar (marcador
+`{alcance}`) y sección **Informes** (plantilla + período + alcance); **valor filtrado** (fórmula
+agregada con filtros por nodos de clasificación, alcance, período y moneda de presentación, y rótulo
+con `{valor}`) y **tabla dinámica** (filas y columnas por clasificación en un nivel, encabezado,
+estructura, moneda o mes; valores del período o el anterior, diferencias y cocientes; subtotales).
+Pendiente: fórmulas entre celdas y páginas, imágenes y formas, formato condicional, edición
 simultánea con bloqueo, deshacer/rehacer, PDF en el servidor y caché Redis.
 
 ### F7 · Inventarios (3 sprints, en paralelo con F5–F6) — RF-INV-01…11, RF-REP-20

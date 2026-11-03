@@ -1,5 +1,5 @@
 import { CheckResultDto, ImportItemResponse, ImportItemStatus } from '@asisteglt/shared-contracts';
-import { FieldDecoder, FieldReader } from '@asisteglt/shared-kernel';
+import { FieldDecoder, FieldReader, Nullable } from '@asisteglt/shared-kernel';
 import { CellValue } from '@asisteglt/shared-ingestion-core';
 import { CHECK_RESULT } from './profile.model';
 import { ReportsLabels } from './reports-labels';
@@ -78,6 +78,24 @@ export class ImportBatchView {
       (f: FieldReader): ImportBatchView =>
         new ImportBatchView(f.string('id'), f.date('createdAt'), f.list('items', ImportItemView.decoder())),
     );
+  }
+
+  /** Último mes (AAAA-MM) con una carga publicada; `null` si aún no hay ninguna. */
+  public static latestPublishedPeriod(batches: ReadonlyArray<ImportBatchView>): Nullable<string> {
+    return (
+      batches
+        .flatMap((b: ImportBatchView): ImportItemView[] => [...b.items])
+        .filter((i: ImportItemView): boolean => i.s.status === ImportItemStatus.PUBLISHED)
+        .map((i: ImportItemView): string => i.s.period)
+        .sort()
+        .reverse()[0] ?? null
+    );
+  }
+
+  /** El mes de un período AAAA-MM como fecha (día 1); `null` si el texto no es un período. */
+  public static monthOf(period: string): Nullable<Date> {
+    const match: Nullable<RegExpExecArray> = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(period);
+    return match === null ? null : new Date(Number(match[1] ?? '0'), Number(match[2] ?? '1') - 1, 1);
   }
 
   public withItem(item: ImportItemView): ImportBatchView {
