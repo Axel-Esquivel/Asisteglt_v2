@@ -566,7 +566,7 @@ export class ReportsPage implements OnInit {
   /** Qué le falta a la colección elegida para servir de tasas (o `null` si sirve). */
   protected collectionProblem(collectionId: Nullable<string>): Nullable<string> {
     if (this.collections().length === 0) {
-      return 'Aún no hay colecciones. Crea una en Colecciones con «Nueva colección de tipo de cambio».';
+      return 'Aún no hay colecciones. Crea en Colecciones una con un campo Texto para la moneda y un campo Decimal con naturaleza Tasa.';
     }
     const collection: Nullable<CollectionView> = this.collection(collectionId);
     if (collection === null) {

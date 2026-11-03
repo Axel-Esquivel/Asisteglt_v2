@@ -106,7 +106,10 @@ los datos anteriores del período siguen vigentes; sin esa opción se publica co
     La fórmula se valida mientras se escribe.
   - *Acumulado del año*: suma el mes con los anteriores del mismo año.
   - *Conversión de moneda*: usa una colección de tipos de cambio.
-- **Colecciones**: tablas propias (p. ej. *Tipo de cambio*: moneda y tasa, con o sin período).
+- **Colecciones**: tablas propias, como un formulario: primero se definen los **campos** y después
+  se llenan las **filas**, cada una con su mes (o sin mes si vale siempre). Un *Tipo de cambio*
+  lleva dos campos: uno **Texto** con el código de la moneda (p. ej. GTQ) y uno **Decimal** con
+  naturaleza **Tasa** con el valor de cambio (p. ej. 7.75); una fila por moneda y mes.
 
 Un informe **no suma montos de monedas distintas**: la celda queda vacía con el aviso «tiene
 montos en varias monedas». Convierte a una moneda común con una operación.

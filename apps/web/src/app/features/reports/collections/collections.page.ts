@@ -214,19 +214,6 @@ export class CollectionsPage implements OnInit {
     });
   }
 
-  /** Colección de tipo de cambio lista para llenar: Moneda (texto) y Tasa (decimal, naturaleza Tasa). */
-  protected startExchangeRates(): void {
-    this.startNew();
-    this.name.set('Tipo de cambio');
-    const currency: CollectionFieldDraft = CollectionFieldDraft.blank([]);
-    const rate: CollectionFieldDraft = CollectionFieldDraft.blank([currency.key]);
-    currency.label = 'Moneda';
-    currency.dataType = DataType.TEXT;
-    currency.nature = null;
-    rate.label = 'Tasa';
-    this.fields.set([currency, rate]);
-  }
-
   protected async save(): Promise<void> {
     const fields: CollectionFieldDraft[] = this.fields();
     this.saving.set(true);

@@ -150,10 +150,13 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
 
   // Colección de tipos de cambio y conversión a dólares
   await page.getByRole('tab', { name: 'Colecciones' }).click();
-  // La plantilla trae Moneda (texto) y Tasa (decimal, naturaleza Tasa)
-  await page.getByRole('button', { name: 'Nueva colección de tipo de cambio' }).click();
-  await expect(page.getByLabel('Nombre (p. ej. Tipo de cambio)')).toHaveValue('Tipo de cambio');
-  await expect(page.getByLabel('Nombre del campo 1')).toHaveValue('Moneda');
+  await page.getByRole('button', { name: 'Nueva colección' }).click();
+  await page.getByLabel('Nombre (p. ej. Tipo de cambio)').fill('Tipo de cambio');
+  await page.getByRole('button', { name: 'Agregar campo' }).click();
+  await page.getByLabel('Nombre del campo 1').fill('Moneda');
+  await page.getByRole('combobox', { name: 'Tipo del campo 1' }).click();
+  await page.getByRole('option', { name: 'Texto' }).click();
+  await page.getByRole('button', { name: 'Agregar campo' }).click();
   await page.getByLabel('Nombre del campo 2').fill('Tasa de cierre');
   await page.getByRole('button', { name: 'Agregar fila' }).click();
   await page.getByLabel('Moneda de la fila 1').fill('GTQ');

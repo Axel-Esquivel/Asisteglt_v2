@@ -29,13 +29,6 @@
         [outlined]="true"
         (onClick)="startNew()"
       />
-      <p-button
-        label="Nueva colección de tipo de cambio"
-        icon="pi pi-dollar"
-        size="small"
-        [outlined]="true"
-        (onClick)="startExchangeRates()"
-      />
       }
     </div>
   </p-card>
@@ -145,12 +138,19 @@
           </ng-template>
         </p-table>
       </div>
-      <p class="reports__hint">
-        Un tipo de cambio necesita <strong>dos campos</strong>: <em>Moneda</em> de tipo Texto (p. ej. GTQ) y
-        <em>Tasa</em> de tipo Decimal con naturaleza <em>Tasa</em> (nunca se suma). En cada fila indica el mes
-        de la tasa, o déjalo vacío para una tasa que vale siempre; las tablas eligen solas la tasa del mes de
-        cada dato.
-      </p>
+      <div class="reports__hint">
+        <p>
+          Una colección es como un formulario: aquí defines sus <strong>campos</strong> (las columnas) y abajo
+          llenas sus <strong>filas</strong> con los valores, cada una con el mes al que corresponde (o sin mes
+          si vale siempre).
+        </p>
+        <p>
+          Para un <strong>tipo de cambio</strong> crea dos campos: uno de tipo <em>Texto</em> para el código
+          de la moneda (p. ej. <em>Moneda</em>: GTQ) y otro de tipo <em>Decimal</em> con naturaleza
+          <em>Tasa</em> para el valor de cambio (p. ej. <em>Tasa</em>: 7.75). Luego agrega una fila por moneda
+          y mes. Las tablas de datos y las operaciones toman solas la tasa del mes de cada dato.
+        </p>
+      </div>
 
       <div class="reports__title">
         <strong>Filas</strong>
