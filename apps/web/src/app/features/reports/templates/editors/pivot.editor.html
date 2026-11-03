@@ -1,0 +1,198 @@
+<strong>Tabla dinámica</strong>
+<p class="reports__hint">
+  Elige qué va en las filas y en las columnas y qué valores se suman en cada cruce. Para un balance: filas por
+  la clasificación en nivel 1 (grupo) y nivel 2 (rubro), y valores Saldo del período, Saldo del período
+  anterior y su diferencia.
+</p>
+@for (axis of ['rows', 'columns']; track axis) {
+<div class="editor__head">
+  <strong>{{ axis === 'rows' ? 'Filas' : 'Columnas' }}</strong>
+  <p-button
+    [label]="axis === 'rows' ? 'Fila' : 'Columna'"
+    icon="pi pi-plus"
+    size="small"
+    [text]="true"
+    [disabled]="axis === 'rows' ? pivot().rows.length >= maxRows : pivot().columns.length >= maxColumns"
+    (onClick)="addDimension(axis === 'rows' ? 'rows' : 'columns')"
+  />
+</div>
+@for (dimension of axis === 'rows' ? pivot().rows : pivot().columns; track $index; let i = $index) {
+<div class="editor__item">
+  <div class="editor__head">
+    <p-floatlabel variant="on" class="full-width">
+      <p-select
+        [inputId]="id(axis + 'Dim' + i)"
+        [ariaLabel]="(axis === 'rows' ? 'Fila ' : 'Columna ') + (i + 1)"
+        [options]="dimensionOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="dimensionCode(dimension)"
+        (ngModelChange)="setDimension(axis === 'rows' ? 'rows' : 'columns', i, $event)"
+        [filter]="true"
+        styleClass="full-width"
+        appendTo="body"
+      />
+      <label [for]="id(axis + 'Dim' + i)">{{ axis === 'rows' ? 'Fila' : 'Columna' }} {{ i + 1 }}</label>
+    </p-floatlabel>
+    <p-button
+      icon="pi pi-trash"
+      size="small"
+      [text]="true"
+      severity="danger"
+      [ariaLabel]="'Quitar ' + (axis === 'rows' ? 'fila ' : 'columna ') + (i + 1)"
+      (onClick)="removeDimension(axis === 'rows' ? 'rows' : 'columns', i)"
+    />
+  </div>
+  @if (dimension.source === classification) {
+  <p-floatlabel variant="on">
+    <p-inputnumber
+      [inputId]="id(axis + 'Level' + i)"
+      [ngModel]="dimension.level"
+      (ngModelChange)="setLevel(axis === 'rows' ? 'rows' : 'columns', i, $event)"
+      [min]="0"
+      [max]="10"
+    />
+    <label [for]="id(axis + 'Level' + i)">Nivel</label>
+  </p-floatlabel>
+  <p class="reports__hint">0 = el nodo de cada cuenta; 1 = el grupo raíz; 2 = el segundo nivel…</p>
+  }
+</div>
+} }
+
+<div class="editor__head">
+  <strong>Valores</strong>
+  <p-button
+    label="Valor"
+    icon="pi pi-plus"
+    size="small"
+    [text]="true"
+    [disabled]="pivot().values.length >= maxValues"
+    (onClick)="addValue()"
+  />
+</div>
+@for (value of pivot().values; track $index; let i = $index) {
+<div class="editor__item" [attr.data-testid]="'pivot-value-' + (i + 1)">
+  <div class="editor__head">
+    <span>{{ i + 1 }}.</span>
+    <p-floatlabel variant="on" class="full-width">
+      <p-select
+        [inputId]="id('Kind' + i)"
+        [ariaLabel]="'Tipo del valor ' + (i + 1)"
+        [options]="kinds"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="value.kind"
+        (ngModelChange)="setKind(i, $event)"
+        styleClass="full-width"
+        appendTo="body"
+      />
+      <label [for]="id('Kind' + i)">Tipo</label>
+    </p-floatlabel>
+    <p-button
+      icon="pi pi-trash"
+      size="small"
+      [text]="true"
+      severity="danger"
+      [ariaLabel]="'Quitar valor ' + (i + 1)"
+      (onClick)="removeValue(i)"
+    />
+  </div>
+  @if (value.kind === fieldKind) {
+  <p-floatlabel variant="on">
+    <p-select
+      [inputId]="id('Field' + i)"
+      [ariaLabel]="'Encabezado del valor ' + (i + 1)"
+      [options]="fieldOptions()"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="value.fieldKey"
+      (ngModelChange)="setField(i, $event)"
+      [filter]="true"
+      styleClass="full-width"
+      appendTo="body"
+    />
+    <label [for]="id('Field' + i)">Encabezado</label>
+  </p-floatlabel>
+  <p-floatlabel variant="on">
+    <p-select
+      [inputId]="id('Offset' + i)"
+      [ariaLabel]="'Período del valor ' + (i + 1)"
+      [options]="offsets"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="value.periodOffset"
+      (ngModelChange)="setOffset(i, $event)"
+      styleClass="full-width"
+      appendTo="body"
+    />
+    <label [for]="id('Offset' + i)">Período</label>
+  </p-floatlabel>
+  } @else if (i < 2) {
+  <p class="reports__hint">Agrega antes al menos dos valores para calcular su diferencia o su cociente.</p>
+  } @else {
+  <p-floatlabel variant="on">
+    <p-select
+      [inputId]="id('Left' + i)"
+      [ariaLabel]="'Valor A de ' + (i + 1)"
+      [options]="earlier(i)"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="value.left"
+      (ngModelChange)="setOperand(i, 'left', $event)"
+      styleClass="full-width"
+      appendTo="body"
+    />
+    <label [for]="id('Left' + i)">A</label>
+  </p-floatlabel>
+  <p-floatlabel variant="on">
+    <p-select
+      [inputId]="id('Right' + i)"
+      [ariaLabel]="'Valor B de ' + (i + 1)"
+      [options]="earlier(i)"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="value.right"
+      (ngModelChange)="setOperand(i, 'right', $event)"
+      styleClass="full-width"
+      appendTo="body"
+    />
+    <label [for]="id('Right' + i)">B</label>
+  </p-floatlabel>
+  }
+  <p-floatlabel variant="on">
+    <input
+      pInputText
+      [id]="id('Label' + i)"
+      class="full-width"
+      [ngModel]="value.label"
+      (ngModelChange)="setLabel(i, $event)"
+    />
+    <label [for]="id('Label' + i)">Título (p. ej. Mes actual)</label>
+  </p-floatlabel>
+</div>
+}
+
+<div class="reports__toolbar">
+  <p-toggleswitch [inputId]="id('Subtotals')" [ngModel]="pivot().subtotals" (ngModelChange)="setSubtotals($event)" />
+  <label [for]="id('Subtotals')">Subtotales por grupo</label>
+</div>
+<p-floatlabel variant="on">
+  <input
+    pInputText
+    [id]="id('RowTitle')"
+    class="full-width"
+    [ngModel]="pivot().rowTitle"
+    (ngModelChange)="setRowTitle($event)"
+  />
+  <label [for]="id('RowTitle')">Título de las filas (p. ej. ACTIVOS)</label>
+</p-floatlabel>
+<p-floatlabel variant="on">
+  <input
+    pInputText
+    [id]="id('TotalLabel')"
+    class="full-width"
+    [ngModel]="pivot().totalLabel"
+    (ngModelChange)="setTotalLabel($event)"
+  />
+  <label [for]="id('TotalLabel')">Texto del total (p. ej. TOTAL ACTIVOS)</label>
+</p-floatlabel>

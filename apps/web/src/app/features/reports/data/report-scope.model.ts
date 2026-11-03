@@ -1,5 +1,5 @@
 import { ParamMap } from '@angular/router';
-import { OrgLevel } from '@asisteglt/shared-contracts';
+import { DataScopeDto, OrgLevel } from '@asisteglt/shared-contracts';
 import { Nullable } from '@asisteglt/shared-kernel';
 import { OrgTree, OrgUnitView } from './org.model';
 import { Option } from './reports-labels';
@@ -29,6 +29,41 @@ export class ReportScope {
 
   public static empty(): ReportScope {
     return new ReportScope([], [], [], [], [], []);
+  }
+
+  public static of(dto: DataScopeDto): ReportScope {
+    return new ReportScope(
+      [...dto.organizationIds],
+      [...dto.countryIds],
+      [...dto.currencies],
+      [...dto.companyIds],
+      [...dto.enterpriseIds],
+      [...dto.branchIds],
+    );
+  }
+
+  public dto(): DataScopeDto {
+    return {
+      organizationIds: [...this.organizationIds],
+      countryIds: [...this.countryIds],
+      currencies: [...this.currencies],
+      companyIds: [...this.companyIds],
+      enterpriseIds: [...this.enterpriseIds],
+      branchIds: [...this.branchIds],
+    };
+  }
+
+  /** Copia con un nivel cambiado. */
+  public with(level: OrgLevel | 'CURRENCY', ids: string[]): ReportScope {
+    const d: DataScopeDto = this.dto();
+    return ReportScope.of({
+      organizationIds: level === OrgLevel.ORGANIZATION ? ids : d.organizationIds,
+      countryIds: level === OrgLevel.COUNTRY ? ids : d.countryIds,
+      currencies: level === 'CURRENCY' ? ids : d.currencies,
+      companyIds: level === OrgLevel.COMPANY ? ids : d.companyIds,
+      enterpriseIds: level === OrgLevel.ENTERPRISE ? ids : d.enterpriseIds,
+      branchIds: level === OrgLevel.BRANCH ? ids : d.branchIds,
+    });
   }
 
   /** `null` si la URL no trae un alcance elegido. */

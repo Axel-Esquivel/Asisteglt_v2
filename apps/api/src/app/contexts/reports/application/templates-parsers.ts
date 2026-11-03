@@ -8,12 +8,21 @@ import {
   NumberScale,
   PageFormatName,
   PageOrientation,
+  PeriodGrouping,
+  PeriodValue,
+  PivotDimensionDto,
+  PivotDto,
+  PivotSource,
+  PivotValueDto,
+  PivotValueKind,
+  ValueFilterDto,
   TemplateElementDto,
   TemplatePageDto,
   TemplateRequest,
   TextAlign,
 } from '@asisteglt/shared-contracts';
 import { Decoder, FieldDecoder, FieldReader, NumberDecoder, Result } from '@asisteglt/shared-kernel';
+import { AnalysisParsers } from './analysis-parsers';
 
 /** Validación estructural de las plantillas (compartible con el navegador). */
 export class TemplatesParsers {
@@ -45,6 +54,50 @@ export class TemplatesParsers {
     }),
   );
 
+  public static readonly FILTER: Decoder<ValueFilterDto> = new FieldDecoder<ValueFilterDto>(
+    (f: FieldReader): ValueFilterDto => ({
+      classificationId: f.nullableString('classificationId'),
+      nodeIds: f.stringList('nodeIds'),
+      scope: f.nested('scope', AnalysisParsers.SCOPE),
+      periodGrouping: f.oneOf('periodGrouping', Object.values(PeriodGrouping)),
+      periodValue: f.oneOf('periodValue', Object.values(PeriodValue)),
+      periodOffset: f.number('periodOffset'),
+      presentation:
+        f.raw('presentation') === null ? null : f.nested('presentation', AnalysisParsers.PRESENTATION),
+    }),
+  );
+
+  public static readonly DIMENSION: Decoder<PivotDimensionDto> = new FieldDecoder<PivotDimensionDto>(
+    (f: FieldReader): PivotDimensionDto => ({
+      source: f.oneOf('source', Object.values(PivotSource)),
+      key: f.string('key'),
+      level: f.number('level'),
+    }),
+  );
+
+  public static readonly PIVOT_VALUE: Decoder<PivotValueDto> = new FieldDecoder<PivotValueDto>(
+    (f: FieldReader): PivotValueDto => ({
+      kind: f.oneOf('kind', Object.values(PivotValueKind)),
+      fieldKey: f.nullableString('fieldKey'),
+      label: f.string('label'),
+      periodOffset: f.number('periodOffset'),
+      left: f.number('left'),
+      right: f.number('right'),
+    }),
+  );
+
+  public static readonly PIVOT: Decoder<PivotDto> = new FieldDecoder<PivotDto>(
+    (f: FieldReader): PivotDto => ({
+      rows: f.list('rows', TemplatesParsers.DIMENSION),
+      columns: f.list('columns', TemplatesParsers.DIMENSION),
+      values: f.list('values', TemplatesParsers.PIVOT_VALUE),
+      subtotals: f.boolean('subtotals'),
+      rowTitle: f.string('rowTitle'),
+      totalLabel: f.string('totalLabel'),
+    }),
+  );
+
+  /** Los elementos guardados antes de los filtros y la tabla dinámica no traen esos campos. */
   public static readonly ELEMENT: Decoder<TemplateElementDto> = new FieldDecoder<TemplateElementDto>(
     (f: FieldReader): TemplateElementDto => ({
       id: f.string('id'),
@@ -60,6 +113,8 @@ export class TemplatesParsers {
       companyId: f.nullableString('companyId'),
       chartType: f.raw('chartType') === null ? null : f.oneOf('chartType', Object.values(ChartType)),
       columns: f.list('columns', new NumberDecoder()),
+      filter: f.raw('filter') === null ? null : f.nested('filter', TemplatesParsers.FILTER),
+      pivot: f.raw('pivot') === null ? null : f.nested('pivot', TemplatesParsers.PIVOT),
     }),
   );
 

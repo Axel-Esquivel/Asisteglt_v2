@@ -60,11 +60,11 @@
     >
       @if (sheet.valueOf(element); as value) { @if (value.error !== null) {
       <p-message severity="warn" size="small">{{ element.name }}: {{ value.error }}</p-message>
-      } @else { @switch (element.kind) { @case (kinds.TEXT) {
+      } @else { @switch (renderKind(element)) { @case (kinds.TEXT) {
       <div class="print__text">{{ value.text }}</div>
       } @case (kinds.KPI) { @if (number(value.value, element.numberFormat); as n) {
       <div class="print__kpi" [class.print__negative]="n.negative && element.numberFormat.negative === 'RED'">
-        {{ n.text }}
+        {{ caption(value.text, n.text) }}
       </div>
       } } @case (kinds.MATRIX) { @if (value.table; as table) {
       <p-table [value]="table.rows" size="small">
@@ -72,7 +72,7 @@
           @for (cells of table.headerRows(); track $index; let first = $first) {
           <tr>
             @if (first) { @for (attribute of table.attributeColumns; track attribute.key) {
-            <th [attr.rowspan]="table.depth() + 1"></th>
+            <th [attr.rowspan]="table.depth() + 1">{{ element.kind === kinds.PIVOT ? attribute.label : '' }}</th>
             } } @for (cell of cells; track $index) {
             <th [attr.colspan]="cell.span" class="print__group">{{ cell.label }}</th>
             }
@@ -81,7 +81,7 @@
           <tr>
             @if (table.depth() === 0) { @for (attribute of table.attributeColumns; track attribute.key; let i
             = $index) {
-            <th>{{ i === 0 ? '' : attribute.label }}</th>
+            <th>{{ i === 0 && element.kind !== kinds.PIVOT ? '' : attribute.label }}</th>
             } } @for (column of table.columns; track $index) {
             <th class="print__number">{{ column.label }}</th>
             }

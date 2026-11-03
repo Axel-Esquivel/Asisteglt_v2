@@ -163,7 +163,7 @@ export class ColumnSplit {
     return unit === null ? id : unit.name;
   }
 
-  private static idAt(record: DataRecordSnapshot, level: OrgLevel): Nullable<string> {
+  public static idAt(record: DataRecordSnapshot, level: OrgLevel): Nullable<string> {
     switch (level) {
       case OrgLevel.ORGANIZATION:
         return record.organizationId;

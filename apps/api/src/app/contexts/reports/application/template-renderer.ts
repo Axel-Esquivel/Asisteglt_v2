@@ -13,6 +13,7 @@ import {
   ChartElement,
   KpiElement,
   MatrixElement,
+  PivotElement,
   ReportElementVisitor,
   TextElement,
 } from '../domain/report-template';
@@ -104,18 +105,11 @@ export class ElementRenderer implements ReportElementVisitor<Promise<RenderedEle
   }
 
   public async visitKpi(element: KpiElement): Promise<RenderedElementDto> {
-    return (
-      await this.analysis.kpi(
-        this.project,
-        element.formula,
-        this.period,
-        element.profileId,
-        element.companyId,
-        this.scope,
-      )
-    ).match(
+    return (await this.analysis.kpi(this.project, element, this.period, this.scope)).match(
       (value: Nullable<string>): RenderedElementDto => ({
         ...ElementRenderer.empty(element.id, ElementKind.KPI),
+        // Rótulo con los marcadores resueltos; la vista pone el número con su formato en {valor}.
+        text: element.caption === null ? null : this.text.resolve(element.caption),
         value,
       }),
       (e: DomainError): RenderedElementDto => ({
@@ -133,6 +127,19 @@ export class ElementRenderer implements ReportElementVisitor<Promise<RenderedEle
       }),
       (e: DomainError): RenderedElementDto => ({
         ...ElementRenderer.empty(element.id, ElementKind.CHART),
+        error: e.message,
+      }),
+    );
+  }
+
+  public async visitPivot(element: PivotElement): Promise<RenderedElementDto> {
+    return (await this.analysis.pivot(this.project, element, this.period, this.scope)).match(
+      (table: ComputedReportResponse): RenderedElementDto => ({
+        ...ElementRenderer.empty(element.id, ElementKind.PIVOT),
+        table,
+      }),
+      (e: DomainError): RenderedElementDto => ({
+        ...ElementRenderer.empty(element.id, ElementKind.PIVOT),
         error: e.message,
       }),
     );

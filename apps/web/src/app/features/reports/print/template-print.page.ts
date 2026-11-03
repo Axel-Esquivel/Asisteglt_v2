@@ -177,6 +177,16 @@ export class TemplatePrintPage implements OnInit, OnDestroy {
         : 'left';
   }
 
+  /** Las tablas dinámicas se muestran como las tablas de datos. */
+  protected renderKind(element: TemplateElementDto): ElementKind {
+    return element.kind === ElementKind.PIVOT ? ElementKind.MATRIX : element.kind;
+  }
+
+  /** Rótulo de un valor filtrado con el número ya formateado en {valor}. */
+  protected caption(text: Nullable<string>, value: string): string {
+    return text === null ? value : text.split('{valor}').join(value);
+  }
+
   protected number(value: Nullable<string>, format: NumberFormatDto): FormattedNumber {
     return NumberFormatter.format(value, format);
   }

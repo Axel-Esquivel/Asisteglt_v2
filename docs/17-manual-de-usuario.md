@@ -162,13 +162,28 @@ montos en varias monedas». Convierte a una moneda común con una operación.
 1. **Plantillas → Nueva plantilla**: página Carta vertical con encabezado `{proyecto}` y pie
    `Página {pagina} de {paginas}` (también `{periodo}`, `{mes}`, `{año}`, `{fecha}` y `{alcance}`,
    que muestra las compañías u organizaciones con las que se generó el informe).
-2. Agrega **Texto**, **Tabla** (una tabla de datos), **Indicador** (fórmula agregada) y **Gráfico**. Se
+2. Agrega **Texto**, **Tabla de datos**, **Valor filtrado**, **Tabla dinámica** y **Gráfico**. Se
    arrastran y redimensionan con el ratón o el dedo, o se mueven con las flechas (1 mm; con Mayús,
    10 mm).
+   - **Valor filtrado**: un solo total, p. ej. `=SUMA([Saldo])`, de los registros que pasan sus
+     **filtros**: los nodos elegidos de una clasificación (cada nodo incluye los que cuelgan de él),
+     el alcance (organizaciones, países, monedas, compañías, empresas, sucursales), el período (del
+     informe o el anterior; el mes de cierre, el inicial o el acumulado) y, si hace falta sumar
+     monedas distintas, una **moneda de presentación**. El **rótulo** opcional pone el número dentro
+     de un texto: `Total activos: {valor}`.
+   - **Tabla dinámica**: eliges qué va en las **filas** y en las **columnas** (una clasificación en
+     el nivel que quieras, un encabezado agrupable como la cuenta, un nivel de la estructura, la
+     moneda o el mes) y qué **valores** se agregan en cada cruce: encabezados del período del
+     informe o del anterior, y **diferencias** (A − B) o **cocientes** (A ÷ B × 100) entre ellos.
+     Tiene los mismos filtros que el valor filtrado, subtotales por grupo, título de las filas y
+     texto propio del total. Ejemplo de un balance: dos tablas dinámicas lado a lado, una filtrada al
+     nodo Activo y otra al Pasivo; filas por la clasificación en nivel 1 (grupo) y nivel 2 (rubro);
+     valores *Saldo* (mes actual), *Saldo* (período anterior), su diferencia y la diferencia ÷ mes
+     actual como %; total «TOTAL ACTIVOS».
 3. Cambia tamaño (Carta, Oficio, Legal, A4 o personalizado), orientación y formato numérico.
 4. Marca **El alcance lo elige quien genera el informe** para que la misma plantilla sirva para una
    compañía, varias o toda la organización: al generar el informe, el alcance elegido reemplaza el
-   de cada tabla de datos y el de los indicadores. Sin marcarla, cada tabla usa su propio alcance.
+   de cada tabla de datos y el de los valores filtrados y tablas dinámicas. Sin marcarla, cada tabla usa su propio alcance.
    Un gráfico de una tabla con columnas abiertas por compañía usa las columnas del total
    consolidado (sin subtotales, las de la primera compañía).
 5. **Guardar → Vista previa**, elige el período y **Imprimir / Guardar PDF** (en el diálogo del

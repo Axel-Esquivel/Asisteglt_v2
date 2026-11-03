@@ -11,7 +11,7 @@ import {
   TextAlign,
 } from '@asisteglt/shared-contracts';
 import { Nullable } from '@asisteglt/shared-kernel';
-import { NumberFormatter, PageGeometry, TemplateView } from '../data/templates.model';
+import { ElementDefaults, NumberFormatter, PageGeometry, TemplateView } from '../data/templates.model';
 
 /** Arrastre o redimensionado en curso (en milímetros de la página). */
 class DragState {
@@ -137,11 +137,9 @@ export class TemplateDesignerStore {
     }
     this.sequence += 1;
     const geometry: PageGeometry = this.geometry();
-    const width: number = Math.min(
-      kind === ElementKind.TEXT || kind === ElementKind.KPI ? 80 : 160,
-      geometry.width - 2 * page.margin,
-    );
-    const height: number = kind === ElementKind.TEXT || kind === ElementKind.KPI ? 20 : 80;
+    const small: boolean = kind === ElementKind.TEXT || kind === ElementKind.KPI;
+    const width: number = Math.min(small ? 80 : kind === ElementKind.PIVOT ? 180 : 160, geometry.width - 2 * page.margin);
+    const height: number = small ? 20 : kind === ElementKind.PIVOT ? 100 : 80;
     const element: TemplateElementDto = {
       id: `e${String(Date.now())}${String(this.sequence)}`,
       kind,
@@ -160,6 +158,8 @@ export class TemplateDesignerStore {
       companyId: null,
       chartType: kind === ElementKind.CHART ? ChartType.BAR : null,
       columns: [],
+      filter: kind === ElementKind.KPI || kind === ElementKind.PIVOT ? ElementDefaults.filter(null) : null,
+      pivot: kind === ElementKind.PIVOT ? ElementDefaults.pivot() : null,
     };
     this.updatePage((p: TemplatePageDto): TemplatePageDto => ({ ...p, elements: [...p.elements, element] }));
     this.selectedId.set(element.id);
@@ -224,9 +224,11 @@ export class TemplateDesignerStore {
       case ElementKind.MATRIX:
         return 'Tabla';
       case ElementKind.KPI:
-        return 'Indicador';
+        return 'Valor filtrado';
       case ElementKind.CHART:
         return 'Gráfico';
+      case ElementKind.PIVOT:
+        return 'Tabla dinámica';
     }
   }
 

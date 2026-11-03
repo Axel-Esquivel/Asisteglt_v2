@@ -1,15 +1,25 @@
 import {
   ChartType,
+  ClassificationNodeDto,
   ElementKind,
   ElementStyleDto,
   LayoutBoxDto,
   NumberFormatDto,
+  OrgLevel,
   PageFormatName,
   PageOrientation,
+  PeriodGrouping,
+  PeriodValue,
+  PivotDimensionDto,
+  PivotDto,
+  PivotSource,
+  PivotValueDto,
+  PivotValueKind,
   TemplateElementDto,
   TemplateErrorCode,
   TemplatePageDto,
   TemplateRequest,
+  ValueFilterDto,
 } from '@asisteglt/shared-contracts';
 import {
   CompiledFormula,
@@ -19,6 +29,11 @@ import {
   ValueKind,
 } from '@asisteglt/shared-formula-engine';
 import { AggregateRoot, Clock, EntityId, Nullable, Result, ValidationError } from '@asisteglt/shared-kernel';
+import { Classification } from './classification';
+import { CatalogField, FieldCatalog } from './field-catalog';
+import { PresentationConverter } from './presentation-currency';
+import { RecordFilter } from './record-filter';
+import { SupplementaryCollection } from './supplementary-collection';
 
 /** Tamaño de papel en milímetros (vertical). */
 export class PageFormat {
@@ -79,7 +94,58 @@ export class TemplateContext {
   public constructor(
     public readonly fields: FieldResolver,
     public readonly reportColumns: ReadonlyMap<string, number>,
+    public readonly catalog: FieldCatalog,
+    public readonly classifications: ReadonlyMap<string, Classification>,
+    public readonly collections: ReadonlyArray<SupplementaryCollection>,
   ) {}
+}
+
+/** Valida los filtros de un valor filtrado o una tabla dinámica. */
+export class ElementFilter {
+  public static validate(
+    dto: ValueFilterDto,
+    context: TemplateContext,
+    label: string,
+  ): Result<ValueFilterDto> {
+    const fail = (message: string): Result<ValueFilterDto> =>
+      Result.fail(ReportTemplate.invalid(`${label}: ${message}`));
+    let nodeIds: string[] = [];
+    if (dto.classificationId !== null) {
+      const classification: Nullable<Classification> = context.classifications.get(dto.classificationId) ?? null;
+      if (classification === null) {
+        return fail('la clasificación del filtro no existe');
+      }
+      const known: Set<string> = new Set<string>(classification.getNodes().map((n: ClassificationNodeDto): string => n.id));
+      nodeIds = [...new Set(dto.nodeIds)];
+      if (nodeIds.some((id: string): boolean => !known.has(id))) {
+        return fail('hay nodos del filtro que ya no están en la clasificación');
+      }
+    }
+    if (!Object.values(PeriodGrouping).includes(dto.periodGrouping)) {
+      return fail('la agrupación del período no es válida');
+    }
+    if (!Object.values(PeriodValue).includes(dto.periodValue)) {
+      return fail('la forma de tomar el período no es válida');
+    }
+    if (dto.periodOffset !== 0 && dto.periodOffset !== -1) {
+      return fail('el período debe ser el del informe o el anterior');
+    }
+    if (dto.presentation !== null) {
+      const problem: Nullable<string> = PresentationConverter.problem(dto.presentation, context.collections);
+      if (problem !== null) {
+        return fail(problem);
+      }
+    }
+    return Result.ok({
+      classificationId: dto.classificationId,
+      nodeIds: dto.classificationId === null ? [] : nodeIds,
+      scope: dto.scope,
+      periodGrouping: dto.periodGrouping,
+      periodValue: dto.periodValue,
+      periodOffset: dto.periodOffset,
+      presentation: dto.presentation,
+    });
+  }
 }
 
 export interface ReportElementVisitor<R> {
@@ -87,6 +153,7 @@ export interface ReportElementVisitor<R> {
   visitMatrix(element: MatrixElement): R;
   visitKpi(element: KpiElement): R;
   visitChart(element: ChartElement): R;
+  visitPivot(element: PivotElement): R;
 }
 
 /** Elemento de una página: caja, estilo y formato numérico comunes; cada tipo valida lo suyo. */
@@ -103,6 +170,8 @@ export abstract class ReportElement {
         return new KpiElement(dto);
       case ElementKind.CHART:
         return new ChartElement(dto);
+      case ElementKind.PIVOT:
+        return new PivotElement(dto);
     }
   }
 
@@ -159,6 +228,8 @@ export abstract class ReportElement {
       companyId: null,
       chartType: null,
       columns: [],
+      filter: null,
+      pivot: null,
     };
     return this.specific(base, context);
   }
@@ -235,6 +306,30 @@ export class KpiElement extends ReportElement {
     return this.dto.companyId;
   }
 
+  /** Rótulo del valor (p. ej. «Activo corriente: {valor}»); `null` = solo el número. */
+  public get caption(): Nullable<string> {
+    return this.dto.text;
+  }
+
+  /**
+   * Filtros del valor. Los indicadores anteriores a los filtros no los tienen: toman el mes del
+   * informe y, si la tenían, su compañía.
+   */
+  public get filter(): ValueFilterDto {
+    if (this.dto.filter !== null) {
+      return this.dto.filter;
+    }
+    const company: Nullable<string> = this.dto.companyId;
+    return RecordFilter.plain({
+      organizationIds: [],
+      countryIds: [],
+      currencies: [],
+      companyIds: company === null ? [] : [company],
+      enterpriseIds: [],
+      branchIds: [],
+    });
+  }
+
   public override accept<R>(visitor: ReportElementVisitor<R>): R {
     return visitor.visitKpi(this);
   }
@@ -255,11 +350,26 @@ export class KpiElement extends ReportElement {
     if (compiled.unwrap().resultType.kind !== ValueKind.NUMBER) {
       return ReportElement.fail(`${this.label()}: un indicador debe dar un número`);
     }
+    const text: string = this.dto.text ?? '';
+    if (text.length > 300) {
+      return ReportElement.fail(`${this.label()}: el rótulo admite hasta 300 caracteres`);
+    }
+    const filter: Result<Nullable<ValueFilterDto>> =
+      this.dto.filter === null
+        ? Result.ok(null)
+        : ElementFilter.validate(this.dto.filter, context, this.label());
+    const problem = filter.errorOrNull();
+    if (problem !== null) {
+      return Result.fail(problem);
+    }
     return Result.ok({
       ...base,
       formula: compiled.unwrap().canonicalSource,
       profileId: this.dto.profileId,
-      companyId: this.dto.companyId,
+      // Con filtros, la compañía va en el alcance del filtro.
+      companyId: this.dto.filter === null ? this.dto.companyId : null,
+      text: text.trim() === '' ? null : text,
+      filter: filter.unwrap(),
     });
   }
 }
@@ -310,6 +420,148 @@ export class ChartElement extends ReportElement {
       chartType: this.dto.chartType ?? ChartType.BAR,
       columns,
     });
+  }
+}
+
+/** Tabla dinámica: filas, columnas y valores elegidos al diseñarla, sobre los registros filtrados. */
+export class PivotElement extends ReportElement {
+  public static readonly MAX_ROWS: number = 3;
+  public static readonly MAX_COLUMNS: number = 3;
+  public static readonly MAX_VALUES: number = 6;
+
+  public constructor(dto: TemplateElementDto) {
+    super(dto);
+  }
+
+  public get profileId(): Nullable<string> {
+    return this.dto.profileId;
+  }
+
+  public get pivot(): PivotDto {
+    return (
+      this.dto.pivot ?? { rows: [], columns: [], values: [], subtotals: true, rowTitle: '', totalLabel: '' }
+    );
+  }
+
+  public get filter(): ValueFilterDto {
+    return this.dto.filter ?? RecordFilter.plain(RecordFilter.everything());
+  }
+
+  public override accept<R>(visitor: ReportElementVisitor<R>): R {
+    return visitor.visitPivot(this);
+  }
+
+  protected override specific(
+    base: TemplateElementDto,
+    context: TemplateContext,
+  ): Result<TemplateElementDto> {
+    const pivot: Nullable<PivotDto> = this.dto.pivot;
+    if (pivot === null || pivot.rows.length === 0) {
+      return ReportElement.fail(`${this.label()}: elige al menos una dimensión para las filas`);
+    }
+    if (pivot.rows.length > PivotElement.MAX_ROWS || pivot.columns.length > PivotElement.MAX_COLUMNS) {
+      return ReportElement.fail(
+        `${this.label()}: admite hasta ${String(PivotElement.MAX_ROWS)} dimensiones en filas y ${String(PivotElement.MAX_COLUMNS)} en columnas`,
+      );
+    }
+    if (pivot.values.length === 0 || pivot.values.length > PivotElement.MAX_VALUES) {
+      return ReportElement.fail(
+        `${this.label()}: elige entre 1 y ${String(PivotElement.MAX_VALUES)} valores para sumar`,
+      );
+    }
+    const seen: Set<string> = new Set<string>();
+    const dimensions: PivotDimensionDto[] = [];
+    for (const dimension of [...pivot.rows, ...pivot.columns]) {
+      const normalized: Result<PivotDimensionDto> = this.dimension(dimension, context);
+      const error = normalized.errorOrNull();
+      if (error !== null) {
+        return Result.fail(error);
+      }
+      const valid: PivotDimensionDto = normalized.unwrap();
+      const key: string = `${valid.source}|${valid.key}|${String(valid.level)}`;
+      if (seen.has(key)) {
+        return ReportElement.fail(`${this.label()}: una dimensión no puede repetirse`);
+      }
+      seen.add(key);
+      dimensions.push(valid);
+    }
+    const values: PivotValueDto[] = [];
+    for (const [index, value] of pivot.values.entries()) {
+      if (value.label.length > 80) {
+        return ReportElement.fail(`${this.label()}: los títulos de los valores admiten hasta 80 caracteres`);
+      }
+      if (value.kind === PivotValueKind.FIELD) {
+        const field: Nullable<CatalogField> =
+          value.fieldKey === null ? null : context.catalog.find(value.fieldKey).toNullable();
+        if (field === null || !field.isActive() || !field.isAggregatable()) {
+          return ReportElement.fail(`${this.label()}: los valores deben ser encabezados numéricos activos`);
+        }
+        if (value.periodOffset !== 0 && value.periodOffset !== -1) {
+          return ReportElement.fail(`${this.label()}: un valor es del período del informe o del anterior`);
+        }
+        values.push({ ...value, fieldKey: field.key, label: value.label.trim(), left: 0, right: 0 });
+        continue;
+      }
+      const earlier = (position: number): boolean =>
+        Number.isInteger(position) && position >= 0 && position < index;
+      if (!earlier(value.left) || !earlier(value.right)) {
+        return ReportElement.fail(
+          `${this.label()}: una diferencia o un cociente usa dos valores que estén antes en la lista`,
+        );
+      }
+      values.push({ ...value, fieldKey: null, label: value.label.trim(), periodOffset: 0 });
+    }
+    if (pivot.rowTitle.length > 80 || pivot.totalLabel.length > 80) {
+      return ReportElement.fail(`${this.label()}: los títulos admiten hasta 80 caracteres`);
+    }
+    const filter: Result<ValueFilterDto> = ElementFilter.validate(
+      this.dto.filter ?? RecordFilter.plain(RecordFilter.everything()),
+      context,
+      this.label(),
+    );
+    const problem = filter.errorOrNull();
+    if (problem !== null) {
+      return Result.fail(problem);
+    }
+    return Result.ok({
+      ...base,
+      profileId: this.dto.profileId,
+      filter: filter.unwrap(),
+      pivot: {
+        rows: dimensions.slice(0, pivot.rows.length),
+        columns: dimensions.slice(pivot.rows.length),
+        values,
+        subtotals: pivot.subtotals,
+        rowTitle: pivot.rowTitle.trim(),
+        totalLabel: pivot.totalLabel.trim(),
+      },
+    });
+  }
+
+  private dimension(dto: PivotDimensionDto, context: TemplateContext): Result<PivotDimensionDto> {
+    const fail = (message: string): Result<PivotDimensionDto> =>
+      Result.fail(ReportTemplate.invalid(`${this.label()}: ${message}`));
+    switch (dto.source) {
+      case PivotSource.FIELD: {
+        const field: Nullable<CatalogField> = context.catalog.find(dto.key).toNullable();
+        return field === null || !field.isActive() || !field.isGroupable()
+          ? fail('las filas y columnas por encabezado deben usar un encabezado agrupable activo')
+          : Result.ok({ source: dto.source, key: dto.key, level: 0 });
+      }
+      case PivotSource.CLASSIFICATION:
+        return !context.classifications.has(dto.key)
+          ? fail('la clasificación elegida no existe')
+          : !Number.isInteger(dto.level) || dto.level < 0 || dto.level > 10
+            ? fail('el nivel de la clasificación debe estar entre 0 y 10')
+            : Result.ok({ source: dto.source, key: dto.key, level: dto.level });
+      case PivotSource.ORG:
+        return Object.values(OrgLevel).some((l: OrgLevel): boolean => l === dto.key)
+          ? Result.ok({ source: dto.source, key: dto.key, level: 0 })
+          : fail('el nivel de la estructura no es válido');
+      case PivotSource.CURRENCY:
+      case PivotSource.MONTH:
+        return Result.ok({ source: dto.source, key: '', level: 0 });
+    }
   }
 }
 
@@ -379,6 +631,21 @@ export class ReportTemplate extends AggregateRoot {
   public usesReport(reportId: string): boolean {
     return this.spec.pages.some((p: TemplatePageDto): boolean =>
       p.elements.some((e: TemplateElementDto): boolean => e.reportId === reportId),
+    );
+  }
+
+  /** Clasificaciones que usan los filtros y las tablas dinámicas (para impedir eliminarlas). */
+  public usesClassification(classificationId: string): boolean {
+    return this.spec.pages.some((p: TemplatePageDto): boolean =>
+      p.elements.some(
+        (e: TemplateElementDto): boolean =>
+          (e.filter !== null && e.filter.classificationId === classificationId) ||
+          (e.pivot !== null &&
+            [...e.pivot.rows, ...e.pivot.columns].some(
+              (d: PivotDimensionDto): boolean =>
+                d.source === PivotSource.CLASSIFICATION && d.key === classificationId,
+            )),
+      ),
     );
   }
 

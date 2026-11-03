@@ -18,7 +18,10 @@ import { Clock, EntityId, NotFoundError, Nullable, Result, ValidationError } fro
 import { ProjectAccess } from '../../projects/application/project-access';
 import { Project } from '../../projects/domain/project';
 import { CatalogResolver } from '../domain/catalog-resolver';
-import { ReportDefinitionRepository, ReportTemplateRepository } from '../domain/ports';
+import { ClassificationRepository, ReportDefinitionRepository, ReportTemplateRepository } from '../domain/ports';
+import { Classification } from '../domain/classification';
+import { FieldCatalog } from '../domain/field-catalog';
+import { OperationsService } from './operations.service';
 import { ReportDefinition } from '../domain/report-definition';
 import { ReportElement, ReportTemplate, TemplateContext } from '../domain/report-template';
 import { AnalysisService } from './analysis.service';
@@ -33,7 +36,9 @@ export class TemplatesService {
   public constructor(
     private readonly templates: ReportTemplateRepository,
     private readonly definitions: ReportDefinitionRepository,
+    private readonly classifications: ClassificationRepository,
     private readonly catalogs: CatalogService,
+    private readonly operations: OperationsService,
     private readonly analysis: AnalysisService,
     private readonly org: OrgStructureService,
     private readonly access: ProjectAccess,
@@ -163,7 +168,18 @@ export class TemplatesService {
         return [d.getId().toString(), spec.columns.length];
       }),
     );
-    return new TemplateContext(CatalogResolver.of(await this.catalogs.of(p.getId())), columns);
+    const catalog: FieldCatalog = await this.catalogs.of(p.getId());
+    return new TemplateContext(
+      CatalogResolver.of(catalog),
+      columns,
+      catalog,
+      new Map<string, Classification>(
+        (await this.classifications.findByProject(p.getId())).map(
+          (c: Classification): [string, Classification] => [c.getId().toString(), c],
+        ),
+      ),
+      await this.operations.collectionsOf(p.getId()),
+    );
   }
 
   private async find(project: Project, id: string): Promise<Result<ReportTemplate>> {

@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { EntityId, Nullable, Optional } from '@asisteglt/shared-kernel';
+import { TemplatePageDto } from '@asisteglt/shared-contracts';
+import { EntityId, Nullable, Optional, Result } from '@asisteglt/shared-kernel';
 import { Model, Schema } from 'mongoose';
 import { MongoDatabase } from '../../../../common/persistence/mongo-database';
 import { ReportTemplateRepository } from '../../domain/ports';
 import { ReportTemplate, ReportTemplateSnapshot } from '../../domain/report-template';
+import { TemplatesParsers } from '../../application/templates-parsers';
 
 type ReportTemplateRecord = Omit<ReportTemplateSnapshot, 'id'> & { readonly _id: string };
 
@@ -58,8 +60,14 @@ export class MongoReportTemplateRepository extends ReportTemplateRepository {
   private static restore(record: ReportTemplateRecord): ReportTemplate {
     const { _id, ...rest } = record;
     // Las plantillas anteriores no tienen el campo: el alcance lo define cada tabla.
+    // Los elementos anteriores no traen filtros ni tabla dinámica: se completan con `null`.
+    const pages: TemplatePageDto[] = rest.pages.map((page: TemplatePageDto): TemplatePageDto => {
+      const decoded: Result<TemplatePageDto> = TemplatesParsers.PAGE.decode(page);
+      return decoded.isOk() ? decoded.unwrap() : page;
+    });
     return ReportTemplate.restore({
       ...rest,
+      pages,
       id: _id,
       scopeParameter: Reflect.get(record, 'scopeParameter') === true,
     });

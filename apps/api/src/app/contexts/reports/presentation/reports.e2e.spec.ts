@@ -1033,6 +1033,131 @@ describe('Reportes: importación (e2e)', () => {
       .set('authorization', owner.bearer())
       .expect(200);
     expect(unchosen.body).toMatchObject({ scopeLabel: 'Según cada tabla de datos' });
+
+    // Valor filtrado y tabla dinámica: filtran por nodos de una clasificación y agrupan a gusto.
+    const filters: Response = await request(app.server())
+      .post(api('/classifications'))
+      .set('authorization', owner.bearer())
+      .send({
+        name: 'Filtros de plantilla',
+        fieldKey: keyOf('Código de cuenta'),
+        nodes: [
+          { id: 'f1', parentId: null, code: '1', name: 'Activo', patterns: ['1.*'] },
+          { id: 'f2', parentId: 'f1', code: '1.1', name: 'Caja', patterns: ['1.001.001.0000'] },
+        ],
+      })
+      .expect(201);
+    const filtersId: string = Body.text(filters.body, 'id');
+    const filterOf = (nodeIds: string[]): Record<string, unknown> => ({
+      classificationId: filtersId,
+      nodeIds,
+      scope: {
+        organizationIds: [],
+        countryIds: [],
+        currencies: [],
+        companyIds: [String(scope['companyId'])],
+        enterpriseIds: [],
+        branchIds: [],
+      },
+      periodGrouping: 'MONTH',
+      periodValue: 'CLOSING',
+      periodOffset: 0,
+      presentation: null,
+    });
+    const debe = (periodOffset: number, label: string): Record<string, unknown> => ({
+      kind: 'FIELD',
+      fieldKey: keyOf('Debe'),
+      label,
+      periodOffset,
+      left: 0,
+      right: 0,
+    });
+    const pivotElements: Array<Record<string, unknown>> = [
+      element('valor', 'KPI', {
+        formula: '=SUMA([Debe])',
+        text: 'Caja de {mes}: {valor}',
+        filter: filterOf(['f2']),
+      }),
+      element('dinamica', 'PIVOT', {
+        box: { x: 15, y: 40, width: 180, height: 80 },
+        filter: filterOf(['f1']),
+        pivot: {
+          rows: [{ source: 'FIELD', key: keyOf('Código de cuenta'), level: 0 }],
+          columns: [],
+          values: [
+            debe(0, 'Mes actual'),
+            debe(-1, 'Mes anterior'),
+            { kind: 'DIFFERENCE', fieldKey: null, label: 'Variación', periodOffset: 0, left: 0, right: 1 },
+          ],
+          subtotals: true,
+          rowTitle: 'ACTIVOS',
+          totalLabel: 'TOTAL ACTIVOS',
+        },
+      }),
+    ];
+    const badPivot: Record<string, unknown> = {
+      ...pivotElements[1],
+      pivot: {
+        rows: [{ source: 'FIELD', key: keyOf('Código de cuenta'), level: 0 }],
+        columns: [],
+        values: [{ kind: 'DIFFERENCE', fieldKey: null, label: '', periodOffset: 0, left: 0, right: 1 }],
+        subtotals: true,
+        rowTitle: '',
+        totalLabel: '',
+      },
+    };
+    await send([page([badPivot])]).expect(400);
+    const pivotTemplate: Response = await send([page(pivotElements)]).expect(201);
+    const pivotRender: Response = await request(app.server())
+      .get(api(`/templates/${Body.text(pivotTemplate.body, 'id')}/render?period=2026-08`))
+      .set('authorization', owner.bearer())
+      .expect(200);
+    expect(pivotRender.body).toMatchObject({
+      pages: [
+        {
+          elements: [
+            { kind: 'KPI', text: 'Caja de agosto: {valor}', error: null },
+            {
+              kind: 'PIVOT',
+              error: null,
+              table: {
+                attributeColumns: [{ label: 'ACTIVOS' }],
+                columns: [{ label: 'Mes actual' }, { label: 'Mes anterior' }, { label: 'Variación' }],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    const renderedElements: unknown[] = Body.list(
+      Reflect.get(Body.list(Reflect.get(pivotRender.body, 'pages'))[0] ?? {}, 'elements'),
+    );
+    const kpiValue: unknown = Reflect.get(renderedElements[0] ?? {}, 'value');
+    const pivotRows: unknown[] = Body.list(Reflect.get(Reflect.get(renderedElements[1] ?? {}, 'table'), 'rows'));
+    const rowValues = (label: string): unknown[] =>
+      Body.list(
+        Reflect.get(
+          pivotRows.find((r: unknown): boolean => String(Reflect.get(r ?? {}, 'label')).startsWith(label)) ?? {},
+          'values',
+        ),
+      );
+    // El valor filtrado de «Caja» coincide con su fila en la tabla dinámica del activo.
+    expect(typeof kpiValue).toBe('string');
+    expect(rowValues('1.001.001.0000')[0]).toBe(kpiValue);
+    expect(rowValues('TOTAL ACTIVOS')).toHaveLength(3);
+    // La clasificación usada por la plantilla no se puede eliminar.
+    await request(app.server())
+      .delete(api(`/classifications/${filtersId}`))
+      .set('authorization', owner.bearer())
+      .expect(400);
+    await request(app.server())
+      .delete(api(`/templates/${Body.text(pivotTemplate.body, 'id')}`))
+      .set('authorization', owner.bearer())
+      .expect(204);
+    await request(app.server())
+      .delete(api(`/classifications/${filtersId}`))
+      .set('authorization', owner.bearer())
+      .expect(204);
     await request(app.server())
       .delete(api(`/templates/${Body.text(parameterized.body, 'id')}`))
       .set('authorization', owner.bearer())

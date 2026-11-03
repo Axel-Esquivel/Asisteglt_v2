@@ -2441,6 +2441,13 @@ medidas, series, dimensiones, filtros, fórmulas) se guarda como `FieldKey` o en
   contexto de agregación de su `binding`.
 - `PivotTableElement` calcula los subtotales según la agregación de cada medida: una tasa nunca
   se suma.
+- **Versión actual** (código): `KpiElement` (*Valor filtrado*) y `PivotElement` comparten un
+  `ValueFilterDto` que aplica `RecordFilter` (nodos de una clasificación con sus descendientes,
+  `DataScope`, ventanas de `PeriodWindow` y moneda de presentación). `PivotEngine` agrupa por
+  `PivotDimension` (encabezado, clasificación en un nivel, nivel de la estructura, moneda o mes),
+  acumula cada prefijo de filas × prefijo de columnas para los subtotales y calcula al final las
+  diferencias (A − B) y cocientes (A ÷ B × 100) entre valores; su respuesta tiene la forma de una
+  tabla de datos calculada (`ComputedReportResponse`).
 
 **Resolución de una celda** de `MatrixTableElement`:
 

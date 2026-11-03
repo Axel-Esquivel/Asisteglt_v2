@@ -17,13 +17,14 @@ import {
   ElementKind,
   NegativeStyle,
   NumberScale,
-  OrgLevel,
   PageFormatName,
   PageOrientation,
+  PivotDto,
   ProjectPermission,
   TemplateElementDto,
   TemplatePageDto,
   TextAlign,
+  ValueFilterDto,
 } from '@asisteglt/shared-contracts';
 import { FormulaContext } from '@asisteglt/shared-formula-engine';
 import { DomainError, Nullable, Result } from '@asisteglt/shared-kernel';
@@ -41,13 +42,16 @@ import { TableModule } from 'primeng/table';
 import { Textarea } from 'primeng/textarea';
 import { ToggleSwitch } from 'primeng/toggleswitch';
 import { ProjectContext } from '../../projects/data/project-context';
-import { ReportDefinitionView } from '../data/analysis.model';
+import { ClassificationView, ReportDefinitionView } from '../data/analysis.model';
+import { CollectionView } from '../data/collections.model';
 import { CatalogView } from '../data/catalog.model';
 import { FormulaCheck } from '../data/operations.model';
-import { OrgTree, OrgUnitView } from '../data/org.model';
+import { OrgTree } from '../data/org.model';
 import { ReportsApiClient } from '../data/reports.api-client';
 import { Option } from '../data/reports-labels';
-import { NumberFormatter, PageGeometry, TemplateView } from '../data/templates.model';
+import { ElementDefaults, NumberFormatter, PageGeometry, TemplateView } from '../data/templates.model';
+import { PivotEditor } from './editors/pivot.editor';
+import { ValueFilterEditor } from './editors/value-filter.editor';
 import { TemplateDesignerStore } from './template-designer.store';
 
 /**
@@ -68,10 +72,12 @@ import { TemplateDesignerStore } from './template-designer.store';
     InputText,
     Message,
     MultiSelect,
+    PivotEditor,
     Select,
     TableModule,
     Textarea,
     ToggleSwitch,
+    ValueFilterEditor,
   ],
   templateUrl: './template-designer.page.html',
   styleUrls: ['../reports.scss', './template-designer.page.scss'],
@@ -104,9 +110,11 @@ export class TemplateDesignerPage implements OnInit {
   protected readonly saving: WritableSignal<boolean> = signal<boolean>(false);
   protected readonly loaded: WritableSignal<boolean> = signal<boolean>(false);
 
-  private readonly catalog: WritableSignal<CatalogView> = signal<CatalogView>(CatalogView.empty());
+  protected readonly catalog: WritableSignal<CatalogView> = signal<CatalogView>(CatalogView.empty());
   private readonly reports: WritableSignal<ReportDefinitionView[]> = signal<ReportDefinitionView[]>([]);
-  private readonly org: WritableSignal<OrgTree> = signal<OrgTree>(OrgTree.empty());
+  protected readonly org: WritableSignal<OrgTree> = signal<OrgTree>(OrgTree.empty());
+  protected readonly classifications: WritableSignal<ClassificationView[]> = signal<ClassificationView[]>([]);
+  protected readonly collections: WritableSignal<CollectionView[]> = signal<CollectionView[]>([]);
   protected readonly context: ProjectContext = inject(ProjectContext);
   private readonly api: ReportsApiClient = inject(ReportsApiClient);
   private readonly notifier: Notifier = inject(Notifier);
@@ -116,11 +124,6 @@ export class TemplateDesignerPage implements OnInit {
   );
   protected readonly reportOptions: Signal<Option<string>[]> = computed((): Option<string>[] =>
     this.reports().map((r: ReportDefinitionView): Option<string> => ({ label: r.name, value: r.id })),
-  );
-  protected readonly companyOptions: Signal<Option<string>[]> = computed((): Option<string>[] =>
-    this.org()
-      .units.filter((u: OrgUnitView): boolean => u.s.level === OrgLevel.COMPANY)
-      .map((u: OrgUnitView): Option<string> => ({ label: u.label(), value: u.id })),
   );
   /** Columnas de la tabla de datos elegida en el gráfico (en orden; sin abrir por compañía). */
   protected readonly columnOptions: Signal<Option<number>[]> = computed((): Option<number>[] => {
@@ -164,7 +167,44 @@ export class TemplateDesignerPage implements OnInit {
         return `Tabla: ${this.reportName(element.reportId)}`;
       case ElementKind.CHART:
         return `Gráfico: ${this.reportName(element.reportId)}`;
+      case ElementKind.PIVOT:
+        return this.pivotSummary(element.pivot);
     }
+  }
+
+  protected filterOf(element: TemplateElementDto): ValueFilterDto {
+    return ElementDefaults.filterOf(element);
+  }
+
+  protected pivotOf(element: TemplateElementDto): PivotDto {
+    return element.pivot ?? ElementDefaults.pivot();
+  }
+
+  /** Con filtros, la compañía va en el alcance del filtro. */
+  protected setFilter(change: (filter: ValueFilterDto) => ValueFilterDto): void {
+    this.element((e: TemplateElementDto): TemplateElementDto => ({
+      ...e,
+      filter: change(ElementDefaults.filterOf(e)),
+      companyId: null,
+    }));
+  }
+
+  protected setPivot(change: (pivot: PivotDto) => PivotDto): void {
+    this.element((e: TemplateElementDto): TemplateElementDto => ({
+      ...e,
+      pivot: change(e.pivot ?? ElementDefaults.pivot()),
+    }));
+  }
+
+  protected caption(value: string): void {
+    this.element((e: TemplateElementDto): TemplateElementDto => ({ ...e, text: value === '' ? null : value }));
+  }
+
+  private pivotSummary(pivot: Nullable<PivotDto>): string {
+    if (pivot === null || pivot.rows.length === 0) {
+      return 'Tabla dinámica: elige las filas';
+    }
+    return `Tabla dinámica: ${String(pivot.rows.length)} fila(s), ${String(pivot.columns.length)} columna(s), ${String(pivot.values.length)} valor(es)`;
   }
 
   protected startDrag(event: PointerEvent, element: TemplateElementDto, resize: boolean): void {
@@ -269,10 +309,6 @@ export class TemplateDesignerPage implements OnInit {
     this.element((e: TemplateElementDto): TemplateElementDto => ({ ...e, reportId: value, columns: [] }));
   }
 
-  protected company(value: Nullable<string>): void {
-    this.element((e: TemplateElementDto): TemplateElementDto => ({ ...e, companyId: value }));
-  }
-
   protected chartType(value: ChartType): void {
     this.element((e: TemplateElementDto): TemplateElementDto => ({ ...e, chartType: value }));
   }
@@ -367,12 +403,24 @@ export class TemplateDesignerPage implements OnInit {
 
   private async load(): Promise<void> {
     const projectId: string = this.context.id();
-    const [template, catalog, reports, org] = await Promise.all([
+    const [template, catalog, reports, org, classifications, collections] = await Promise.all([
       this.api.template(projectId, this.templateId()),
       this.api.fieldCatalog(projectId),
       this.api.reportList(projectId),
       this.api.orgStructure(projectId),
+      this.api.classificationList(projectId),
+      this.api.collections(projectId),
     ]);
+    classifications.match(
+      (items: ClassificationView[]): void => this.classifications.set(items),
+      (e): void => this.notifier.error(e),
+    );
+    collections.match(
+      (items: CollectionView[]): void => this.collections.set(items),
+      (): void => {
+        // Sin permiso de ver colecciones: no se ofrece la moneda de presentación.
+      },
+    );
     catalog.match(
       (c: CatalogView): void => this.catalog.set(c),
       (e): void => this.notifier.error(e),
