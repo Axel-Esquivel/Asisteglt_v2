@@ -563,6 +563,21 @@ export class ReportsPage implements OnInit {
           .map((f: CollectionFieldDto): Option<string> => ({ label: f.label, value: f.key }));
   }
 
+  /** Qué le falta a la colección elegida para servir de tasas (o `null` si sirve). */
+  protected collectionProblem(collectionId: Nullable<string>): Nullable<string> {
+    if (this.collections().length === 0) {
+      return 'Aún no hay colecciones. Crea una en Colecciones con «Nueva colección de tipo de cambio».';
+    }
+    const collection: Nullable<CollectionView> = this.collection(collectionId);
+    if (collection === null) {
+      return null;
+    }
+    if (collection.rateFields().length === 0 || collection.textFields().length === 0) {
+      return `«${collection.name}» necesita un campo Decimal con naturaleza Tasa y un campo Texto con la moneda (p. ej. GTQ).`;
+    }
+    return null;
+  }
+
   private collection(id: Nullable<string>): Nullable<CollectionView> {
     return this.collections().find((c: CollectionView): boolean => c.id === id) ?? null;
   }

@@ -150,13 +150,10 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
 
   // Colección de tipos de cambio y conversión a dólares
   await page.getByRole('tab', { name: 'Colecciones' }).click();
-  await page.getByRole('button', { name: 'Nueva colección' }).click();
-  await page.getByLabel('Nombre (p. ej. Tipo de cambio)').fill('Tipo de cambio');
-  await page.getByRole('button', { name: 'Agregar campo' }).click();
-  await page.getByLabel('Nombre del campo 1').fill('Moneda');
-  await page.getByRole('combobox', { name: 'Tipo del campo 1' }).click();
-  await page.getByRole('option', { name: 'Texto' }).click();
-  await page.getByRole('button', { name: 'Agregar campo' }).click();
+  // La plantilla trae Moneda (texto) y Tasa (decimal, naturaleza Tasa)
+  await page.getByRole('button', { name: 'Nueva colección de tipo de cambio' }).click();
+  await expect(page.getByLabel('Nombre (p. ej. Tipo de cambio)')).toHaveValue('Tipo de cambio');
+  await expect(page.getByLabel('Nombre del campo 1')).toHaveValue('Moneda');
   await page.getByLabel('Nombre del campo 2').fill('Tasa de cierre');
   await page.getByRole('button', { name: 'Agregar fila' }).click();
   await page.getByLabel('Moneda de la fila 1').fill('GTQ');
@@ -229,6 +226,27 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
   await expect(page.getByTestId('report-table')).toContainText('Movimiento neto');
   await expect(page.getByTestId('report-table')).toContainText('2,670.00');
   await expect(page.getByTestId('report-table')).toContainText('Sin clasificar');
+  await page.getByRole('button', { name: 'Editar tabla de datos' }).click();
+  // Moneda de presentación con la colección de tipos de cambio
+  await design.getByText('Convertir los montos a una sola moneda').click();
+  await design.getByLabel('Moneda de presentación (p. ej. USD)').fill('usd');
+  for (const [combobox, option] of [
+    ['Colección de tasas', 'Tipo de cambio'],
+    ['Campo de tasa', 'Tasa de cierre'],
+    ['Campo de moneda', 'Moneda'],
+  ] as const) {
+    await design.getByRole('combobox', { name: combobox }).click();
+    await page.getByRole('option', { name: option, exact: true }).click();
+  }
+  await design.getByRole('button', { name: 'Guardar' }).click();
+  await expect(page.getByText('montos en USD')).toBeVisible();
+  await expect(page.getByTestId('report-table')).toContainText('1,950.00');
+  await expect(page.getByTestId('report-table')).toContainText('333.75');
+  // Sin conversión otra vez, para la plantilla de abajo
+  await page.getByRole('button', { name: 'Editar tabla de datos' }).click();
+  await design.getByText('Convertir los montos a una sola moneda').click();
+  await design.getByRole('button', { name: 'Guardar' }).click();
+  await expect(page.getByTestId('report-table')).toContainText('15,600.00');
 
   // Validación de cuadre: el balance de muestra no cuadra (Debe ≠ Haber) y se rechaza
   await page.getByRole('tab', { name: 'Preconfiguraciones' }).click();

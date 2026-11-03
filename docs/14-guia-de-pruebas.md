@@ -63,7 +63,7 @@ Proyecto de demostración: **Demo · Balance ficticio** (o crea uno nuevo).
 | 5.6 | Guardar y abrir Datos | Aparece la columna *Saldo final* calculada en cada registro |
 | 5.7 | Paso «Acumulado del año» sobre *Debe* (destino Monto) con cargas de dos meses del mismo año | El acumulado suma el mes y los meses anteriores del mismo identificador |
 | 5.8 | Usar *Saldo final* como columna de un informe; intentar desactivar el encabezado | El informe lo totaliza; la desactivación avisa «se usa en: Operación 1» |
-| 5.9 | Colecciones → nueva *Tipo de cambio* con campos *Moneda* (Texto) y *Tasa de cierre* (Decimal, Tasa); filas `GTQ` / `7.75` (sin período) y `GTQ` / `8` (un período) | Una tasa vacía, negativa o con coma decimal se rechaza al guardar |
+| 5.9 | Colecciones → «Nueva colección de tipo de cambio» (trae *Moneda* (Texto) y *Tasa* (Decimal, Tasa)); renombrar *Tasa* a *Tasa de cierre*; filas `GTQ` / `7.75` (sin período) y `GTQ` / `8` (un período) | Una tasa vacía, negativa o con coma decimal se rechaza al guardar |
 | 5.10 | Operaciones → «Conversión de moneda» de *Saldo final* a *Saldo final USD* con la colección, cotización «moneda del registro por 1 de destino» y destino `USD` | En Datos, *Saldo final USD* = saldo ÷ tasa del período (o la vigente más reciente) |
 | 5.11 | Cargar el mismo período para una compañía en `USD` e informe con *Saldo final* | La celda queda vacía con el aviso «tiene montos en varias monedas»; *Saldo final USD* sí se suma |
 | 5.12 | Diseño del informe → «Agregar columna calculada» `=SUMA([Debe]) - SUMA([Haber])` | Se valida al escribir («Resultado: Monto») y se calcula por fila y en el total |

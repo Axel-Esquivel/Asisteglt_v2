@@ -29,6 +29,13 @@
         [outlined]="true"
         (onClick)="startNew()"
       />
+      <p-button
+        label="Nueva colección de tipo de cambio"
+        icon="pi pi-dollar"
+        size="small"
+        [outlined]="true"
+        (onClick)="startExchangeRates()"
+      />
       }
     </div>
   </p-card>
@@ -139,8 +146,10 @@
         </p-table>
       </div>
       <p class="reports__hint">
-        Un tipo de cambio es de naturaleza <em>Tasa</em>: nunca se suma. Agrega también un campo de texto con
-        la moneda (p. ej. GTQ).
+        Un tipo de cambio necesita <strong>dos campos</strong>: <em>Moneda</em> de tipo Texto (p. ej. GTQ) y
+        <em>Tasa</em> de tipo Decimal con naturaleza <em>Tasa</em> (nunca se suma). En cada fila indica el mes
+        de la tasa, o déjalo vacío para una tasa que vale siempre; las tablas eligen solas la tasa del mes de
+        cada dato.
       </p>
 
       <div class="reports__title">

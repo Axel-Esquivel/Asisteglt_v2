@@ -380,7 +380,9 @@
         />
         <label for="presentationQuote">Cotización</label>
       </p-floatlabel>
-      }
+      @if (collectionProblem(d.collectionId); as problem) {
+      <p-message severity="warn" data-testid="presentation-problem">{{ problem }}</p-message>
+      } }
       <p class="reports__hint">
         Cada registro se convierte con la tasa de su mes (si no hay, la del mes anterior más reciente). Así un
         saldo al cierre usa la tasa de cierre y un acumulado suma cada mes a su propia tasa. Las cantidades no

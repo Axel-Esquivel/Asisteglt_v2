@@ -56,6 +56,13 @@ class CollectionFieldDraft {
     return new CollectionFieldDraft(key, '', DataType.DECIMAL, NumericNature.RATE);
   }
 
+  /** Al volver a un tipo numérico sin naturaleza, propone *Tasa* (lo habitual en una colección). */
+  public normalize(): void {
+    if (this.isNumeric() && this.nature === null) {
+      this.nature = NumericNature.RATE;
+    }
+  }
+
   public isNumeric(): boolean {
     return this.dataType === DataType.DECIMAL || this.dataType === DataType.INTEGER;
   }
@@ -199,7 +206,25 @@ export class CollectionsPage implements OnInit {
 
   /** Fuerza el redibujado de las columnas de filas al cambiar el tipo o el nombre de un campo. */
   protected touchFields(): void {
-    this.fields.update((fields: CollectionFieldDraft[]): CollectionFieldDraft[] => [...fields]);
+    this.fields.update((fields: CollectionFieldDraft[]): CollectionFieldDraft[] => {
+      for (const field of fields) {
+        field.normalize();
+      }
+      return [...fields];
+    });
+  }
+
+  /** Colección de tipo de cambio lista para llenar: Moneda (texto) y Tasa (decimal, naturaleza Tasa). */
+  protected startExchangeRates(): void {
+    this.startNew();
+    this.name.set('Tipo de cambio');
+    const currency: CollectionFieldDraft = CollectionFieldDraft.blank([]);
+    const rate: CollectionFieldDraft = CollectionFieldDraft.blank([currency.key]);
+    currency.label = 'Moneda';
+    currency.dataType = DataType.TEXT;
+    currency.nature = null;
+    rate.label = 'Tasa';
+    this.fields.set([currency, rate]);
   }
 
   protected async save(): Promise<void> {
