@@ -9,7 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import { OrgLevel } from '@asisteglt/shared-contracts';
 import { Nullable } from '@asisteglt/shared-kernel';
 import { Notifier } from '@asisteglt/web-core';
@@ -50,6 +50,7 @@ export class IssuedReportsPage implements OnInit {
   private readonly api: ReportsApiClient = inject(ReportsApiClient);
   private readonly notifier: Notifier = inject(Notifier);
   private readonly router: Router = inject(Router);
+  private readonly route: ActivatedRoute = inject(ActivatedRoute);
 
   protected readonly templateOptions: Signal<Option<string>[]> = computed((): Option<string>[] =>
     this.templates().map((t: TemplateView): Option<string> => ({ label: t.name, value: t.id })),
@@ -60,6 +61,17 @@ export class IssuedReportsPage implements OnInit {
   );
 
   public ngOnInit(): void {
+    // Al volver de la vista de impresión se recuperan la plantilla, el período y el alcance.
+    const params: ParamMap = this.route.snapshot.queryParamMap;
+    this.templateId.set(params.get('template'));
+    const match: Nullable<RegExpExecArray> = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(params.get('period') ?? '');
+    if (match !== null) {
+      this.month.set(new Date(Number(match[1] ?? '0'), Number(match[2] ?? '1') - 1, 1));
+    }
+    const scope: Nullable<ReportScope> = ReportScope.fromQuery(params);
+    if (scope !== null) {
+      this.scope.set(scope);
+    }
     this.load().catch((): void => {
       // Informado en load.
     });
@@ -114,7 +126,8 @@ export class IssuedReportsPage implements OnInit {
       (items: TemplateView[]): void => {
         this.templates.set(items);
         const first: Nullable<TemplateView> = items[0] ?? null;
-        if (this.templateId() === null && first !== null) {
+        const known: boolean = items.some((t: TemplateView): boolean => t.id === this.templateId());
+        if (!known && first !== null) {
           this.templateId.set(first.id);
         }
       },

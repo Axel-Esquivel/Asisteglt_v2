@@ -324,4 +324,5 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
   await expect(page.getByTestId('print-Tabla')).toContainText('15,600.00');
   await page.getByRole('button', { name: 'Volver' }).click();
   await expect(page.getByRole('button', { name: 'Generar informe' })).toBeVisible();
+  await expect(page).toHaveURL(/scope=chosen/);
 });

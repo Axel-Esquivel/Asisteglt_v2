@@ -125,6 +125,17 @@ export class TemplatePrintPage implements OnInit, OnDestroy {
     await this.load();
   }
 
+  /** Al volver a Informes conserva la plantilla, el período y el alcance elegidos. */
+  protected backQuery(): Record<string, string> {
+    return this.fromIssued()
+      ? {
+          template: this.templateId(),
+          period: this.periodText(),
+          ...(this.scope === null ? {} : this.scope.toQuery()),
+        }
+      : {};
+  }
+
   protected print(): void {
     const view: Nullable<Window> = this.document.defaultView;
     if (view !== null) {

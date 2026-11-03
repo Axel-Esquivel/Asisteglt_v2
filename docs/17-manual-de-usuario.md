@@ -170,7 +170,7 @@ montos en varias monedas». Convierte a una moneda común con una operación.
    compañía, varias o toda la organización: al generar el informe, el alcance elegido reemplaza el
    de cada tabla de datos y el de los indicadores. Sin marcarla, cada tabla usa su propio alcance.
    Un gráfico de una tabla con columnas abiertas por compañía usa las columnas del total
-   consolidado.
+   consolidado (sin subtotales, las de la primera compañía).
 5. **Guardar → Vista previa**, elige el período y **Imprimir / Guardar PDF** (en el diálogo del
    navegador, «Guardar como PDF»).
 

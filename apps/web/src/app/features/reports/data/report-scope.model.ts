@@ -70,16 +70,30 @@ export class ReportScope {
     return query;
   }
 
-  /** Unidades de un nivel, en cascada con lo elegido en el nivel superior. */
+  /**
+   * Unidades de un nivel, en cascada: cada nivel superior con algo elegido (aunque no sea el
+   * inmediato) limita las opciones a sus descendientes.
+   */
   public options(tree: OrgTree, level: OrgLevel): Option<string>[] {
-    const parents: string[] = this.parentsOf(level);
     return tree.units
-      .filter(
-        (u: OrgUnitView): boolean =>
-          u.s.level === level &&
-          (parents.length === 0 || (u.s.parentId !== null && parents.includes(u.s.parentId))),
-      )
+      .filter((u: OrgUnitView): boolean => u.s.level === level && this.fitsAncestors(tree, u))
       .map((u: OrgUnitView): Option<string> => ({ label: u.label(), value: u.id }));
+  }
+
+  private fitsAncestors(tree: OrgTree, unit: OrgUnitView): boolean {
+    const ancestors: Map<OrgLevel, string> = new Map<OrgLevel, string>();
+    let parent: Nullable<OrgUnitView> = tree.find(unit.s.parentId);
+    while (parent !== null) {
+      ancestors.set(parent.s.level, parent.id);
+      parent = tree.find(parent.s.parentId);
+    }
+    for (const [level, id] of ancestors) {
+      const chosen: string[] = this.chosenAt(level);
+      if (chosen.length > 0 && !chosen.includes(id)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /** Monedas de los países elegidos (o de todos). */
@@ -95,18 +109,18 @@ export class ReportScope {
     return [...currencies].sort().map((c: string): Option<string> => ({ label: c, value: c }));
   }
 
-  private parentsOf(level: OrgLevel): string[] {
+  private chosenAt(level: OrgLevel): string[] {
     switch (level) {
       case OrgLevel.ORGANIZATION:
-        return [];
-      case OrgLevel.COUNTRY:
         return this.organizationIds;
-      case OrgLevel.COMPANY:
+      case OrgLevel.COUNTRY:
         return this.countryIds;
-      case OrgLevel.ENTERPRISE:
+      case OrgLevel.COMPANY:
         return this.companyIds;
-      case OrgLevel.BRANCH:
+      case OrgLevel.ENTERPRISE:
         return this.enterpriseIds;
+      case OrgLevel.BRANCH:
+        return this.branchIds;
     }
   }
 }

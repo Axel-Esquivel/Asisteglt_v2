@@ -155,14 +155,16 @@ export class ElementRenderer implements ReportElementVisitor<Promise<RenderedEle
 
   /**
    * Categorías: las filas de detalle (sin subtotales ni total); series: las columnas elegidas. Si
-   * la tabla abre columnas (p. ej. por compañía), se toma el último grupo: el total consolidado.
+   * la tabla abre columnas (p. ej. por compañía), se toma el total consolidado; sin subtotales,
+   * el primer grupo.
    */
   private static chart(table: ComputedReportResponse, columns: ReadonlyArray<number>): RenderedChartDto {
     const rows: ReportRowResponse[] = table.rows.filter((r: ReportRowResponse): boolean => !r.total);
     const groupOf = (c: ReportColumnResponse): string => `${c.group.join('›')}|${String(c.subtotal)}`;
+    // Sin subtotales el último grupo es una compañía más: entonces se toma el primero (con su nombre).
     const last: Nullable<ReportColumnResponse> = table.columns.at(-1) ?? null;
     const start: number =
-      last === null
+      last === null || !last.subtotal
         ? 0
         : table.columns.findIndex((c: ReportColumnResponse): boolean => groupOf(c) === groupOf(last));
     return {

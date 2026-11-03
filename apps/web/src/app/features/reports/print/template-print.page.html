@@ -5,6 +5,7 @@
     size="small"
     [text]="true"
     [routerLink]="['/app/projects', projectId(), fromIssued() ? 'issued' : 'templates']"
+    [queryParams]="backQuery()"
   />
   <strong class="print__title">{{ name() }}</strong>
   @if (scopeLabel() !== '') {
