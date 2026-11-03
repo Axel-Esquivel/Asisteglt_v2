@@ -28,6 +28,7 @@ import { Message } from 'primeng/message';
 import { ProgressSpinner } from 'primeng/progressspinner';
 import { TableModule } from 'primeng/table';
 import { ReportRow } from '../data/analysis.model';
+import { ImportBatchView } from '../data/import.model';
 import { ReportsApiClient } from '../data/reports.api-client';
 import { ReportScope } from '../data/report-scope.model';
 import {
@@ -95,17 +96,38 @@ export class TemplatePrintPage implements OnInit, OnDestroy {
   };
 
   public ngOnInit(): void {
-    const period: string = this.route.snapshot.queryParamMap.get('period') ?? '';
-    const match: Nullable<RegExpExecArray> = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(period);
-    if (match !== null) {
-      this.month.set(new Date(Number(match[1] ?? '0'), Number(match[2] ?? '1') - 1, 1));
+    const requested: Nullable<Date> = ImportBatchView.monthOf(
+      this.route.snapshot.queryParamMap.get('period') ?? '',
+    );
+    if (requested !== null) {
+      this.month.set(requested);
     }
     this.scope = ReportScope.fromQuery(this.route.snapshot.queryParamMap);
     this.fromIssued.set(this.route.snapshot.queryParamMap.get('from') === 'informes');
     this.document.head.appendChild(this.pageStyles);
-    this.load().catch((): void => {
+    this.start(requested !== null).catch((): void => {
       this.error.set('No se pudo calcular la plantilla');
     });
+  }
+
+  /** Sin período en la dirección se abre el último mes con datos publicados (no el mes actual). */
+  private async start(hasPeriod: boolean): Promise<void> {
+    if (!hasPeriod) {
+      (await this.api.importHistory(this.projectId())).match(
+        (batches: ImportBatchView[]): void => {
+          const latest: Nullable<Date> = ImportBatchView.monthOf(
+            ImportBatchView.latestPublishedPeriod(batches) ?? '',
+          );
+          if (latest !== null) {
+            this.month.set(latest);
+          }
+        },
+        (): void => {
+          // Sin permiso de ver las cargas: se usa el mes actual.
+        },
+      );
+    }
+    await this.load();
   }
 
   public ngOnDestroy(): void {

@@ -303,7 +303,7 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
   await expect(page.getByRole('button', { name: 'Vista previa' })).toBeEnabled();
   await page.getByRole('button', { name: 'Vista previa' }).click();
   await expect(page).toHaveURL(/\/print\/projects\//);
-  await page.goto(`${page.url()}?period=2026-08`);
+  // Sin período en la dirección abre el último mes con datos publicados.
   await expect(page.getByTestId('print-Texto')).toHaveText('Informe de agosto de 2026');
   await expect(page.getByTestId('print-Tabla')).toContainText('15,600.00');
   await expect(page.getByTestId('print-Indicador')).toHaveText('4,020.00');
@@ -319,7 +319,7 @@ test('configura un proyecto de reportes y carga un balance con el asistente', as
   await page.getByRole('button', { name: 'Generar informe' }).click();
   await expect(page).toHaveURL(/from=informes/);
   await expect(page).toHaveURL(/scope=chosen/);
-  await page.goto(page.url().replace(/period=\d{4}-\d{2}/, 'period=2026-08'));
+  await expect(page).toHaveURL(/period=2026-08/);
   await expect(page.getByTestId('print-scope')).toHaveText('Toda la información');
   await expect(page.getByTestId('print-Tabla')).toContainText('15,600.00');
   await page.getByRole('button', { name: 'Volver' }).click();

@@ -21,6 +21,7 @@ import { Message } from 'primeng/message';
 import { MultiSelect } from 'primeng/multiselect';
 import { Select } from 'primeng/select';
 import { ProjectContext } from '../../projects/data/project-context';
+import { ImportBatchView } from '../data/import.model';
 import { OrgTree } from '../data/org.model';
 import { ReportScope } from '../data/report-scope.model';
 import { ReportsApiClient } from '../data/reports.api-client';
@@ -64,15 +65,15 @@ export class IssuedReportsPage implements OnInit {
     // Al volver de la vista de impresión se recuperan la plantilla, el período y el alcance.
     const params: ParamMap = this.route.snapshot.queryParamMap;
     this.templateId.set(params.get('template'));
-    const match: Nullable<RegExpExecArray> = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(params.get('period') ?? '');
-    if (match !== null) {
-      this.month.set(new Date(Number(match[1] ?? '0'), Number(match[2] ?? '1') - 1, 1));
+    const requested: Nullable<Date> = ImportBatchView.monthOf(params.get('period') ?? '');
+    if (requested !== null) {
+      this.month.set(requested);
     }
     const scope: Nullable<ReportScope> = ReportScope.fromQuery(params);
     if (scope !== null) {
       this.scope.set(scope);
     }
-    this.load().catch((): void => {
+    this.load(requested !== null).catch((): void => {
       // Informado en load.
     });
   }
@@ -116,12 +117,27 @@ export class IssuedReportsPage implements OnInit {
     });
   }
 
-  private async load(): Promise<void> {
+  /** Sin período elegido se propone el último mes con datos publicados. */
+  private async load(hasPeriod: boolean): Promise<void> {
     const projectId: string = this.context.id();
-    const [templates, org] = await Promise.all([
+    const [templates, org, history] = await Promise.all([
       this.api.templates(projectId),
       this.api.orgStructure(projectId),
+      this.api.importHistory(projectId),
     ]);
+    history.match(
+      (batches: ImportBatchView[]): void => {
+        const latest: Nullable<Date> = ImportBatchView.monthOf(
+          ImportBatchView.latestPublishedPeriod(batches) ?? '',
+        );
+        if (!hasPeriod && latest !== null) {
+          this.month.set(latest);
+        }
+      },
+      (): void => {
+        // Sin permiso de ver las cargas: se usa el mes actual.
+      },
+    );
     templates.match(
       (items: TemplateView[]): void => {
         this.templates.set(items);
